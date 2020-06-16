@@ -16,7 +16,6 @@ namespace SeqSketch {
     using namespace Types;
     using namespace VecTools;
 
-
     template<class seq_type, class embed_type, class size_type = std::size_t>
     void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
         vec = Vec<embed_type>(seq.size() - kmer_size + 1);

@@ -13,7 +13,7 @@ int main() {
 
     // sequence generatioin parameters
     bool fix_len = true;
-    size_t sig_len = 4, num_seqs = 100, seq_len = 256;
+    size_t sig_len = 4, num_seqs = 200, seq_len = 256;
     // embedding parameters
     size_t tup_len = 2, embed_dim = 200, kmer_size = 2, num_phases = 5;
     double mutate_rate = .05, block_mutate = .1;
@@ -42,7 +42,7 @@ int main() {
     Vec2D<int> MHembed(num_seqs);
 
     // weighted min hash
-    WeightedMinHashParams WMHparams(embed_dim, ksig_len, seq_len * 4);
+    WeightedMinHashParams WMHparams(embed_dim, ksig_len, seq_len * 2);
     Vec2D<int> WMHembed(num_seqs);
 
 
@@ -60,7 +60,7 @@ int main() {
     tensor_params.sig_len = ksig_len;
     tensor_params.tup_len = tup_len;
     tensor_params.embed_dim = embed_dim;
-    tensor_params.num_bins = 245;
+    tensor_params.num_bins = 250;
     tensor_params.num_phases = num_phases;
     tensor_params.rand_init();
     Vec2D<int> tensor_embeddings(num_seqs);

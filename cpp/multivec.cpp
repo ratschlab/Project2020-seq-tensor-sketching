@@ -7,7 +7,7 @@
 #include <memory>
 #include <random>
 
-#include "include/vec_tools.hpp"
+#include "../include/vec_tools.hpp"
 
 int main() {
     using std::cout;
