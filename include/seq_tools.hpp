@@ -9,39 +9,31 @@
 #include <memory>
 #include <random>
 
-#include "args.hpp"
-#include "types.h"
+#include "common.hpp"
 
-namespace SeqSketch {
+namespace Sketching {
     using namespace Types;
     using string = std::string;
 
     struct SeqGen {
         std::random_device rd;
         std::mt19937 gen = std::mt19937(rd());
-        bool fix_len;
-        int num_seqs,
-            seq_len,
-            max_blocks,
-            sig_len;
-        double mutation_rate,
-               block_mutate_rate;
 
-        SeqGen(seq_args &args) {
-            sig_len = args.sig_len;
-            num_seqs = args.num_seqs;
-            seq_len = args.seq_len;
-            mutation_rate = args.mutation_rate;
-            block_mutate_rate = args.block_mutate_rate;
-            max_blocks = args.max_blocks;
-            fix_len = args.fix_len;
-        }
+        int sig_len;
+        bool fix_len;
+        int max_num_blocks;
+        int min_num_blocks;
+        int num_seqs;
+        int seq_len;
+        float mutation_rate;
+        float block_mutate_rate;
+
 
         template<class T>
         void block_permute(Seq<T> &seq) {
             std::uniform_real_distribution<double> mute(0, 1);
             if (mute(gen) > block_mutate_rate) { return; }
-            std::uniform_int_distribution<T> unif(0, sig_len - 1), blocks(2, max_blocks);
+            std::uniform_int_distribution<T> unif(0, sig_len - 1), blocks(min_num_blocks, max_num_blocks);
             int num_blocks = blocks(gen);
             Vec<Index> perm(num_blocks);
             std::iota(perm.begin(), perm.end(), 0);
@@ -84,7 +76,7 @@ namespace SeqSketch {
                     }
                     case 1: {// insert
                         seq.push_back(unif(gen));
-                        i--;// to negate the increment
+                        i--;// init_tensor_slide_params negate the increment
                         break;
                     }
                     case 2: {// delete
@@ -102,7 +94,7 @@ namespace SeqSketch {
 
         template<class T>
         void make_fix_len(Seq<T> &seq) {
-            std::uniform_int_distribution<T> unif(0, sig_len - 1), blocks(2, max_blocks);
+            std::uniform_int_distribution<T> unif(0, sig_len - 1), blocks(min_num_blocks, max_num_blocks);
             if (seq.size() > seq_len) {
                 seq = Seq<T>(seq.begin(), seq.end());
             } else if (seq.size() < seq_len) {
@@ -233,7 +225,7 @@ namespace SeqSketch {
         return result;
     }
 
-}// namespace SeqSketch
+}// namespace Sketching
 
 
 #define SEQUENCE_SKETCHING_UTILS_H

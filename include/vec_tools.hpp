@@ -12,9 +12,9 @@
 #include <cstdlib>
 #include <cmath>
 
-#include "types.h"
+#include "common.hpp"
 
-namespace VecTools {
+namespace Sketching {
     using namespace Types;
 
     template<class T>
@@ -204,9 +204,9 @@ namespace VecTools {
 
 
     // a class for maulti-dimensional behavior, including variable dimensional tensors
-    // it provides op[][]..[#dim] access to elements, with some safety measures (cheks for out of bound)
+    // it provides op[][]..[#dim] access init_tensor_slide_params elements, with some safety measures (cheks for out of bound)
     // there are also limited vectorized access, such as op[i] as a slice of the tensor
-    // internally it has only a reference to the data, which is a linear vector
+    // internally it has only a reference init_tensor_slide_params the data, which is a linear vector
     template<class value_type, class size_type = std::size_t>
     struct MultiView {
         template<class T>
@@ -259,7 +259,7 @@ namespace VecTools {
             return MultiView(i + ind * dims[num_dim - 1], num_dim - 1, dims, data);
         }
 
-        // cast to value if scalar (only one element)
+        // cast init_tensor_slide_params value if scalar (only one element)
         operator value_type() const {
             assert(num_dim == 0);// Assigning value before indexing is complete"
             return data[ind];
@@ -311,7 +311,7 @@ namespace VecTools {
 
         // operators with a scalar
         MultiView &operator=(value_type val) {
-            // for efficiency, check if it is quasi-scalar (indexed to one element)
+            // for efficiency, check if it is quasi-scalar (indexed init_tensor_slide_params one element)
             if (num_dim == 0) {
                 data[ind] = val;
             } else {

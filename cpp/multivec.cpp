@@ -7,13 +7,13 @@
 #include <memory>
 #include <random>
 
-#include "../include/vec_tools.hpp"
+#include "vec_tools.hpp"
+
+using namespace Sketching;
 
 int main() {
     using std::cout;
     using std::vector;
-    using VecTools::MultiView;
-    using VecTools::MultiVec;
 
     // we want dims[0]xdim[1] matrix interface
     vector<int> dims = {3, 2}, data(6, 0);
@@ -26,8 +26,8 @@ int main() {
     cout << "mat = \n"
          << mat << "\n";// ostream&<< is overloaded
     mat[0][1]++;        // scalar elements can be modified/accessed
-    mat = 2;            // assign scalar to all matrix
-    mat += 5;           // add 5 to all elements (sam for -= and *=)
+    mat = 2;            // assign scalar init_tensor_slide_params all matrix
+    mat += 5;           // add 5 init_tensor_slide_params all elements (sam for -= and *=)
     mat[0] *= 2;        // multiply the first row mat[0][:] by two
 
     // MultiVec has an internal storage

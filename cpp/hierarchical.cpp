@@ -14,7 +14,7 @@ int main() {
 
     // global parameters
     size_t sig_len = 2, tup_len = 3, num_seqs = 50, embed_dim = 100, seq_len = 200;
-    double mutate_rate = .1;
+    float mutate_rate = .1;
 
     // generate sequences
     SeqGen gen;
