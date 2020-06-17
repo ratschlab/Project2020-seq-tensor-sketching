@@ -16,6 +16,7 @@ namespace SeqSketch {
     using namespace Types;
     using namespace VecTools;
 
+
     template<class seq_type, class embed_type, class size_type = std::size_t>
     void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
         vec = Vec<embed_type>(seq.size() - kmer_size + 1);
@@ -119,35 +120,42 @@ namespace SeqSketch {
     }
 
     struct OMP_Params {
-        size_t sig_len,
+        int sig_len,
                 max_seq_len,
                 embed_dim,
                 tup_len;
-    };
 
-    template<class size_type = std::size_t>
-    MultiVec<size_type, size_type> omp_rand_perms(const OMP_Params &params) {
-        std::random_device rd;
-        std::mt19937 gen = std::mt19937(rd());
+        MultiVec<int, int> perms;
 
-        // Dimensions: #perms X #sig X max-len
-        std::vector<size_type> dims{params.max_seq_len, params.sig_len, params.embed_dim};
-        MultiVec<size_type, size_type> perms(dims, 0);
-        for (int pi = 0; pi < params.embed_dim; pi++) {
-            std::iota(perms[pi].begin(), perms[pi].end(), 0);
-            std::shuffle(perms[pi].begin(), perms[pi].end(), gen);
+        OMP_Params(int argc, char* argv[]) {
+            omp_embed_arg_group args(argc, argv);
+            sig_len = args.sig_len;
+            max_seq_len = 2*args.seq_len;
+            embed_dim = args.embed_dim;
+            tup_len = args.tup_len;
         }
-        return perms;
-    }
+
+        void init_rand() {
+            std::random_device rd;
+            std::mt19937 gen = std::mt19937(rd());
+            // Dimensions: #perms X #sig X max-len
+            std::vector<int> dims{max_seq_len, sig_len, embed_dim};
+            perms.init(dims, 0);
+            for (int pi = 0; pi < embed_dim; pi++) {
+                std::iota(perms[pi].begin(), perms[pi].end(), 0);
+                std::shuffle(perms[pi].begin(), perms[pi].end(), gen);
+            }
+        }
+    };
 
     template<class seq_type, class embed_type, class size_type = std::size_t>
     void omp_sketch(const Seq<seq_type> &seq, Vec2D<embed_type> &embed,
-                    MultiVec<size_type, size_type> &perms, const OMP_Params &params) {
+                    const OMP_Params &params) {
         for (int pi = 0; pi < params.embed_dim; pi++) {
             Vec<size_type> counts(params.sig_len, 0);
             Vec<std::pair<embed_type, size_type>> ranks;
             for (auto s : seq) {
-                ranks.push_back({perms[pi][s][counts[s]], s});
+                ranks.push_back({params.perms[pi][s][counts[s]], s});
                 counts[s]++;
             }
             std::sort(ranks.begin(), ranks.end());
@@ -170,6 +178,15 @@ namespace SeqSketch {
         Vec3D<int> iphase;
         Vec2D<double> icdf;
         Vec<double> bins;
+
+        TensorParams(int argc, char* argv[]) {
+            tensor_embed_arg_group opts(argc, argv);
+            sig_len = opts.sig_len;
+            embed_dim = opts.embed_dim;
+            num_phases = opts.num_phases;
+            num_bins = opts.num_bins;
+            tup_len = opts.tup_len;
+        }
 
         virtual void rand_init() {
             std::random_device rd;
@@ -233,6 +250,11 @@ namespace SeqSketch {
     struct TensorSlideParams : public TensorParams {
         size_t win_len,
                 stride;
+        TensorSlideParams(int argc, char* argv[]) : TensorParams(argc, argv) {
+            tensor_slide_arg_group opts(argc, argv);
+            win_len = opts.win_len;
+            stride = opts.stride;
+        }
 
         void rand_init() {
             TensorParams::rand_init();

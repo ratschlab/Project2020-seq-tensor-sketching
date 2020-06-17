@@ -127,6 +127,15 @@ namespace VecTools {
             res += std::abs(a[i] - b[i]);
         return res;
     }
+
+    template <class T>
+    T l1_dist2D(const Vec2D<T> &a, const Vec2D<T> &b) {
+        assert(a.size() == b.size());
+        T res;
+        for (int i=0; i<a.size(); i++)
+            res += l1_dist(a[i], b[i]);
+        return res;
+    }
     template <class T>
     T l1_dist_minlen(const Vec<T> &a, const Vec<T> &b) {
         auto len = std::min(a.size(), b.size());
@@ -351,6 +360,13 @@ namespace VecTools {
         Vec<value_type> inner_data;
         Vec<size_type> inner_dims;
 
+        MultiVec() : View(inner_dims, inner_data) {}
+
+        void init(const Vec<size_type> &dims, value_type val = 0) {
+            inner_dims = dims;
+            View::init();
+            View::alloc(val);
+        }
         MultiVec(const Vec<size_type> &dims, value_type val = 0)
             : View(inner_dims, inner_data) {
             inner_dims = dims;

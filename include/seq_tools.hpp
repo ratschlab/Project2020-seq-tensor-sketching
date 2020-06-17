@@ -9,22 +9,33 @@
 #include <memory>
 #include <random>
 
+#include "args.h"
 #include "types.h"
 
-namespace SeqTools {
+namespace SeqSketch {
     using namespace Types;
     using string = std::string;
 
     struct SeqGen {
         std::random_device rd;
         std::mt19937 gen = std::mt19937(rd());
-        bool fix_len = false;
-        int num_seqs = 100,
-            seq_len = 100,
-            max_blocks = 4,
-            sig_len = 4;
-        double mutation_rate = 0.05,
-               block_mutate_rate = 0.1;
+        bool fix_len;
+        int num_seqs,
+            seq_len,
+            max_blocks,
+            sig_len;
+        double mutation_rate,
+               block_mutate_rate;
+
+        SeqGen(seq_args &args) {
+            sig_len = args.sig_len;
+            num_seqs = args.num_seqs;
+            seq_len = args.seq_len;
+            mutation_rate = args.mutation_rate;
+            block_mutate_rate = args.block_mutate_rate;
+            max_blocks = args.max_blocks;
+            fix_len = args.fix_len;
+        }
 
         template<class T>
         void block_permute(Seq<T> &seq) {
@@ -222,7 +233,7 @@ namespace SeqTools {
         return result;
     }
 
-}// namespace SeqTools
+}// namespace SeqSketch
 
 
 #define SEQUENCE_SKETCHING_UTILS_H
