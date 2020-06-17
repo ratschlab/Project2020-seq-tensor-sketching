@@ -9,39 +9,31 @@
 #include <memory>
 #include <random>
 
-#include "args.hpp"
-#include "types.h"
+#include "common.hpp"
 
-namespace SeqSketch {
+namespace Sketching {
     using namespace Types;
     using string = std::string;
 
     struct SeqGen {
         std::random_device rd;
         std::mt19937 gen = std::mt19937(rd());
-        bool fix_len;
-        int num_seqs,
-            seq_len,
-            max_blocks,
-            sig_len;
-        double mutation_rate,
-               block_mutate_rate;
 
-        SeqGen(seq_args &args) {
-            sig_len = args.sig_len;
-            num_seqs = args.num_seqs;
-            seq_len = args.seq_len;
-            mutation_rate = args.mutation_rate;
-            block_mutate_rate = args.block_mutate_rate;
-            max_blocks = args.max_blocks;
-            fix_len = args.fix_len;
-        }
+        int sig_len;
+        bool fix_len;
+        int max_num_blocks;
+        int min_num_blocks;
+        int num_seqs;
+        int seq_len;
+        float mutation_rate;
+        float block_mutate_rate;
+
 
         template<class T>
         void block_permute(Seq<T> &seq) {
             std::uniform_real_distribution<double> mute(0, 1);
             if (mute(gen) > block_mutate_rate) { return; }
-            std::uniform_int_distribution<T> unif(0, sig_len - 1), blocks(2, max_blocks);
+            std::uniform_int_distribution<T> unif(0, sig_len - 1), blocks(min_num_blocks, max_num_blocks);
             int num_blocks = blocks(gen);
             Vec<Index> perm(num_blocks);
             std::iota(perm.begin(), perm.end(), 0);
@@ -84,7 +76,7 @@ namespace SeqSketch {
                     }
                     case 1: {// insert
                         seq.push_back(unif(gen));
-                        i--;// to negate the increment
+                        i--;// init_tensor_slide_params negate the increment
                         break;
                     }
                     case 2: {// delete
@@ -102,7 +94,7 @@ namespace SeqSketch {
 
         template<class T>
         void make_fix_len(Seq<T> &seq) {
-            std::uniform_int_distribution<T> unif(0, sig_len - 1), blocks(2, max_blocks);
+            std::uniform_int_distribution<T> unif(0, sig_len - 1), blocks(min_num_blocks, max_num_blocks);
             if (seq.size() > seq_len) {
                 seq = Seq<T>(seq.begin(), seq.end());
             } else if (seq.size() < seq_len) {
@@ -140,100 +132,8 @@ namespace SeqSketch {
         }
         return str;
     }
-    template<class seq_type>
-    int lcs(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
-        size_t m = s1.size();
-        size_t n = s2.size();
-        int L[m + 1][n + 1];
-        for (int i = 0; i <= m; i++) {
-            for (int j = 0; j <= n; j++) {
-                if (i == 0 || j == 0) {
-                    L[i][j] = 0;
-                } else if (s1[i - 1] == s2[j - 1]) {
-                    L[i][j] = L[i - 1][j - 1] + 1;
-                } else {
-                    L[i][j] = std::max(L[i - 1][j], L[i][j - 1]);
-                }
-            }
-        }
-        return L[m][n];
-    }
-    template<class seq_type>
-    size_t lcs_distance(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
-        return s1.size() + s2.size() - 2 * lcs(s1, s2);
-    }
-    template<class seq_type>
-    size_t edit_distance(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
-        const size_t m(s1.size());
-        const size_t n(s2.size());
 
-        if (m == 0) return n;
-        if (n == 0) return m;
-
-        auto costs = Seq<size_t>(n + 1);
-
-        for (size_t k = 0; k <= n; k++) costs[k] = k;
-
-        size_t i = 0;
-        for (auto it1 = s1.begin(); it1 != s1.end(); ++it1, ++i) {
-            costs[0] = i + 1;
-            size_t corner = i;
-
-            size_t j = 0;
-            for (auto it2 = s2.begin(); it2 != s2.end(); ++it2, ++j) {
-                size_t upper = costs[j + 1];
-                if (*it1 == *it2) {
-                    costs[j + 1] = corner;
-                } else {
-                    size_t t(upper < corner ? upper : corner);
-                    costs[j + 1] = (costs[j] < t ? costs[j] : t) + 1;
-                }
-
-                corner = upper;
-            }
-        }
-
-        size_t result = costs[n];
-
-        return result;
-    }
-    size_t edit_distance(const string &s1, const string &s2) {
-        const size_t m(s1.size());
-        const size_t n(s2.size());
-
-        if (m == 0) return n;
-        if (n == 0) return m;
-
-        size_t *costs = new size_t[n + 1];
-
-        for (size_t k = 0; k <= n; k++) costs[k] = k;
-
-        size_t i = 0;
-        for (std::basic_string<char, ::std::char_traits<char>, ::std::allocator<char>>::const_iterator it1 = s1.begin(); it1 != s1.end(); ++it1, ++i) {
-            costs[0] = i + 1;
-            size_t corner = i;
-
-            size_t j = 0;
-            for (std::basic_string<char, ::std::char_traits<char>, ::std::allocator<char>>::const_iterator it2 = s2.begin(); it2 != s2.end(); ++it2, ++j) {
-                size_t upper = costs[j + 1];
-                if (*it1 == *it2) {
-                    costs[j + 1] = corner;
-                } else {
-                    size_t t(upper < corner ? upper : corner);
-                    costs[j + 1] = (costs[j] < t ? costs[j] : t) + 1;
-                }
-
-                corner = upper;
-            }
-        }
-
-        size_t result = costs[n];
-        delete[] costs;
-
-        return result;
-    }
-
-}// namespace SeqSketch
+}// namespace Sketching
 
 
 #define SEQUENCE_SKETCHING_UTILS_H

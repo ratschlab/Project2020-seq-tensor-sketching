@@ -6,9 +6,10 @@
 #define SEQUENCE_SKETCHING_DTW_H
 
 #include <vector>
+// TODO test skeching with l1 over vectors
 
 template<class T, class result_type>
-void dwt(std::vector<T> &a, const std::vector<T> &b) {
+void dtw(std::vector<T> &a, const std::vector<T> &b) {
     int n = a.size();
     int m = b.size();
     std::vector<std::vector<T>> DTW(n + 1, std::vector<T>(m, 0));

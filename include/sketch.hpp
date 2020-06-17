@@ -5,17 +5,14 @@
 #ifndef SEQUENCE_SKETCHING_SKETCH_HPP
 #define SEQUENCE_SKETCHING_SKETCH_HPP
 
-#include "types.h"
-#include "vec_tools.hpp"
+#include "vectools.hpp"
 #include <algorithm>
 #include <cmath>
 #include <numeric>
 
 
-namespace SeqSketch {
+namespace Sketching {
     using namespace Types;
-    using namespace VecTools;
-
 
     template<class seq_type, class embed_type, class size_type = std::size_t>
     void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
@@ -29,11 +26,11 @@ namespace SeqSketch {
         }
     }
 
-    struct MinHashParams {
+    struct MHParams {
         size_t embed_dim, sig_len;
         Vec2D<size_t> perms;
-        MinHashParams(size_t embed_dim, size_t sig_len)
-            : embed_dim(embed_dim), sig_len(sig_len) {
+
+        void rand_init() {
             std::random_device rd;
             auto eng = std::mt19937(rd());
             perms = Vec2D<size_t>(embed_dim, Vec<size_t>(sig_len, 0));
@@ -45,7 +42,7 @@ namespace SeqSketch {
     };
 
     template<class seq_type>
-    void minhash(const Seq<seq_type> &seq, Vec<seq_type> &embed, const MinHashParams &params) {
+    void minhash(const Seq<seq_type> &seq, Vec<seq_type> &embed, const MHParams &params) {
         embed = Vec<seq_type>(params.embed_dim);
         for (int m = 0; m < params.embed_dim; m++) {
             seq_type min_char;
@@ -61,11 +58,11 @@ namespace SeqSketch {
         }
     }
 
-    struct WeightedMinHashParams {
+    struct WMHParams {
         size_t embed_dim, sig_len, max_len;
         Vec2D<size_t> perms;
-        WeightedMinHashParams(size_t embed_dim, size_t sig_len, size_t max_len)
-            : embed_dim(embed_dim), sig_len(sig_len), max_len(max_len) {
+
+        void rand_init() {
             std::random_device rd;
             auto eng = std::mt19937(rd());
             perms = Vec2D<size_t>(embed_dim, Vec<size_t>(sig_len * max_len, 0));
@@ -76,7 +73,7 @@ namespace SeqSketch {
         }
     };
     template<class seq_type>
-    void weighted_minhash(const Seq<seq_type> &seq, Vec<seq_type> &embed, const WeightedMinHashParams &params) {
+    void weighted_minhash(const Seq<seq_type> &seq, Vec<seq_type> &embed, const WMHParams &params) {
         embed = Vec<seq_type>(params.embed_dim);
         for (int m = 0; m < params.embed_dim; m++) {
             seq_type min_char;
@@ -119,21 +116,13 @@ namespace SeqSketch {
         } while (increment_sub(sub, seq_len));
     }
 
-    struct OMP_Params {
-        int sig_len,
-                max_seq_len,
-                embed_dim,
-                tup_len;
+    struct OMHParams {
+        int sig_len;
+        int max_seq_len;
+        int embed_dim;
+        int tup_len;
 
         MultiVec<int, int> perms;
-
-        OMP_Params(int argc, char* argv[]) {
-            omp_embed_opts args(argc, argv);
-            sig_len = args.sig_len;
-            max_seq_len = 2*args.seq_len;
-            embed_dim = args.embed_dim;
-            tup_len = args.tup_len;
-        }
 
         void init_rand() {
             std::random_device rd;
@@ -149,8 +138,8 @@ namespace SeqSketch {
     };
 
     template<class seq_type, class embed_type, class size_type = std::size_t>
-    void omp_sketch(const Seq<seq_type> &seq, Vec2D<embed_type> &embed,
-                    const OMP_Params &params) {
+    void ordered_minhash(const Seq<seq_type> &seq, Vec2D<embed_type> &embed,
+                    const OMHParams &params) {
         for (int pi = 0; pi < params.embed_dim; pi++) {
             Vec<size_type> counts(params.sig_len, 0);
             Vec<std::pair<embed_type, size_type>> ranks;
@@ -169,24 +158,15 @@ namespace SeqSketch {
 
 
     struct TensorParams {
-        size_t sig_len,
-                embed_dim,
-                num_phases,
-                num_bins,
-                tup_len;
+        int sig_len;
+        int embed_dim;
+        int num_phases;
+        int num_bins;
+        int tup_len;
 
         Vec3D<int> iphase;
         Vec2D<double> icdf;
         Vec<double> bins;
-
-        TensorParams(int argc, char* argv[]) {
-            tensor_embed_opts opts(argc, argv);
-            sig_len = opts.sig_len;
-            embed_dim = opts.embed_dim;
-            num_phases = opts.num_phases;
-            num_bins = opts.num_bins;
-            tup_len = opts.tup_len;
-        }
 
         virtual void rand_init() {
             std::random_device rd;
@@ -248,13 +228,8 @@ namespace SeqSketch {
     }
 
     struct TensorSlideParams : public TensorParams {
-        size_t win_len,
-                stride;
-        TensorSlideParams(int argc, char* argv[]) : TensorParams(argc, argv) {
-            tensor_slide_opts opts(argc, argv);
-            win_len = opts.win_len;
-            stride = opts.stride;
-        }
+        int win_len;
+        int stride;
     };
 
     template<class seq_type, class embed_type>
@@ -353,7 +328,7 @@ namespace SeqSketch {
         }
     }
 
-}// namespace SeqSketch
+}// namespace Sketching
 
 
 #endif//SEQUENCE_SKETCHING_SKETCH_HPP
