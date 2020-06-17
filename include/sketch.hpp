@@ -128,7 +128,7 @@ namespace SeqSketch {
         MultiVec<int, int> perms;
 
         OMP_Params(int argc, char* argv[]) {
-            omp_embed_arg_group args(argc, argv);
+            omp_embed_opts args(argc, argv);
             sig_len = args.sig_len;
             max_seq_len = 2*args.seq_len;
             embed_dim = args.embed_dim;
@@ -180,7 +180,7 @@ namespace SeqSketch {
         Vec<double> bins;
 
         TensorParams(int argc, char* argv[]) {
-            tensor_embed_arg_group opts(argc, argv);
+            tensor_embed_opts opts(argc, argv);
             sig_len = opts.sig_len;
             embed_dim = opts.embed_dim;
             num_phases = opts.num_phases;
@@ -251,15 +251,12 @@ namespace SeqSketch {
         size_t win_len,
                 stride;
         TensorSlideParams(int argc, char* argv[]) : TensorParams(argc, argv) {
-            tensor_slide_arg_group opts(argc, argv);
+            tensor_slide_opts opts(argc, argv);
             win_len = opts.win_len;
             stride = opts.stride;
         }
-
-        void rand_init() {
-            TensorParams::rand_init();
-        }
     };
+
     template<class seq_type, class embed_type>
     void tensor_sketch_slide(const Seq<seq_type> &seq, Vec2D<embed_type> &embedding, const TensorSlideParams &params) {
         embedding = Vec2D<embed_type>(params.embed_dim, Vec<embed_type>());

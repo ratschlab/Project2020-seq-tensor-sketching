@@ -2,8 +2,8 @@
 // Created by Amir Joudaki on 6/17/20.
 //
 
-#ifndef SEQUENCE_SKETCHING_ARGS_H
-#define SEQUENCE_SKETCHING_ARGS_H
+#ifndef SEQUENCE_SKETCHING_ARGS_HPP
+#define SEQUENCE_SKETCHING_ARGS_HPP
 #include <string>
 
 struct basic_args {
@@ -11,15 +11,19 @@ struct basic_args {
     char **argv;
 
     basic_args(int argc, char *argv[]) : argc(argc), argv(argv) {}
-    std::string to_string() {
-        std::string s;
-        for (int i = 0; i < argc; i++) {
-            s += argv[i];
-            s += " ";
-        }
-        return s;
-    }
+
 };
+
+
+std::string to_string(int argc, char* argv[]) {
+    std::string s;
+    for (int i = 0; i < argc; i++) {
+        s += argv[i];
+        s += " ";
+    }
+    return s;
+}
+
 
 struct seq_args : public basic_args {
     bool fix_len = true;
@@ -108,22 +112,22 @@ struct tensor_slide_args : public tensor_embed_args {
     }
 };
 
-struct tensor_embed_arg_group : public tensor_embed_args, public seq_args {
-    tensor_embed_arg_group(int argc, char *argv[]) : tensor_embed_args(argc, argv), seq_args(argc, argv) {}
+struct tensor_embed_opts : public tensor_embed_args, public seq_args {
+    tensor_embed_opts(int argc, char *argv[]) : tensor_embed_args(argc, argv), seq_args(argc, argv) {}
 };
 
-struct tensor_slide_arg_group : public tensor_slide_args, public seq_args {
-    tensor_slide_arg_group(int argc, char *argv[]) : tensor_slide_args(argc, argv), seq_args(argc, argv) {}
+struct tensor_slide_opts : public tensor_slide_args, public seq_args {
+    tensor_slide_opts(int argc, char *argv[]) : tensor_slide_args(argc, argv), seq_args(argc, argv) {}
 };
 
-struct omp_embed_arg_group : public tuple_embed_args, public seq_args {
-    omp_embed_arg_group(int argc, char *argv[]) : tuple_embed_args(argc, argv), seq_args(argc, argv) {}
+struct omp_embed_opts : public tuple_embed_args, public seq_args {
+    omp_embed_opts(int argc, char *argv[]) : tuple_embed_args(argc, argv), seq_args(argc, argv) {}
 };
 
-struct minhash_arg_group : public kmer_args, public seq_args {
-    minhash_arg_group(int argc, char *argv[]) : kmer_args(argc, argv), seq_args(argc, argv) {}
+struct minhash_opts : public kmer_args, public seq_args {
+    minhash_opts(int argc, char *argv[]) : kmer_args(argc, argv), seq_args(argc, argv) {}
 };
 
 
 
-#endif//SEQUENCE_SKETCHING_ARGS_H
+#endif//SEQUENCE_SKETCHING_ARGS_HPP

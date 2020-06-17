@@ -9,7 +9,7 @@
 #include <memory>
 #include <random>
 
-#include "args.h"
+#include "args.hpp"
 #include "types.h"
 
 namespace SeqSketch {
