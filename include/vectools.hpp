@@ -14,8 +14,8 @@
 
 #include "common.hpp"
 
-namespace Sketching {
-    using namespace Types;
+namespace SeqSearch {
+    using namespace BasicTypes;
 
     template<class T>
     auto new2D(int d1, int d2, T val = 0) {
@@ -121,7 +121,7 @@ namespace Sketching {
     template<class value_type, class size_type = std::size_t>
     struct MultiView {
         template<class T>
-        using Vec = Types::Vec<T>;
+        using Vec = BasicTypes::Vec<T>;
         template<class T>
         using is_u_integral = typename std::__1::enable_if<std::is_unsigned<T>::value>::type;
 
@@ -266,7 +266,7 @@ namespace Sketching {
     template<class value_type, class size_type = std::size_t>
     struct MultiVec : public MultiView<value_type, size_type> {
         template<class T>
-        using Vec = Types::Vec<T>;
+        using Vec = BasicTypes::Vec<T>;
         using View = MultiView<value_type, size_type>;
         Vec<value_type> inner_data;
         Vec<size_type> inner_dims;

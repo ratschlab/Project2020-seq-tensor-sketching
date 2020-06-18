@@ -4,14 +4,15 @@
 
 #ifndef SEQUENCE_SKETCHING_COMMON_HPP
 #define SEQUENCE_SKETCHING_COMMON_HPP
+
 #include <string>
 #include <vector>
 #include <map>
 #include <iostream>
 
-namespace Sketching {
+namespace SeqSearch {
 
-    namespace Types {
+    namespace BasicTypes {
         template<class T>
         using is_u_integral = typename std::enable_if<std::is_unsigned<T>::value>::type;
         using Index = std::size_t;
@@ -25,116 +26,122 @@ namespace Sketching {
         template<class T>
         using Seq = std::vector<T>;
 
-    }// namespace Types
+    }// namespace BasicTypes
 
-    namespace ArgNames {
-        static const char *const FIX_LEN = "--fix_len";
-        static const char *const NUM_SEQS = "--num_seqs";
-        static const char *const SIG_LEN = "--sig_len";
-        static const char *const SEQ_LEN = "--seq_len";
-        static const char *const MUTATION_RATE = "--mutation_rate";
-        static const char *const BLOCK_MUTATION_RATE = "--block_mutate_rate";
-        static const char *const MAX_NUM_BLOCKS = "--max_num_blocks";
-        static const char *const MIN_NUM_BLOCKS = "--min_num_blocks";
-        static const char *const KMER_SIZE = "--kmer_size";
-        static const char *const TUP_LEN = "--tup_len";
-        static const char *const EMBED_DIM = "--embed_dim";
-        static const char *const NUM_PHASES = "--num_phases";
-        static const char *const NUM_BINS = "--num_bins";
-        static const char *const WIN_LEN = "--win_len";
-        static const char *const STRIDE = "--stride";
-        // short names
-        static const char *const FIX_LEN2 = "-F";
-        static const char *const NUM_SEQS2 = "-N";
-        static const char *const SIG_LEN2 = "-A";
-        static const char *const SEQ_LEN2 = "-L";
-        static const char *const MUTATION_RATE2 = "-r";
-        static const char *const BLOCK_MUTATION_RATE2 = "-R";
-        static const char *const MAX_NUM_BLOCKS2 = "-B";
-        static const char *const MIN_NUM_BLOCKS2 = "-b";
-        static const char *const NUM_PHASES2 = "-P";
-        static const char *const NUM_BINS2 = "-n";
-        static const char *const KMER_SIZE2 = "-K";
-        static const char *const TUP_LEN2 = "-T";
-        static const char *const EMBED_DIM2 = "-M";
-        static const char *const WIN_LEN2 = "-W";
-        static const char *const STRIDE2 = "-S";
 
-    };
-    enum ArgTypes {
-        STRING = 1, INT = 2, FLOAT = 3, BOOL = 4
-    };
+    namespace Argument {
+        namespace ArgNames {
+            static const char *const L_FIX_LEN = "--fix_len";
+            static const char *const L_NUM_SEQS = "--num_seqs";
+            static const char *const L_SIG_LEN = "--sig_len";
+            static const char *const L_SEQ_LEN = "--seq_len";
+            static const char *const L_MAX_NUM_BLOCKS = "--max_num_blocks";
+            static const char *const L_MIN_NUM_BLOCKS = "--min_num_blocks";
+            static const char *const L_KMER_SIZE = "--kmer_size";
+            static const char *const L_TUP_LEN = "--tup_len";
+            static const char *const L_EMBED_DIM = "--embed_dim";
+            static const char *const L_NUM_PHASES = "--num_phases";
+            static const char *const L_NUM_BINS = "--num_bins";
+            static const char *const L_WIN_LEN = "--win_len";
+            static const char *const L_STRIDE = "--stride";
+            static const char *const L_MUTATION_RATE = "--mutation_rate";
+            static const char *const L_BLOCK_MUTATION_RATE = "--block_mutate_rate";
+            // short names
+            static const char *const S_FIX_LEN = "-F";
+            static const char *const S_NUM_SEQS = "-N";
+            static const char *const S_SIG_LEN = "-A";
+            static const char *const S_SEQ_LEN = "-L";
+            static const char *const S_MAX_NUM_BLOCKS = "-B";
+            static const char *const S_MIN_NUM_BLOCKS = "-b";
+            static const char *const S_NUM_PHASES = "-P";
+            static const char *const S_NUM_BINS = "-n";
+            static const char *const S_KMER_SIZE = "-K";
+            static const char *const S_TUP_LEN = "-T";
+            static const char *const S_EMBED_DIM = "-M";
+            static const char *const S_WIN_LEN = "-W";
+            static const char *const S_STRIDE = "-S";
+            static const char *const S_MUTATION_RATE = "-r";
+            static const char *const S_BLOCK_MUTATION_RATE = "-R";
 
-    struct ArgParser {
+        };// namespace ArgNames
+        using namespace ArgNames;
+
+        enum StoreType {
+            STRING = 1,
+            INT = 2,
+            FLOAT = 3,
+            BOOL = 4
+        };
+
+        struct Type {
+            const char *long_name;
+            const char *short_name;
+            StoreType type;
+            void *ptr = nullptr;
+        };
+        static const Type FIX_LEN = {L_FIX_LEN, S_FIX_LEN, BOOL};
+        static const Type NUM_SEQS = {L_NUM_SEQS, S_NUM_SEQS, INT};
+        static const Type SIG_LEN = {L_SIG_LEN, S_SIG_LEN, INT};
+        static const Type SEQ_LEN = {L_SEQ_LEN, S_SEQ_LEN, INT};
+        static const Type MAX_NUM_BLOCKS = {L_MAX_NUM_BLOCKS, S_MAX_NUM_BLOCKS, INT};
+        static const Type MIN_NUM_BLOCKS = {L_MIN_NUM_BLOCKS, S_MIN_NUM_BLOCKS, INT};
+        static const Type NUM_PHASES = {L_NUM_PHASES, S_NUM_PHASES, INT};
+        static const Type NUM_BINS = {L_NUM_BINS, S_NUM_BINS, INT};
+        static const Type KMER_SIZE = {L_KMER_SIZE, S_KMER_SIZE, INT};
+        static const Type TUP_LEN = {L_TUP_LEN, S_TUP_LEN, INT};
+        static const Type EMBED_DIM = {L_EMBED_DIM, S_EMBED_DIM, INT};
+        static const Type WIN_LEN = {L_WIN_LEN, S_WIN_LEN, INT};
+        static const Type STRIDE = {L_STRIDE, S_STRIDE, INT};
+        static const Type MUTATION_RATE = {L_MUTATION_RATE, S_MUTATION_RATE, FLOAT};
+        static const Type BLOCK_MUTATION_RATE = {L_BLOCK_MUTATION_RATE, S_BLOCK_MUTATION_RATE, FLOAT};
+    }// namespace Argument
+
+    struct Parser {
         using string = std::string;
-//        int argc;
-//        char **argv;
-
-        std::map<string, void*> arg2ptr;
-        std::map<string, ArgTypes> arg2type;
-
-//        ArgParser(int argc, char *argv[]) : argc(argc), argv(argv) {}
+        std::map<string, Argument::Type> name2arg;
 
         bool not_exists(const string &name) {
-            if (arg2ptr.find(name) != arg2ptr.end())
+            if (name2arg.find(name) != name2arg.end())
                 return false;
             return true;
         }
 
-        void basic_add(void* ptr, const string& name, const string &name2, ArgTypes argType) {
-            assert(not_exists(name));
-            assert(not_exists(name2));
-            arg2ptr[name] = ptr;
-            arg2ptr[name2] = ptr;
-            arg2type[name] = argType;
-            arg2type[name2] = argType;
+        // TODO add regex checks for validity of argnames or values
+        void add(void *ptr, Argument::Type arg) {
+            assert(not_exists(arg.long_name));
+            assert(not_exists(arg.short_name));
+            arg.ptr = ptr;
+            name2arg[arg.long_name] = arg;
+            name2arg[arg.short_name] = arg;
         }
-
-        void add(int *ptr, int val, const string& name, const string &name2) {
-            basic_add(ptr, name, name2, ArgTypes::INT);
-            *ptr = val;
-        }
-        void add(float *ptr, float val, const string &name, const string &name2) {
-            basic_add(ptr, name, name2, ArgTypes::FLOAT);
-            *ptr = val;
-        }
-        void add(string *ptr, string val, const string &name, const string &name2) {
-            basic_add(ptr, name, name2, ArgTypes::STRING);
-            *ptr = val;
-        }
-        void add(bool *ptr, bool val, const string& name, const string& name2) {
-            basic_add(ptr, name, name2, ArgTypes::BOOL);
-            *ptr = val;
-        }
-
-        void parse(int argc, char* argv[]) {
-            for (int i=1; i<argc; i++) {
-                void *ptr = nullptr;
-                if (arg2ptr.find(argv[i]) != arg2ptr.end()) {
-                    ptr = arg2ptr[argv[i]];
+        void parse(int argc, char *argv[]) {
+            for (int i = 1; i < argc; i++) {
+                Argument::Type arg;
+                if (name2arg.find(argv[i]) != name2arg.end()) {
+                    arg = name2arg[argv[i]];
                 } else {
                     std::string A = argv[i];
-                    std::cerr << "invalid arg name";
+                    std::cerr << "invalid arg long_name";
                     exit(1);
                 }
-                switch (arg2type[argv[i]]) {
-                    case ArgTypes::FLOAT:
-                        *(float*)ptr = std::stof(argv[++i]);
+                switch (name2arg[argv[i]].type) {
+                    case Argument::FLOAT:
+                        *(float *) arg.ptr = std::stof(argv[++i]);
                         break;
-                    case ArgTypes::STRING:
-                        *(string*)ptr = argv[++i];
+                    case Argument::STRING:
+                        *(string *) arg.ptr = argv[++i];
                         break;
-                    case ArgTypes::INT:
-                        *(int*)ptr = std::stoi(argv[++i]);
+                    case Argument::INT:
+                        *(int *) arg.ptr = std::stoi(argv[++i]);
                         break;
-                    case ArgTypes::BOOL:
-                        *(bool*)ptr = std::stoi(argv[++i]);
+                    case Argument::BOOL:
+                        *(bool *) arg.ptr = std::stoi(argv[++i]);
                         break;
                 }
             }
         }
     };
-}// namespace Sketching
+}// namespace SeqSearch
 
 
 #endif//SEQUENCE_SKETCHING_COMMON_HPP

@@ -5,7 +5,7 @@
 #ifndef SEQUENCE_SKETCHING_TENSOR_HPP
 #define SEQUENCE_SKETCHING_TENSOR_HPP
 
-namespace Sketching {
+namespace SeqSearch {
 
 
     struct TensorParams {
@@ -180,6 +180,6 @@ namespace Sketching {
     }
 
 
-}// namespace Sketching
+}// namespace SeqSearch
 
 #endif//SEQUENCE_SKETCHING_TENSOR_HPP

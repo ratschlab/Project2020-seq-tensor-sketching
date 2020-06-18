@@ -6,12 +6,25 @@
 #include "modules.hpp"
 #include "seqgen.hpp"
 
-using namespace Sketching;
-using namespace Types;
+using namespace SeqSearch;
+using namespace BasicTypes;
+
+struct KmerModules : public BasicModules {
+    int original_sig_len{};
+
+    void override_pre() override {
+        original_sig_len = sig_len;
+        sig_len = int_pow<size_t>(sig_len, kmer_size);
+    }
+
+    void override_post() override {
+        tensor_slide_params.sig_len = original_sig_len;
+        tensor_slide_params.tup_len = 2;
+    }
+};
 
 struct TestModule1 {
 
-    SeqGen seq_gen;
     Vec2D<int> seqs;
     Vec2D<int> kmer_seqs;
     Vec2D<int> wmh_sketch;
@@ -21,14 +34,18 @@ struct TestModule1 {
     Vec3D<int> tenslide_sketch;
     Vec3D<int> dists;
 
-    BasicModules &basicModules;
-    KmerModules &kmerModules;
+    BasicModules basicModules;
+    KmerModules kmerModules;
 
-    TestModule1(BasicModules &bm, KmerModules &km) : basicModules(bm), kmerModules(km) {}
+    void parse(int argc, char **argv) {
+        basicModules.parse(argc, argv);
+        basicModules.models_init();
+        kmerModules.parse(argc, argv);
+        kmerModules.models_init();
+    }
 
     void generate_sequences() {
-        basicModules.init_seqgen(seq_gen);
-        seq_gen.gen_seqs(seqs);
+        basicModules.seq_gen.gen_seqs(seqs);
     }
 
     void compute_sketches() {
@@ -45,7 +62,7 @@ struct TestModule1 {
             weighted_minhash(kmer_seqs[si], wmh_sketch[si], kmerModules.wmh_params);
             ordered_minhash(kmer_seqs[si], omh_sketch[si], kmerModules.omh_params);
             tensor_sketch(kmer_seqs[si], ten_sketch[si], kmerModules.tensor_params);
-            tensor_sketch_slide(seqs[si], tenslide_sketch[si], basicModules.tensor_slide_params);
+            tensor_sketch_slide(seqs[si], tenslide_sketch[si], kmerModules.tensor_slide_params);
         }
     }
     void compute_dists() {
@@ -76,11 +93,8 @@ struct TestModule1 {
 };
 
 int main(int argc, char *argv[]) {
-    BasicModules bm(argc, argv);
-    KmerModules km(argc, argv);
-    km.models_init();
-    bm.models_init();
-    TestModule1 experiment(bm, km);
+    TestModule1 experiment;
+    experiment.parse(argc, argv);
     experiment.generate_sequences();
     experiment.compute_sketches();
     experiment.compute_dists();

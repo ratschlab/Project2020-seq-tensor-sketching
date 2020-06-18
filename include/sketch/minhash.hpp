@@ -5,7 +5,7 @@
 #ifndef SEQUENCE_SKETCHING_MINHASH_HPP
 #define SEQUENCE_SKETCHING_MINHASH_HPP
 
-namespace Sketching {
+namespace SeqSearch {
 
     struct MHParams {
         size_t embed_dim, sig_len;
@@ -38,6 +38,6 @@ namespace Sketching {
             embed[m] = min_char;
         }
     }
-}// namespace Sketching
+}// namespace SeqSearch
 
 #endif//SEQUENCE_SKETCHING_MINHASH_HPP

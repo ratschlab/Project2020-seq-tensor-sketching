@@ -7,8 +7,8 @@
 
 #include "common.hpp"
 
-namespace Sketching {
-    using namespace Types;
+namespace SeqSearch {
+    using namespace BasicTypes;
     template<class T>
     T l1(const Vec<T> &vec) {
         T sum = 0;
@@ -191,5 +191,5 @@ namespace Sketching {
 
         return result;
     }
-}// namespace Sketching
+}// namespace SeqSearch
 #endif//SEQUENCE_SKETCHING_DISTANCES_HPP

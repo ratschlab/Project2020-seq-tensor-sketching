@@ -11,8 +11,8 @@
 
 #include "common.hpp"
 
-namespace Sketching {
-    using namespace Types;
+namespace SeqSearch {
+    using namespace BasicTypes;
     using string = std::string;
 
     template<class seq_type, class embed_type, class size_type = std::size_t>
@@ -128,24 +128,8 @@ namespace Sketching {
             }
         }
     };
-    template<class seq_type>
-    void print_seq(const Seq<seq_type> &seq, string alpha = "ACGT") {
-        std::cout << "seq = ";
-        for (auto s : seq) {
-            std::cout << alpha[s];
-        }
-        std::cout << "\n";
-    }
-    template<class seq_type>
-    string seq2string(const Seq<seq_type> &seq, string alpha = "ACGT") {
-        string str = "";
-        for (auto s : seq) {
-            str += alpha[s];
-        }
-        return str;
-    }
 
-}// namespace Sketching
+}// namespace SeqSearch
 
 
 #define SEQUENCE_SKETCHING_UTILS_H

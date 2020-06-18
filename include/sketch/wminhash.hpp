@@ -8,8 +8,8 @@
 #include <iostream>
 #include <random>
 
-namespace Sketching {
-    using namespace Types;
+namespace SeqSearch {
+    using namespace BasicTypes;
 
     struct WMHParams {
         size_t embed_dim, sig_len, max_len;
@@ -43,6 +43,6 @@ namespace Sketching {
             embed[m] = min_char;
         }
     }
-}// namespace Sketching
+}// namespace SeqSearch
 
 #endif//SEQUENCE_SKETCHING_WMINHASH_HPP

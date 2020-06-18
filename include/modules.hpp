@@ -12,58 +12,53 @@
 #include "sketch/tuple.hpp"
 #include "sketch/wminhash.hpp"
 
-namespace Sketching {
+namespace SeqSearch {
 
-    struct BasicParams : public ArgParser {
-        bool fix_len;
-        int sig_len;
-        int max_num_blocks;
-        int min_num_blocks;
-        int num_seqs;
-        int seq_len;
-        int kmer_size;
-        int embed_dim;
-        int tup_len;
-        int num_phases;
-        int num_bins;
-        int win_len;
-        int stride;
-        float mutation_rate;
-        float block_mutate_rate;
+    struct BasicParams : public Parser {
+        bool fix_len = true;
+        int sig_len = 4;
+        int max_num_blocks = 4;
+        int min_num_blocks = 2;
+        int num_seqs = 200;
+        int seq_len = 256;
+        int kmer_size = 2;
+        int embed_dim = 100;
+        int tup_len = 2;
+        int num_phases = 5;
+        int num_bins = 255;
+        int win_len = 32;
+        int stride = 8;
+        float mutation_rate = 0.015;
+        float block_mutate_rate = 0.02;
 
         BasicParams() {
-            add(&fix_len, true, ArgNames::FIX_LEN, ArgNames::FIX_LEN2);
-            add(&sig_len, 4, ArgNames::SIG_LEN, ArgNames::SIG_LEN2);
-            add(&max_num_blocks, 4, ArgNames::MAX_NUM_BLOCKS, ArgNames::MAX_NUM_BLOCKS2);
-            add(&min_num_blocks, 2, ArgNames::MIN_NUM_BLOCKS, ArgNames::MIN_NUM_BLOCKS2);
-            add(&num_seqs, 200, ArgNames::NUM_SEQS, ArgNames::NUM_SEQS2);
-            add(&seq_len, 256, ArgNames::SEQ_LEN, ArgNames::SEQ_LEN2);
-            add(&mutation_rate, 0.015, ArgNames::MUTATION_RATE, ArgNames::MUTATION_RATE2);
-            add(&block_mutate_rate, 0.02, ArgNames::BLOCK_MUTATION_RATE, ArgNames::BLOCK_MUTATION_RATE2);
-            add(&kmer_size, 2, ArgNames::KMER_SIZE, ArgNames::KMER_SIZE2);
-            add(&embed_dim, 100, ArgNames::EMBED_DIM, ArgNames::EMBED_DIM2);
-            add(&tup_len, 2, ArgNames::TUP_LEN, ArgNames::TUP_LEN2);
-            add(&num_phases, 5, ArgNames::NUM_PHASES, ArgNames::NUM_PHASES2);
-            add(&num_bins, 255, ArgNames::NUM_BINS, ArgNames::NUM_BINS2);
-            add(&win_len, 32, ArgNames::WIN_LEN, ArgNames::WIN_LEN2);
-            add(&stride, 8, ArgNames::STRIDE, ArgNames::STRIDE2);
+            add(&fix_len, Argument::FIX_LEN);
+            add(&sig_len, Argument::SIG_LEN);
+            add(&max_num_blocks, Argument::MAX_NUM_BLOCKS);
+            add(&min_num_blocks, Argument::MIN_NUM_BLOCKS);
+            add(&num_seqs, Argument::NUM_SEQS);
+            add(&seq_len, Argument::SEQ_LEN);
+            add(&mutation_rate, Argument::MUTATION_RATE);
+            add(&block_mutate_rate, Argument::BLOCK_MUTATION_RATE);
+            add(&kmer_size, Argument::KMER_SIZE);
+            add(&embed_dim, Argument::EMBED_DIM);
+            add(&tup_len, Argument::TUP_LEN);
+            add(&num_phases, Argument::NUM_PHASES);
+            add(&num_bins, Argument::NUM_BINS);
+            add(&win_len, Argument::WIN_LEN);
+            add(&stride, Argument::STRIDE);
         }
     };
 
     struct BasicModules : public BasicParams {
-        // modudles
+        SeqGen seq_gen;
         MHParams mh_params;
         WMHParams wmh_params;
         OMHParams omh_params;
         TensorParams tensor_params;
         TensorSlideParams tensor_slide_params;
 
-        BasicModules() = default;
-        BasicModules(int argc, char* argv[]) {
-            parse(argc, argv);
-//            models_init();
-        }
-
+    protected:
         void init_seqgen(SeqGen &seqgen) const {
             seqgen.sig_len = sig_len;
             seqgen.fix_len = fix_len;
@@ -116,37 +111,32 @@ namespace Sketching {
             tensor_slide_params.rand_init();
         }
 
-        virtual void pre() {}
+        /**
+         * runs before module params are set, affect params in all modules
+         */
+        virtual void override_pre() {}
 
-        virtual void post() {
-            tensor_slide_params.sig_len = 4;
-            tensor_slide_params.tup_len = 2;
-        }
+        /**
+         *  runs after modules parameters are set, but before rand_init()
+         */
+        virtual void override_post() {}
 
+    public:
         void models_init() {
-            pre();
+            override_pre();
+            init_seqgen(seq_gen);
             init_mh_params(mh_params);
             init_wmh_params(wmh_params);
             init_omh(omh_params);
             init_tensor_params(tensor_params);
             init_tensor_slide_params(tensor_slide_params);
-            post();
+            override_post();
             rand_init();
         }
     };
 
-    struct KmerModules : public BasicModules {
 
-        KmerModules() = default;
-        KmerModules(int argc, char* argv[]) : BasicModules(argc, argv) {}
-
-        void pre() override {
-            sig_len = int_pow<size_t>(sig_len, kmer_size);
-        }
-    };
-
-
-}// namespace Sketching
+}// namespace SeqSearch
 
 #define SEQUENCE_SKETCHING_MODULES_H
 
