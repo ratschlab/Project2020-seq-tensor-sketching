@@ -1,160 +1,11 @@
 //
-// Created by Amir Joudaki on 6/11/20.
+// Created by Amir Joudaki on 6/18/20.
 //
 
-#ifndef SEQUENCE_SKETCHING_SKETCH_HPP
-#define SEQUENCE_SKETCHING_SKETCH_HPP
-
-#include "vectools.hpp"
-#include <algorithm>
-#include <cmath>
-#include <numeric>
-
+#ifndef SEQUENCE_SKETCHING_TENSOR_HPP
+#define SEQUENCE_SKETCHING_TENSOR_HPP
 
 namespace Sketching {
-    using namespace Types;
-
-    template<class seq_type, class embed_type, class size_type = std::size_t>
-    void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
-        vec = Vec<embed_type>(seq.size() - kmer_size + 1);
-        for (size_type i = 0; i < vec.size(); i++) {
-            size_type c = 1;
-            for (size_type j = 0; j < kmer_size; j++) {
-                vec[i] += c * seq[i + j];
-                c *= sig_len;
-            }
-        }
-    }
-
-    struct MHParams {
-        size_t embed_dim, sig_len;
-        Vec2D<size_t> perms;
-
-        void rand_init() {
-            std::random_device rd;
-            auto eng = std::mt19937(rd());
-            perms = Vec2D<size_t>(embed_dim, Vec<size_t>(sig_len, 0));
-            for (int m = 0; m < embed_dim; m++) {
-                std::iota(perms[m].begin(), perms[m].end(), 0);
-                std::shuffle(perms[m].begin(), perms[m].end(), eng);
-            }
-        }
-    };
-
-    template<class seq_type>
-    void minhash(const Seq<seq_type> &seq, Vec<seq_type> &embed, const MHParams &params) {
-        embed = Vec<seq_type>(params.embed_dim);
-        for (int m = 0; m < params.embed_dim; m++) {
-            seq_type min_char;
-            size_t min_rank = params.sig_len + 1;
-            for (auto s : seq) {
-                auto r = params.perms[m][s];
-                if (r < min_rank) {
-                    min_rank = r;
-                    min_char = s;
-                }
-            }
-            embed[m] = min_char;
-        }
-    }
-
-    struct WMHParams {
-        size_t embed_dim, sig_len, max_len;
-        Vec2D<size_t> perms;
-
-        void rand_init() {
-            std::random_device rd;
-            auto eng = std::mt19937(rd());
-            perms = Vec2D<size_t>(embed_dim, Vec<size_t>(sig_len * max_len, 0));
-            for (int m = 0; m < embed_dim; m++) {
-                std::iota(perms[m].begin(), perms[m].end(), 0);
-                std::shuffle(perms[m].begin(), perms[m].end(), eng);
-            }
-        }
-    };
-    template<class seq_type>
-    void weighted_minhash(const Seq<seq_type> &seq, Vec<seq_type> &embed, const WMHParams &params) {
-        embed = Vec<seq_type>(params.embed_dim);
-        for (int m = 0; m < params.embed_dim; m++) {
-            seq_type min_char;
-            size_t min_rank = params.sig_len + 1;
-            Vec<int> cnts(params.sig_len, 0);
-            for (auto s : seq) {
-                auto r = params.perms[m][s + cnts[s] * params.sig_len];
-                cnts[s]++;
-                if (r < min_rank) {
-                    min_rank = r;
-                    min_char = s;
-                }
-            }
-            embed[m] = min_char;
-        }
-    }
-
-    template<class seq_type, class size_type>
-    size_type subseq2ind(const Vec<seq_type> &seq, const Vec<size_type> &sub, size_type sig_len) {
-        size_type ind = 0, coef = 1;
-        for (size_type i = 0; i < sub.size(); i++) {
-            ind += seq[sub[i]] * coef;
-            coef *= sig_len;
-        }
-        return ind;
-    }
-
-    template<class seq_type, class embed_type, class size_type = std::size_t>
-    void tup_embed(const Seq<seq_type> &seq, Vec<embed_type> &embed,
-                   size_type sig_len, size_type tup_len) {
-        size_type seq_len = seq.size();
-        size_type cnt = 0, size = int_pow(sig_len, tup_len);
-        embed = Vec<embed_type>(size, 0);
-        Vec<size_type> sub(tup_len, 0);
-        do {
-            if (is_ascending(sub)) {
-                auto ind = subseq2ind(seq, sub, sig_len);
-                embed[ind]++;
-            }
-        } while (increment_sub(sub, seq_len));
-    }
-
-    struct OMHParams {
-        int sig_len;
-        int max_seq_len;
-        int embed_dim;
-        int tup_len;
-
-        MultiVec<int, int> perms;
-
-        void init_rand() {
-            std::random_device rd;
-            std::mt19937 gen = std::mt19937(rd());
-            // Dimensions: #perms X #sig X max-len
-            std::vector<int> dims{max_seq_len, sig_len, embed_dim};
-            perms.init(dims, 0);
-            for (int pi = 0; pi < embed_dim; pi++) {
-                std::iota(perms[pi].begin(), perms[pi].end(), 0);
-                std::shuffle(perms[pi].begin(), perms[pi].end(), gen);
-            }
-        }
-    };
-
-    template<class seq_type, class embed_type, class size_type = std::size_t>
-    void ordered_minhash(const Seq<seq_type> &seq, Vec2D<embed_type> &embed,
-                    const OMHParams &params) {
-        for (int pi = 0; pi < params.embed_dim; pi++) {
-            Vec<size_type> counts(params.sig_len, 0);
-            Vec<std::pair<embed_type, size_type>> ranks;
-            for (auto s : seq) {
-                ranks.push_back({params.perms[pi][s][counts[s]], s});
-                counts[s]++;
-            }
-            std::sort(ranks.begin(), ranks.end());
-            Vec<embed_type> tup;
-            for (auto pair = ranks.begin(); pair != ranks.begin() + params.tup_len; pair++) {
-                tup.push_back(pair->second);
-            }
-            embed.push_back(tup);
-        }
-    }
 
 
     struct TensorParams {
@@ -328,7 +179,7 @@ namespace Sketching {
         }
     }
 
+
 }// namespace Sketching
 
-
-#endif//SEQUENCE_SKETCHING_SKETCH_HPP
+#endif//SEQUENCE_SKETCHING_TENSOR_HPP

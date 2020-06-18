@@ -5,8 +5,6 @@
 #include "distances.hpp"
 #include "modules.hpp"
 #include "seqgen.hpp"
-#include "sketch.hpp"
-
 
 using namespace Sketching;
 using namespace Types;

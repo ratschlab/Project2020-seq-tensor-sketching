@@ -15,6 +15,18 @@ namespace Sketching {
     using namespace Types;
     using string = std::string;
 
+    template<class seq_type, class embed_type, class size_type = std::size_t>
+    void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
+        vec = Vec<embed_type>(seq.size() - kmer_size + 1);
+        for (size_type i = 0; i < vec.size(); i++) {
+            size_type c = 1;
+            for (size_type j = 0; j < kmer_size; j++) {
+                vec[i] += c * seq[i + j];
+                c *= sig_len;
+            }
+        }
+    }
+
     struct SeqGen {
         std::random_device rd;
         std::mt19937 gen = std::mt19937(rd());

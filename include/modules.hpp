@@ -6,7 +6,11 @@
 
 #include "common.hpp"
 #include "seqgen.hpp"
-#include "sketch.hpp"
+#include "sketch/minhash.hpp"
+#include "sketch/omh.hpp"
+#include "sketch/tensor.hpp"
+#include "sketch/tuple.hpp"
+#include "sketch/wminhash.hpp"
 
 namespace Sketching {
 
@@ -47,7 +51,6 @@ namespace Sketching {
     };
 
     struct BasicModules : public BasicParams {
-
         // modudles
         MHParams mh_params;
         WMHParams wmh_params;

@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "../include/seqgen.hpp"
-#include "../include/sketch.hpp"
 #include <fstream>
 
 // TODO write Google test units
