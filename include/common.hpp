@@ -24,6 +24,8 @@ namespace SeqSearch {
         template<class T>
         using Vec3D = Vec<Vec2D<T>>;
         template<class T>
+        using Vec4D = Vec<Vec3D<T>>;
+        template<class T>
         using Seq = std::vector<T>;
 
     }// namespace BasicTypes

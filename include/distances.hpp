@@ -21,7 +21,7 @@ namespace SeqSearch {
         assert(a.size() == b.size());
         T res;
         for (int i = 0; i < a.size(); i++)
-            res += std::abs(a[i] - b[i]);
+            res += (a[i] - b[i] >= 0) ? (a[i] - b[i]) : (b[i] - a[i]);
         return res;
     }
 

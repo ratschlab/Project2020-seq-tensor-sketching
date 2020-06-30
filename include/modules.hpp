@@ -4,11 +4,14 @@
 
 #ifndef SEQUENCE_SKETCHING_MODULES_H
 
+#include "../cpp/experimental/tensor_slide2.hpp"
 #include "common.hpp"
 #include "seqgen.hpp"
 #include "sketch/minhash.hpp"
 #include "sketch/omh.hpp"
 #include "sketch/tensor.hpp"
+#include "sketch/tensor_disc.hpp"
+#include "sketch/tensor_slide.hpp"
 #include "sketch/tuple.hpp"
 #include "sketch/wminhash.hpp"
 
@@ -22,7 +25,7 @@ namespace SeqSearch {
         int num_seqs = 200;
         int seq_len = 256;
         int kmer_size = 2;
-        int embed_dim = 100;
+        int embed_dim = 128;
         int tup_len = 2;
         int num_phases = 5;
         int num_bins = 255;
@@ -89,7 +92,8 @@ namespace SeqSearch {
             init_tensor_params(params);
             params.win_len = win_len;
             params.stride = stride;
-            params.embed_dim = embed_dim / stride;
+            assert(seq_len % stride == 0);
+            params.embed_dim = embed_dim / (seq_len / stride);
         }
 
         void init_mh_params(MHParams &params) const {

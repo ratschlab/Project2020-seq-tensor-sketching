@@ -15,6 +15,25 @@ namespace SeqSearch {
     using namespace BasicTypes;
     using string = std::string;
 
+    std::map<char, int> chr2int = {{'a', 1}, {'c', 2}, {'g', 3}, {'t', 4}, {'A', 1}, {'C', 2}, {'G', 3}, {'T', 4}, {'N', 0}};
+    std::map<char, int> chr2int_mask = {{'a', -1}, {'c', -2}, {'g', -3}, {'t', -4}, {'A', 1}, {'C', 2}, {'G', 3}, {'T', 4}, {'N', 0}};
+
+    template<class seq_type>
+    void read_fasta(Vec2D<seq_type> &seqs, Vec<string> &seq_names, string filename, std::map<char, int> tr, int max_num_seqs = 1000) {
+        std::ifstream infile(filename);
+        string line;
+        while (std::getline(infile, line) and seqs.size() <= max_num_seqs) {
+            if (line[0] == '>') {
+                seqs.push_back(Vec<seq_type>());
+                seq_names.push_back(line);
+            } else {
+                for (char c : line) {
+                    seqs[seqs.size() - 1].push_back(tr[c]);
+                }
+            }
+        }
+    }
+
     template<class seq_type, class embed_type, class size_type = std::size_t>
     void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
         vec = Vec<embed_type>(seq.size() - kmer_size + 1);
