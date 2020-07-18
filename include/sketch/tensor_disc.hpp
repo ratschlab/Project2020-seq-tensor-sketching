@@ -19,14 +19,14 @@ namespace SeqSearch {
     template<typename T>
     bool in_range2(const Vec2D<T> &vec, T min = 0, T max = std::numeric_limits<T>::max()) {
         for (auto &v : vec)
-            if (not in_range(v))
+            if (not in_range<T>(v))
                 return false;
         return true;
     }
     template<typename T>
     bool in_range3(const Vec3D<T> &vec, T min = 0, T max = std::numeric_limits<T>::max()) {
         for (auto &v : vec) {
-            if (not in_range2(v))
+            if (not in_range2<T>(v))
                 return false;
         }
         return true;
@@ -62,7 +62,7 @@ namespace SeqSearch {
         Vec<T> res(N, 0);
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                res[(i + j) % N] += a[i] * b[inv_ind[j]];
+                res[(i + j) % N] += a[i] * b[j];
             }
         }
         return res;
@@ -155,7 +155,7 @@ namespace SeqSearch {
                         const auto &iph = params.iphase[m][t2];
                         auto conv = trans_conv(cnt[t][t2 - 1], seq[i], iph);
                         cnt[t][t2] += conv;
-                        assert(in_range3(cnt));
+                        assert(in_range3<embed_type>(cnt));
                         //                        for (int p = 0; p < params.num_phases; p++) {
                         //                            auto shift = (p + iph[p]) % params.num_phases;
                         //                            cnt[t][t2][shift] += seq[i][p] * cnt[t][t2 - 1][p];
@@ -167,7 +167,7 @@ namespace SeqSearch {
                         auto pi = params.iphase[m][t][p];
                         cnt[t][t][pi] += seq[i][p];
                         assert(cnt[t][t][pi] >= 0);
-                        assert(in_range3(cnt));
+                        assert(in_range3<embed_type>(cnt));
                     }
                 }
 
@@ -177,13 +177,13 @@ namespace SeqSearch {
                         for (int p = 0; p < params.num_phases; p++) {
                             auto pj = params.iphase[m][t][p];
                             cnt[t][t][pj] -= seq[j][p];
-                            assert(in_range3(cnt));
+                            assert(in_range3<embed_type>(cnt));
                         }
                         for (int t2 = t - 1; t2 >= 0; t2--) {
                             const auto &iph = params.iphase[m][t2];
                             auto conv = trans_conv(cnt[t2 + 1][t], seq[j], iph);
                             cnt[t2][t] -= conv;
-                            assert(in_range3(cnt));
+                            assert(in_range3<embed_type>(cnt));
                             //                            for (int p = 0; p < params.num_phases; p++) {
                             //                                for (int p2 = 0; p2 < params.num_phases; p2++) {
                             //                                    auto shift = (p + iph[p2]) % params.num_phases;
@@ -201,8 +201,8 @@ namespace SeqSearch {
                     for (auto &c : top_cnt) {
                         c = norm == 0 ? 0 : (c / norm);
                     }
+                    assert(in_range3<embed_type>(cnt));
                     embedding[m].push_back(top_cnt);
-                    assert(in_range3(embedding));
                 }
             }
         }

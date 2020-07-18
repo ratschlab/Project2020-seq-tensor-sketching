@@ -15,20 +15,20 @@ namespace SeqSearch {
     using namespace BasicTypes;
     using string = std::string;
 
-    std::map<char, int> chr2int = {{'a', 1}, {'c', 2}, {'g', 3}, {'t', 4}, {'A', 1}, {'C', 2}, {'G', 3}, {'T', 4}, {'N', 0}};
-    std::map<char, int> chr2int_mask = {{'a', -1}, {'c', -2}, {'g', -3}, {'t', -4}, {'A', 1}, {'C', 2}, {'G', 3}, {'T', 4}, {'N', 0}};
 
     template<class seq_type>
     void read_fasta(Vec2D<seq_type> &seqs, Vec<string> &seq_names, string filename, std::map<char, int> tr, int max_num_seqs = 1000) {
         std::ifstream infile(filename);
         string line;
+        int si = -1;
         while (std::getline(infile, line) and seqs.size() <= max_num_seqs) {
             if (line[0] == '>') {
+                si++;
                 seqs.push_back(Vec<seq_type>());
                 seq_names.push_back(line);
             } else {
                 for (char c : line) {
-                    seqs[seqs.size() - 1].push_back(tr[c]);
+                    seqs[si].push_back(tr[c]);
                 }
             }
         }

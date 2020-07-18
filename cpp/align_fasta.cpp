@@ -21,19 +21,38 @@ struct KmerModule : public BasicModules {
     void override_post() override {
         //        tensor_slide_params.sig_len = original_sig_len;
         //        tensor_slide_params.tup_len = 2;
+        tensor_slide_params.embed_dim = 50;
+        tensor_slide_params.num_bins = 250;
     }
 };
 
-struct TestModule1 {
-    Vec2D<int> seqs;
-    Vec<string> seq_names;
-    Vec2D<int> kmer_seqs;
-    Vec2D<int> wmh_sketch;
-    Vec2D<int> mh_sketch;
-    Vec3D<int> omh_sketch;
-    Vec2D<int> ten_sketch;
-    Vec3D<int> slide_sketch;
+struct HGModule {
+
     Vec3D<int> dists;
+    std::ifstream infile;
+
+    std::map<char, int> chr2int =
+            {{'a', 1},
+             {'c', 2},
+             {'g', 3},
+             {'t', 4},
+             {'n', 0},
+             {'A', 1},
+             {'C', 2},
+             {'G', 3},
+             {'T', 4},
+             {'N', 0}};
+    std::map<char, int> chr2int_mask =
+            {{'a', -1},
+             {'c', -2},
+             {'g', -3},
+             {'t', -4},
+             {'n', 0},
+             {'A', 1},
+             {'C', 2},
+             {'G', 3},
+             {'T', 4},
+             {'N', 0}};
 
     BasicModules basicModules;
     KmerModule kmerModules;
@@ -46,48 +65,65 @@ struct TestModule1 {
         kmerModules.models_init();
     }
 
-    void read_seqs() {
-        string hg_file = "/Users/amirjoudaki/Downloads/hg38.fa";
-        read_fasta(seqs, seq_names, hg_file, chr2int, 1);
+
+    string read_first() {
+        string hg_file = "data/sub.fa";
+        infile = std::ifstream(hg_file);
+        string line;
+        std::getline(infile, line);
+        return line;
+    }
+
+    template<typename seq_type>
+    string read_next_seq(Vec<seq_type> &seq, Vec<bool> mask) {
+        seq.clear();
+        string line;
+        while (std::getline(infile, line)) {
+            if (line[0] == '>') {
+                return line;
+            } else {
+                for (char c : line) {
+                    seq.push_back(chr2int[c]);
+                    mask.push_back((chr2int[c] > 0));
+                }
+            }
+        }
+        return "";
     }
 
     void compute_sketches() {
-        int num_seqs = 1;
-        kmer_seqs.resize(num_seqs);
-        slide_sketch.resize(num_seqs);
-        for (int si = 0; si < num_seqs; si++) {
-            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.sig_len);
-            tensor_slide_sketch(kmer_seqs[si], slide_sketch[si], kmerModules.tensor_slide_params);
-        }
-    }
-    void compute_dists() {
-        int num_seqs = seqs.size();
-        dists = new3D<int>(2, num_seqs, num_seqs, 0);
-        for (int i = 0; i < seqs.size(); i++) {
-            for (int j = i + 1; j < seqs.size(); j++) {
-                dists[0][i][j] = edit_distance(seqs[i], seqs[j]);
-                dists[1][i][j] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
-            }
+        Vec2D<int> slide_sketch;
+        Vec<int> seq, kmer_seq;
+        Vec<bool> mask;
+        string name = read_first(), next_name;
+        while (not name.empty()) {
+            next_name = read_next_seq(seq, mask);
+            seq2kmer(seq, kmer_seq, basicModules.kmer_size, basicModules.sig_len);
+            tensor_slide_sketch(kmer_seq, slide_sketch, kmerModules.tensor_slide_params);
+            save_output(name, slide_sketch);
+            name = next_name;
         }
     }
 
-    void save_output() {
+
+    void save_output(string seq_name, const Vec2D<int> &sketch) {
         std::ofstream fo;
-        fo.open("long_seq_output.txt");
-        for (int i = 0; i < seqs.size(); i++) {
-            for (int j = i + 1; j < seqs.size(); j++) {
-                fo << dists[0][i][j] << ", " << dists[1][i][j] << "\n";
+        seq_name = string("data/sketch_") + seq_name.substr(1) + "_" + std::to_string(sketch.size()) + "_" + std::to_string(sketch[0].size()) + ".txt";
+        fo.open(seq_name);
+        //        fo << sketch.size() << ", " << sketch[0].size() << "\n";
+        for (int m = 0; m < sketch.size(); m++) {
+            for (int i = 0; i < sketch[m].size(); i++) {
+                fo << sketch[m][i] << ",";
             }
+            fo << "\n";
         }
         fo.close();
     }
 };
 
 int main(int argc, char *argv[]) {
-    TestModule1 experiment;
+    HGModule experiment;
     experiment.parse(argc, argv);
-    experiment.read_seqs();
     experiment.compute_sketches();
-    experiment.compute_dists();
-    experiment.save_output();
+    //    experiment.save_output();
 }
