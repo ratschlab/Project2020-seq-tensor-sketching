@@ -12,9 +12,9 @@
 #include <cstdlib>
 #include <cmath>
 
-#include "common.hpp"
+#include "args.hpp"
 
-namespace SeqSearch {
+namespace SeqSketch {
     using namespace BasicTypes;
 
     template<class T>

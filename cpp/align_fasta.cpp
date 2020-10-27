@@ -1,12 +1,12 @@
 #include <fstream>
 #include <memory>
 
-#include "common.hpp"
+#include "args.hpp"
 #include "distances.hpp"
 #include "modules.hpp"
 #include "seqgen.hpp"
 
-using namespace SeqSearch;
+using namespace SeqSketch;
 using namespace BasicTypes;
 
 struct KmerModule : public BasicModules {
@@ -27,7 +27,6 @@ struct KmerModule : public BasicModules {
 };
 
 struct HGModule {
-
     Vec3D<int> dists;
     std::ifstream infile;
 
@@ -67,7 +66,7 @@ struct HGModule {
 
 
     string read_first() {
-        string hg_file = "data/sub.fa";
+        string hg_file = "data/sub2.fa";
         infile = std::ifstream(hg_file);
         string line;
         std::getline(infile, line);

@@ -5,7 +5,7 @@
 #ifndef SEQUENCE_SKETCHING_TUPLE_H
 #define SEQUENCE_SKETCHING_TUPLE_H
 
-namespace SeqSearch {
+namespace SeqSketch {
 
     template<class seq_type, class size_type>
     size_type subseq2ind(const Vec<seq_type> &seq, const Vec<size_type> &sub, size_type sig_len) {
@@ -32,6 +32,6 @@ namespace SeqSearch {
         } while (increment_sub(sub, seq_len));
     }
 
-}// namespace SeqSearch
+}// namespace SeqSketch
 
 #endif//SEQUENCE_SKETCHING_TUPLE_H

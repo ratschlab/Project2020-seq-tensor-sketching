@@ -7,7 +7,7 @@
 //
 //#include "sketch/tensor_slide.hpp"
 //
-//namespace SeqSearch {
+//namespace SeqSketch {
 //
 //
 //    template<class seq_type, class embed_type>
@@ -21,10 +21,10 @@
 //                int j = i - params.win_len;
 //                if (j >= 0) {
 //                    for (int t = 0; t < params.tup_len; t++) {
-//                        auto pj = params.iphase[m][t][seq[j]];
+//                        auto pj = params.iphases[m][t][seq[j]];
 //                        cnt[t][t][pj]--;
 //                        for (int t2 = t - 1; t2 >= 0; t2--) {
-//                            auto pj = params.iphase[m][t2][seq[j]];
+//                            auto pj = params.iphases[m][t2][seq[j]];
 //                            for (int p = 0; p < params.num_phases; p++) {
 //                                auto shift = (p + pj) % params.num_phases;
 //                                cnt[t2][t][shift] -= cnt[t2 + 1][t][p];
@@ -35,13 +35,13 @@
 //
 //                for (int t = 0; t < params.tup_len; t++) {
 //                    for (int t2 = params.tup_len - 1; t2 > t; t2--) {
-//                        auto pi = params.iphase[m][t2][seq[i]];
+//                        auto pi = params.iphases[m][t2][seq[i]];
 //                        for (int p = 0; p < params.num_phases; p++) {
 //                            auto shift = (p + pi) % params.num_phases;
 //                            cnt[t][t2][shift] += cnt[t][t2 - 1][p];
 //                        }
 //                    }
-//                    auto pi = params.iphase[m][t][seq[i]];
+//                    auto pi = params.iphases[m][t][seq[i]];
 //                    cnt[t][t][pi]++;
 //                }
 //                const auto &top_cnt = cnt[0][params.tup_len - 1];

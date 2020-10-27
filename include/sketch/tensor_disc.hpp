@@ -7,7 +7,7 @@
 
 #include "tensor_slide.hpp"
 
-namespace SeqSearch {
+namespace SeqSketch {
 
     template<typename T>
     bool in_range(const Vec<T> &vec, T min = 0, T max = std::numeric_limits<T>::max()) {
@@ -232,6 +232,6 @@ namespace SeqSearch {
         return out;
     }
 
-}// namespace SeqSearch
+}// namespace SeqSketch
 
 #endif//SEQUENCE_SKETCHING_TENSOR_DISC_HPP

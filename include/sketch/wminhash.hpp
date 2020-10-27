@@ -4,11 +4,11 @@
 
 #ifndef SEQUENCE_SKETCHING_WMINHASH_HPP
 #define SEQUENCE_SKETCHING_WMINHASH_HPP
-#include "common.hpp"
+#include "args.hpp"
 #include <iostream>
 #include <random>
 
-namespace SeqSearch {
+namespace SeqSketch {
     using namespace BasicTypes;
 
     struct WMHParams {
@@ -43,6 +43,6 @@ namespace SeqSearch {
             embed[m] = min_char;
         }
     }
-}// namespace SeqSearch
+}// namespace SeqSketch
 
 #endif//SEQUENCE_SKETCHING_WMINHASH_HPP

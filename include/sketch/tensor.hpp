@@ -5,8 +5,9 @@
 #ifndef SEQUENCE_SKETCHING_TENSOR_HPP
 #define SEQUENCE_SKETCHING_TENSOR_HPP
 
+#include <math.h>
 
-namespace SeqSearch {
+namespace SeqSketch {
 
 
     struct TensorParams {
@@ -38,8 +39,8 @@ namespace SeqSearch {
                     }
                 }
                 for (int p = 0; p < num_phases; p++) {
-                    double phase = std::fmod(p + bias, (double) num_phases) / num_phases;
-                    icdf[m][p] = std::tan(pie * (phase - 0.5));
+                    icdf[m][p] = 1 - 2 * unif(gen);    // use random sign (-1) or (1)
+                    icdf[m][p] = (p % 2 == 0) ? 1 : -1;// use oddity of p to assign (-1) or (1)
                 }
             }
             num_bins -= 2;
@@ -58,29 +59,30 @@ namespace SeqSearch {
     void tensor_sketch(const Seq<seq_type> &seq, Vec<embed_type> &embedding, const TensorParams &params) {
         embedding = Vec<embed_type>(params.embed_dim, 0);
         for (int m = 0; m < params.embed_dim; m++) {
-            auto cnt = new2D<double>(params.tup_len, params.num_phases, 0);
+            auto cnt = new2D<double>(params.tup_len + 1, params.num_phases, 0);
+            cnt[0][0] = 1;// base case
             for (int i = 0; i < seq.size(); i++) {
-                for (int t = params.tup_len - 1; t >= 1; t--) {
+                for (int t = params.tup_len - 1; t >= 0; t--) {
                     auto pi = params.iphase[m][t][seq[i]];
                     for (int p = 0; p < params.num_phases; p++) {
                         auto shift = (p + pi) % params.num_phases;
-                        cnt[t][shift] += cnt[t - 1][p];
+                        cnt[t + 1][shift] += cnt[t][p];
                     }
                 }
-                auto pi = params.iphase[m][0][seq[i]];
-                cnt[0][pi]++;
             }
-            const auto &top_cnt = cnt[params.tup_len - 1];
+            const auto &top_cnt = cnt[params.tup_len];
             auto prod = std::inner_product(params.icdf[m].begin(), params.icdf[m].end(), top_cnt.begin(), (double) 0);
             double norm = l1(top_cnt);
             prod = prod / norm;
+            //            int exp;
+            //            frexp(prod, &exp);
+            //           embedding[m]= exp * sgn(prod);
             embed_type bin = std::upper_bound(params.bins.begin(), params.bins.begin() + params.num_bins, prod) - params.bins.begin();
             embedding[m] = bin;
         }
     }
 
 
-
-}// namespace SeqSearch
+}// namespace SeqSketch
 
 #endif//SEQUENCE_SKETCHING_TENSOR_HPP

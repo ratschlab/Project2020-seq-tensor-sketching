@@ -16,11 +16,6 @@ struct KmerModule : public BasicModules {
         original_sig_len = sig_len;
         sig_len = int_pow<size_t>(sig_len, kmer_size);
     }
-
-    void override_post() override {
-        tensor_slide_params.sig_len = original_sig_len;
-        tensor_slide_params.tup_len = 2;
-    }
 };
 
 struct TestModule1 {
@@ -32,7 +27,7 @@ struct TestModule1 {
     Vec2D<int> mh_sketch;
     Vec3D<int> omh_sketch;
     Vec2D<double> ten_sketch;
-    Vec3D<int> slide_sketch;
+    Vec3D<double> slide_sketch;
     Vec2D<double> ten_new_sketch;
     Vec3D<double> ten_new_slide_sketch;
     Vec3D<double> dists;
@@ -49,6 +44,8 @@ struct TestModule1 {
         newModules.parse(argc, argv);
         newModules.model_init();
     }
+
+    string out_path = "/Users/amirjoudaki/Codes/seq_alignment/output";
 
 
     template<class seq_type>
@@ -101,8 +98,9 @@ struct TestModule1 {
     }
 
     void generate_sequences() {
-        basicModules.seq_gen.gen_seqs(seqs);
-        write_fasta(seqs);
+        //        basicModules.seq_gen.gen_seqs(seqs);
+        basicModules.seq_gen.gen_phylogeny(seqs);
+        //        write_fasta(seqs);
         //        read_fasta(seqs);
     }
 
@@ -120,35 +118,12 @@ struct TestModule1 {
             seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.sig_len);
             minhash(kmer_seqs[si], mh_sketch[si], kmerModules.mh_params);
             weighted_minhash(kmer_seqs[si], wmh_sketch[si], kmerModules.wmh_params);
-            ordered_minhash(kmer_seqs[si], omh_sketch[si], kmerModules.omh_params);
-            tensor_sketch(kmer_seqs[si], ten_sketch[si], kmerModules.tensor_params);
-            tensor_slide_sketch(seqs[si], slide_sketch[si], kmerModules.tensor_slide_params);
-
-            tensor2_sketch<int, double>(kmer_seqs[si], ten_new_sketch[si], newModules.ten_2_params);
-            tensor2_slide_sketch<int, double>(kmer_seqs[si], ten_new_slide_sketch[si], newModules.ten_2_slide_params);
+            ordered_minhash(seqs[si], omh_sketch[si], basicModules.omh_params);
+            tensor_sketch(seqs[si], ten_sketch[si], basicModules.tensor_params);
+            tensor_slide_sketch(seqs[si], slide_sketch[si], basicModules.tensor_slide_params);
+            tensor2_sketch<int, double>(seqs[si], ten_new_sketch[si], newModules.ten_2_params);
+            tensor2_slide_sketch<int, double>(seqs[si], ten_new_slide_sketch[si], newModules.ten_2_slide_params);
         }
-        std::ofstream fo;
-        fo.open(out_path + "/sketches_Ten2.txt");
-        fo << test_id << "\n";
-        for (int si = 0; si < num_seqs; si++) {
-            for (int i = 0; i < ten_new_sketch[si].size(); i++) {
-                fo << ten_new_sketch[si][i];
-            }
-            fo << "\n";
-        }
-        fo.close();
-        fo.open(out_path + "/sketches_Ten2_slide.txt");
-        fo << test_id << "\n";
-        for (int si = 0; si < num_seqs; si++) {
-            fo << ">> " << si << "\n";
-            for (int i = 0; i < ten_new_slide_sketch[si].size(); i++) {
-                for (int j = 0; j < ten_new_slide_sketch[si][i].size(); j++)
-                    fo << ten_new_slide_sketch[si][i][j] << ", ";
-                fo << "\n";
-            }
-            fo << "\n";
-        }
-        fo.close();
     }
     void compute_dists() {
         std::ofstream fo;
@@ -160,35 +135,77 @@ struct TestModule1 {
                 dists[1][i][j] = hamming_dist(mh_sketch[i], mh_sketch[j]);
                 dists[2][i][j] = hamming_dist(wmh_sketch[i], wmh_sketch[j]);
                 dists[3][i][j] = hamming_dist2D(omh_sketch[i], omh_sketch[j]);
-                dists[4][i][j] = l2_sq_dist(ten_sketch[i], ten_sketch[j]);
+                dists[4][i][j] = l1_dist(ten_sketch[i], ten_sketch[j]);
                 dists[5][i][j] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
                 dists[6][i][j] = l2_sq_dist(ten_new_sketch[i], ten_new_sketch[j]);
-                dists[7][i][j] = l1_dist2D_minlen(ten_new_slide_sketch[i], ten_new_slide_sketch[j]);
+                dists[7][i][j] = l2_dist2D_minlen(ten_new_slide_sketch[i], ten_new_slide_sketch[j]);
                 //                dists[6][i][j] = cosine_sim(ten_new_sketch[i], ten_new_sketch[j]);
                 //                dists[6][i][j] = l1_dist(ten_new_sketch[i], ten_new_sketch[j]);
             }
         }
+    }
+
+    void save_output() {
         Vec<string> method_names = {"ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide"};
+        std::ofstream fo;
+
         for (int m = 0; m < 8; m++) {
-            fo.open(out_path + "/dists_" + method_names[m] + ".txt");
+            fo.open(out_path + "/dists/" + method_names[m] + ".txt");
             fo << test_id << "\n";
-            for (int i = 0; i < num_seqs; i++) {
-                for (int j = i + 1; j < num_seqs; j++) {
+            for (int i = 0; i < seqs.size(); i++) {
+                for (int j = i + 1; j < seqs.size(); j++) {
                     fo << i << ", " << j << ", " << dists[m][i][j] << "\n";
                 }
             }
             fo.close();
         }
-    }
 
-    void save_output() {
-        std::ofstream fo;
-        //        fo.open("output.txt");
-        fo.open(out_path + "/matlab_output.txt");
-        for (int i = 0; i < seqs.size(); i++) {
-            for (int j = i + 1; j < seqs.size(); j++) {
-                fo << dists[0][i][j] << ", " << dists[1][i][j] << ", " << dists[2][i][j] << ", " << dists[3][i][j] << ", " << dists[4][i][j] << ", " << dists[5][i][j] << ", " << dists[6][i][j] << ", " << dists[7][i][j] << "\n";
+        fo.open(out_path + "/sketches/ten.txt");
+        fo << test_id << "\n";
+        for (int si = 0; si < seqs.size(); si++) {
+            fo << ">> seq " << si << ", ";
+            for (int i = 0; i < ten_sketch[si].size(); i++) {
+                fo << ten_sketch[si][i] << ", ";
             }
+            fo << "\n";
+        }
+        fo.close();
+
+        fo.open(out_path + "/sketches/ten_slide.txt");
+        fo << test_id << "\n";
+        for (int si = 0; si < seqs.size(); si++) {
+            auto &sk = slide_sketch[si];
+            for (int dim = 0; dim < sk.size(); dim++) {
+                fo << ">> seq: " << si << ", dim: " << dim << ", ";
+                for (auto &item : sk[dim])
+                    fo << item << ", ";
+                fo << "\n";
+            }
+            fo << "\n";
+        }
+        fo.close();
+
+        // don't save the rest
+        return;
+        fo.open(out_path + "/sketches/Ten2.txt");
+        fo << test_id << "\n";
+        for (int si = 0; si < seqs.size(); si++) {
+            for (int i = 0; i < ten_new_sketch[si].size(); i++) {
+                fo << ten_new_sketch[si][i];
+            }
+            fo << "\n";
+        }
+        fo.close();
+        fo.open(out_path + "/sketches_Ten2_slide.txt");
+        fo << test_id << "\n";
+        for (int si = 0; si < seqs.size(); si++) {
+            fo << ">> " << si << "\n";
+            for (int i = 0; i < ten_new_slide_sketch[si].size(); i++) {
+                for (int j = 0; j < ten_new_slide_sketch[si][i].size(); j++)
+                    fo << ten_new_slide_sketch[si][i][j] << ", ";
+                fo << "\n";
+            }
+            fo << "\n";
         }
         fo.close();
     }

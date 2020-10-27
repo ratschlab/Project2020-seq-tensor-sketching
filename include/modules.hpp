@@ -5,53 +5,18 @@
 #ifndef SEQUENCE_SKETCHING_MODULES_H
 
 #include "../cpp/experimental/tensor_slide2.hpp"
-#include "common.hpp"
+#include "args.hpp"
 #include "seqgen.hpp"
 #include "sketch/minhash.hpp"
 #include "sketch/omh.hpp"
 #include "sketch/tensor.hpp"
 #include "sketch/tensor_disc.hpp"
+#include "sketch/tensor_new.h"
 #include "sketch/tensor_slide.hpp"
 #include "sketch/tuple.hpp"
 #include "sketch/wminhash.hpp"
 
-namespace SeqSearch {
-
-    struct BasicParams : public Parser {
-        bool fix_len = true;
-        int sig_len = 4;
-        int max_num_blocks = 4;
-        int min_num_blocks = 2;
-        int num_seqs = 200;
-        int seq_len = 256;
-        int kmer_size = 2;
-        int embed_dim = 128;
-        int tup_len = 2;
-        int num_phases = 5;
-        int num_bins = 255;
-        int win_len = 32;
-        int stride = 8;
-        float mutation_rate = 0.015;
-        float block_mutate_rate = 0.02;
-
-        BasicParams() {
-            add(&fix_len, Argument::FIX_LEN);
-            add(&sig_len, Argument::SIG_LEN);
-            add(&max_num_blocks, Argument::MAX_NUM_BLOCKS);
-            add(&min_num_blocks, Argument::MIN_NUM_BLOCKS);
-            add(&num_seqs, Argument::NUM_SEQS);
-            add(&seq_len, Argument::SEQ_LEN);
-            add(&mutation_rate, Argument::MUTATION_RATE);
-            add(&block_mutate_rate, Argument::BLOCK_MUTATION_RATE);
-            add(&kmer_size, Argument::KMER_SIZE);
-            add(&embed_dim, Argument::EMBED_DIM);
-            add(&tup_len, Argument::TUP_LEN);
-            add(&num_phases, Argument::NUM_PHASES);
-            add(&num_bins, Argument::NUM_BINS);
-            add(&win_len, Argument::WIN_LEN);
-            add(&stride, Argument::STRIDE);
-        }
-    };
+namespace SeqSketch {
 
     struct BasicModules : public BasicParams {
         SeqGen seq_gen;
@@ -71,6 +36,17 @@ namespace SeqSearch {
             seqgen.seq_len = seq_len;
             seqgen.mutation_rate = mutation_rate;
             seqgen.block_mutate_rate = block_mutate_rate;
+        }
+
+        void init_mh_params(MHParams &params) const {
+            params.sig_len = sig_len;
+            params.embed_dim = embed_dim;
+        }
+
+        void init_wmh_params(WMHParams &params) const {
+            params.embed_dim = embed_dim;
+            params.sig_len = sig_len;
+            params.max_len = 2 * seq_len;
         }
 
         void init_omh(OMHParams &params) const {
@@ -93,19 +69,9 @@ namespace SeqSearch {
             params.win_len = win_len;
             params.stride = stride;
             assert(seq_len % stride == 0);
-            params.embed_dim = embed_dim / (seq_len / stride);
+            params.embed_dim = embed_dim / stride + 1;
         }
 
-        void init_mh_params(MHParams &params) const {
-            params.sig_len = sig_len;
-            params.embed_dim = embed_dim;
-        }
-
-        void init_wmh_params(WMHParams &params) const {
-            params.embed_dim = embed_dim;
-            params.sig_len = sig_len;
-            params.max_len = 2 * seq_len;
-        }
 
         void rand_init() {
             mh_params.rand_init();
@@ -139,8 +105,37 @@ namespace SeqSearch {
         }
     };
 
+    struct NewModules : public BasicParams {
+        Tensor2Params ten_2_params;
+        Tensor2_slide_Params ten_2_slide_params;
 
-}// namespace SeqSearch
+        void rand_init() {
+            ten_2_params.rand_init();
+            ten_2_slide_params.rand_init();
+        }
+
+        void init_ten_2_params(Tensor2Params &params) const {
+            params.tup_len = tup_len;
+            params.sig_len = sig_len;
+            params.embed_dim = embed_dim;
+            params.num_phases = num_phases;
+        }
+        void init_ten_2_slide_params(Tensor2_slide_Params &params) const {
+            init_ten_2_params(params);
+            params.win_len = win_len;
+            params.stride = stride;
+            int embed = embed_dim * stride / seq_len;
+            params.embed_dim = embed + 1;
+        }
+
+        void model_init() {
+            init_ten_2_params(ten_2_params);
+            init_ten_2_slide_params(ten_2_slide_params);
+            rand_init();
+        }
+    };
+
+}// namespace SeqSketch
 
 #define SEQUENCE_SKETCHING_MODULES_H
 

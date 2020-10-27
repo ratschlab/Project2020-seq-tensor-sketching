@@ -9,9 +9,9 @@
 #include <memory>
 #include <random>
 
-#include "common.hpp"
+#include "args.hpp"
 
-namespace SeqSearch {
+namespace SeqSketch {
     using namespace BasicTypes;
     using string = std::string;
 
@@ -146,9 +146,34 @@ namespace SeqSearch {
                     make_fix_len(seqs[si]);
             }
         }
+
+        template<class T>
+        void gen_phylogeny(Vec<Seq<T>> &seqs) {
+            seqs = Vec2D<T>(4, Vec<T>());
+            for (int i = 0; i < 4; i++) {
+                gen_seq(seqs[i]);
+            }
+            Vec<Seq<T>> children;
+            while (seqs.size() < num_seqs) {
+                for (auto &seq : seqs) {
+                    Seq<T> ch1, ch2;
+                    point_mutate(seq, ch1);
+                    block_permute(ch1);
+                    point_mutate(seq, ch2);
+                    block_permute(ch2);
+                    children.push_back(ch1);
+                    children.push_back(ch2);
+                }
+                std::swap(seqs, children);
+            }
+            seqs.resize(num_seqs);
+            for (auto &seq : seqs)
+                if (fix_len)
+                    make_fix_len(seq);
+        }
     };
 
-}// namespace SeqSearch
+}// namespace SeqSketch
 
 
 #define SEQUENCE_SKETCHING_UTILS_H

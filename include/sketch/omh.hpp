@@ -6,7 +6,7 @@
 #define SEQUENCE_SKETCHING_OMH_HPP
 #include "vectools.hpp"
 
-namespace SeqSearch {
+namespace SeqSketch {
 
     struct OMHParams {
         int sig_len;
@@ -47,6 +47,6 @@ namespace SeqSearch {
             embed.push_back(tup);
         }
     }
-}// namespace SeqSearch
+}// namespace SeqSketch
 
 #endif//SEQUENCE_SKETCHING_OMH_HPP

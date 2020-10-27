@@ -1,12 +1,12 @@
 #include <fstream>
 #include <memory>
 
-#include "common.hpp"
+#include "args.hpp"
 #include "distances.hpp"
 #include "modules.hpp"
 #include "seqgen.hpp"
 
-using namespace SeqSearch;
+using namespace SeqSketch;
 using namespace BasicTypes;
 
 struct KmerModule : public BasicModules {

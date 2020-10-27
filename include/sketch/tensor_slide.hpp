@@ -8,7 +8,7 @@
 #include "tensor.hpp"
 #include "vectools.hpp"
 
-namespace SeqSearch {
+namespace SeqSketch {
 
     struct TensorSlideParams : public TensorParams {
         int win_len;
@@ -47,21 +47,21 @@ namespace SeqSearch {
                     auto pi = params.iphase[m][t][seq[i]];
                     cnt[t][t][pi]++;
                 }
-                const auto &top_cnt = cnt[0][params.tup_len - 1];
-                auto prod = std::inner_product(params.icdf[m].begin(), params.icdf[m].end(), top_cnt.begin(), (double) 0);
-                auto norm = l1(top_cnt);
-                prod = prod / norm;
-                embed_type bin = std::upper_bound(params.bins.begin(), params.bins.begin() + params.num_bins, prod) - params.bins.begin();
-                if ((i + 1) % params.stride == 0 or i == (seq.size() - 1)) {
-                    if (norm != 0)
-                        embedding[m].push_back(bin);
-                    else
-                        embedding[m].push_back(params.num_bins / 2);
+                if ((i + 1) % params.stride == 0 or (i + 1 == seq.size())) {
+                    const auto &top_cnt = cnt[0][params.tup_len - 1];
+                    auto prod = std::inner_product(params.icdf[m].begin(), params.icdf[m].end(), top_cnt.begin(), (double) 0);
+                    auto norm = l1(top_cnt);
+                    prod = prod / norm;
+                    //                    int exp;
+                    //                    frexp(prod, &exp);
+                    //                    embedding[m].push_back(exp * sgn(prod));
+                    embed_type bin = std::upper_bound(params.bins.begin(), params.bins.begin() + params.num_bins, prod) - params.bins.begin();
+                    embedding[m].push_back(bin);
                 }
             }
         }
     }
 
-}// namespace SeqSearch
+}// namespace SeqSketch
 
 #endif//SEQUENCE_SKETCHING_TENSOR_SLIDE_H

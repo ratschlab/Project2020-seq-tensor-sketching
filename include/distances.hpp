@@ -5,9 +5,9 @@
 #ifndef SEQUENCE_SKETCHING_DISTANCES_HPP
 #define SEQUENCE_SKETCHING_DISTANCES_HPP
 
-#include "common.hpp"
+#include "args.hpp"
 
-namespace SeqSearch {
+namespace SeqSketch {
     using namespace BasicTypes;
     template<class T>
     T l1(const Vec<T> &vec) {
@@ -19,7 +19,7 @@ namespace SeqSearch {
     template<class T>
     T l1_dist(const Vec<T> &a, const Vec<T> &b) {
         assert(a.size() == b.size());
-        T res;
+        T res = 0;
         for (int i = 0; i < a.size(); i++)
             res += (a[i] - b[i] >= 0) ? (a[i] - b[i]) : (b[i] - a[i]);
         return res;
@@ -28,26 +28,39 @@ namespace SeqSearch {
     template<class T>
     T l1_dist2D(const Vec2D<T> &a, const Vec2D<T> &b) {
         assert(a.size() == b.size());
-        T res;
+        T res = 0;
         for (int i = 0; i < a.size(); i++)
             res += l1_dist(a[i], b[i]);
         return res;
     }
-    template<class T>
-    T l1_dist_minlen(const Vec<T> &a, const Vec<T> &b) {
-        auto len = std::min(a.size(), b.size());
-        return l1_dist<T>(Vec<T>(a.begin(), a.begin() + len),
-                          Vec<T>(b.begin(), b.begin() + len));
-    }
+
+
+    //    template<class T>
+    //    T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
+    //        assert(a.size() == b.size());
+    //        auto len = std::min(a.size(), b.size());
+    //        T result = 0;
+    //        for (size_t i = 0; i < len; i++) {
+    //            result += l1_dist_minlen(a[i], b[i]);
+    //        }
+    //        return result;
+    //    }
 
     template<class T>
-    T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
-        assert(a.size() == b.size());
-        T result = 0;
-        for (size_t i = 0; i < a.size(); i++) {
-            result += l1_dist_minlen(a[i], b[i]);
+    T l1_dist2D_mean(const Vec2D<T> &a, const Vec2D<T> &b) {
+        int len = a[0].size();
+        T diff;
+        for (int j = 0; j < len; j++) {
+            T A = 0, B = 0;
+            for (int i = 0; i < a.size(); i++) {
+                A += (double) a[i][j] / a.size();
+            }
+            for (int i = 0; i < b.size(); i++) {
+                B += (double) b[i][j] / b.size();
+            }
+            diff += (A - B) ? (A - B) : (B - A);
         }
-        return result;
+        return diff;
     }
 
     template<class T>
@@ -55,6 +68,58 @@ namespace SeqSearch {
         T sum = 0;
         for (auto v : vec) sum += v * v;
         return sum;
+    }
+
+    template<class T>
+    T l2_sq_dist(const Vec<T> &a, const Vec<T> &b) {
+        assert(a.size() == b.size());
+        T sum = 0;
+        for (int i = 0; i < a.size(); i++) {
+            sum += (a[i] - b[i]) * (a[i] - b[i]);
+        }
+        return sum;
+    }
+
+    template<class T>
+    T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
+        auto len = std::min(a.size(), b.size());
+        T val = 0;
+        for (int i = 0; i < len; i++) {
+            for (int j = 0; j < a[i].size() and j < b[i].size(); j++) {
+                val += (a[i][j] - b[i][j]) * ((a[i][j] - b[i][j] > 0) ? 1 : -1);
+            }
+        }
+        return val;
+    }
+
+    template<class T>
+    T l2_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
+        auto len = std::min(a.size(), b.size());
+        T val = 0;
+        for (int i = 0; i < len; i++) {
+            for (int j = 0; j < a[i].size() and j < b[i].size(); j++) {
+                val += (a[i][j] - b[i][j]) * (a[i][j] - b[i][j]);
+            }
+        }
+        return val;
+    }
+
+
+    template<class T>
+    T ip_sim(const Vec<T> &a, const Vec<T> &b) {
+        assert(a.size() == b.size());
+        T sum = 0;
+        for (int i = 0; i < a.size(); i++) {
+            sum += a[i] * b[i];
+        }
+        return sum;
+    }
+
+    template<class T>
+    T cosine_sim(const Vec<T> &a, const Vec<T> &b) {
+        T val = ip_sim(a, b);
+        val = val * val / l2_sq(a) / l2_sq(b);
+        return val;
     }
 
     template<class T>
@@ -78,7 +143,7 @@ namespace SeqSearch {
     template<class T>
     T hamming_dist(const Vec<T> &a, const Vec<T> &b) {
         assert(a.size() == b.size());
-        T diff;
+        T diff = 0;
         for (size_t i = 0; i < a.size(); i++) {
             if (a[i] != b[i]) {
                 diff++;
@@ -90,7 +155,7 @@ namespace SeqSearch {
     template<class T>
     T hamming_dist2D(const Vec2D<T> &a, const Vec2D<T> &b) {
         assert(a.size() == b.size());
-        T diff;
+        T diff = 0;
         for (size_t i = 0; i < a.size(); i++) {
             if (a[i] != b[i]) {
                 diff++;
@@ -103,7 +168,8 @@ namespace SeqSearch {
     int lcs(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
         size_t m = s1.size();
         size_t n = s2.size();
-        int L[m + 1][n + 1];
+        //        int L[m + 1][n + 1];
+        Vec2D<int> L(m + 1, Vec<int>(n + 1, 0));
         for (int i = 0; i <= m; i++) {
             for (int j = 0; j <= n; j++) {
                 if (i == 0 || j == 0) {
@@ -191,5 +257,5 @@ namespace SeqSearch {
 
         return result;
     }
-}// namespace SeqSearch
+}// namespace SeqSketch
 #endif//SEQUENCE_SKETCHING_DISTANCES_HPP
