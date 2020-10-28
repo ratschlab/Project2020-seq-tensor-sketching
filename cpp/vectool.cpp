@@ -7,7 +7,7 @@
 #include <memory>
 #include <random>
 
-#include "vectools.hpp"
+#include "vectool.hpp"
 
 using namespace SeqSearch;
 

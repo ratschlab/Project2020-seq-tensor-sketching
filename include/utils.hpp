@@ -2,12 +2,51 @@
 // Created by Amir Joudaki on 6/18/20.
 //
 
-#ifndef SEQUENCE_SKETCHING_DISTANCES_HPP
-#define SEQUENCE_SKETCHING_DISTANCES_HPP
+#ifndef SEQUENCE_SKETCHING_UTILS_HPP
+#define SEQUENCE_SKETCHING_UTILS_HPP
 
 #include "args.hpp"
 
 namespace SeqSketch {
+
+    namespace BasicTypes {
+        template<class T>
+        using is_u_integral = typename std::enable_if<std::is_unsigned<T>::value>::type;
+        using Index = std::size_t;
+        using Size_t = std::size_t;
+        template<class T>
+        using Vec = std::vector<T>;
+        template<class T>
+        using Vec2D = Vec<Vec<T>>;
+        template<class T>
+        using Vec3D = Vec<Vec2D<T>>;
+        template<class T>
+        using Vec4D = Vec<Vec3D<T>>;
+        template<class T>
+        using Seq = std::vector<T>;
+
+    }// namespace BasicTypes
+    using namespace BasicTypes;
+
+
+    template<typename T>
+    inline int sgn(T val) {
+        return (T(0) < val) - (val < T(0));
+    }
+
+    inline int sketch_end(int offset, int len) {
+        return len - offset + 1;
+    }
+
+    inline bool sketch_now(int i, int len, int stride, int off) {
+        return (i >= off) and ((i - off) % stride == 0) and (i < sketch_end(off, len));
+    }
+
+    int sketch_len(int offset, int seq_len) {
+        int len = sketch_end(offset, seq_len) - offset;
+        assert(len % offset == 0);
+        return len / offset;
+    }
     using namespace BasicTypes;
     template<class T>
     T l1(const Vec<T> &vec) {
@@ -34,17 +73,6 @@ namespace SeqSketch {
         return res;
     }
 
-
-    //    template<class T>
-    //    T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
-    //        assert(a.size() == b.size());
-    //        auto len = std::min(a.size(), b.size());
-    //        T result = 0;
-    //        for (size_t i = 0; i < len; i++) {
-    //            result += l1_dist_minlen(a[i], b[i]);
-    //        }
-    //        return result;
-    //    }
 
     template<class T>
     T l1_dist2D_mean(const Vec2D<T> &a, const Vec2D<T> &b) {
@@ -229,7 +257,7 @@ namespace SeqSketch {
         if (m == 0) return n;
         if (n == 0) return m;
 
-        size_t *costs = new size_t[n + 1];
+        auto costs = new size_t[n + 1];
 
         for (size_t k = 0; k <= n; k++) costs[k] = k;
 
@@ -258,4 +286,4 @@ namespace SeqSketch {
         return result;
     }
 }// namespace SeqSketch
-#endif//SEQUENCE_SKETCHING_DISTANCES_HPP
+#endif//SEQUENCE_SKETCHING_UTILS_HPP

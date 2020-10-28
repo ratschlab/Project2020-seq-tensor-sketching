@@ -15,9 +15,8 @@ namespace SeqSketch {
     using namespace BasicTypes;
     using string = std::string;
 
-
     template<class seq_type>
-    void read_fasta(Vec2D<seq_type> &seqs, Vec<string> &seq_names, string filename, std::map<char, int> tr, int max_num_seqs = 1000) {
+    void read_fasta(Vec2D<seq_type> &seqs, Vec<string> &seq_names, const string &filename, const std::map<char, int> &tr, int max_num_seqs = 1000) {
         std::ifstream infile(filename);
         string line;
         int si = -1;
@@ -58,7 +57,6 @@ namespace SeqSketch {
         int seq_len;
         float mutation_rate;
         float block_mutate_rate;
-
 
         template<class T>
         void block_permute(Seq<T> &seq) {
@@ -135,8 +133,13 @@ namespace SeqSketch {
             }
         }
 
+        /**
+         * Generate sequences in a linear fashion, ie s1->s2, s2->s3, ...
+         * @tparam T
+         * @param seqs
+         */
         template<class T>
-        void gen_seqs(Vec<Seq<T>> &seqs) {
+        void genseqs_linear(Vec<Seq<T>> &seqs) {
             seqs = Vec2D<T>(num_seqs, Vec<T>());
             gen_seq(seqs[0]);
             for (int si = 1; si < num_seqs; si++) {
@@ -148,9 +151,10 @@ namespace SeqSketch {
         }
 
         template<class T>
-        void gen_phylogeny(Vec<Seq<T>> &seqs) {
-            seqs = Vec2D<T>(4, Vec<T>());
-            for (int i = 0; i < 4; i++) {
+        void genseqs_tree(Vec<Seq<T>> &seqs, int sequence_seeds) {
+            // TODO get this to get input from command line
+            seqs = Vec2D<T>(sequence_seeds, Vec<T>());
+            for (int i = 0; i < sequence_seeds; i++) {
                 gen_seq(seqs[i]);
             }
             Vec<Seq<T>> children;

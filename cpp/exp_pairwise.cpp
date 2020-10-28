@@ -2,23 +2,23 @@
 #include <memory>
 
 #include "args.hpp"
-#include "distances.hpp"
 #include "modules.hpp"
-#include "seqgen.hpp"
+#include "seqtool.hpp"
+#include "utils.hpp"
 
 using namespace SeqSketch;
 using namespace BasicTypes;
 
-struct KmerModule : public BasicModules {
+struct KmerModule : public BasicModule {
     int original_sig_len{};
 
-    void override_pre() override {
+    void override_module_params() override {
         original_sig_len = sig_len;
         sig_len = int_pow<size_t>(sig_len, kmer_size);
     }
 };
 
-struct TestModule1 {
+struct SeqGenModule {
     Vec2D<int> seqs;
     Vec<std::string> seq_names;
     string test_id;
@@ -32,9 +32,9 @@ struct TestModule1 {
     Vec3D<double> ten_new_slide_sketch;
     Vec3D<double> dists;
 
-    BasicModules basicModules;
+    BasicModule basicModules;
     KmerModule kmerModules;
-    NewModules newModules;
+    ComboModules_v2 newModules;
 
     void parse(int argc, char **argv) {
         basicModules.parse(argc, argv);
@@ -45,11 +45,13 @@ struct TestModule1 {
         newModules.model_init();
     }
 
-    string out_path = "/Users/amirjoudaki/Codes/seq_alignment/output";
 
+    //    string output = "/Users/amirjoudaq_alignment/output/seqs.fa";
+
+    string out_path = "/Users/amirjoudaq_alignment/output";
 
     template<class seq_type>
-    void write_fasta(Vec2D<seq_type> &seq_vec) {
+    void write_fasta(Vec2D<seq_type> &seq_vec, bool Abc = false) {
         std::ofstream fo;
         fo.open(out_path + "/seqs.fa");
         test_id = "#" + std::to_string(random());
@@ -57,7 +59,11 @@ struct TestModule1 {
         for (int si = 0; si < seq_vec.size(); si++) {
             fo << "> " << si << "\n";
             for (int i = 0; i < seq_vec[i].size(); i++) {
-                fo << (char) (seq_vec[si][i] + (int) 'A');
+                if (Abc) {
+                    fo << (char) (seq_vec[si][i] + (int) 'A');
+                } else {
+                    fo << seq_vec[si][i] << ",";
+                }
             }
             fo << "\n\n";
         }
@@ -97,11 +103,12 @@ struct TestModule1 {
         }
     }
 
+
     void generate_sequences() {
-        //        basicModules.seq_gen.gen_seqs(seqs);
-        basicModules.seq_gen.gen_phylogeny(seqs);
-        //        write_fasta(seqs);
-        //        read_fasta(seqs);
+        basicModules.seq_gen.genseqs_linear(seqs);
+        write_fasta(seqs);
+        //            basicModules.seq_gen.genseqs_tree(seqs);
+        //            read_fasta(seqs);
     }
 
     void compute_sketches() {
@@ -164,8 +171,9 @@ struct TestModule1 {
         fo << test_id << "\n";
         for (int si = 0; si < seqs.size(); si++) {
             fo << ">> seq " << si << ", ";
-            for (int i = 0; i < ten_sketch[si].size(); i++) {
-                fo << ten_sketch[si][i] << ", ";
+            //            for (int i = 0; i < ten_sketch[si].size(); i++) {
+            for (const auto &e : ten_sketch[si]) {
+                fo << e << ", ";
             }
             fo << "\n";
         }
@@ -212,7 +220,7 @@ struct TestModule1 {
 };
 
 int main(int argc, char *argv[]) {
-    TestModule1 experiment;
+    SeqGenModule experiment;
     experiment.parse(argc, argv);
     experiment.generate_sequences();
     experiment.compute_sketches();

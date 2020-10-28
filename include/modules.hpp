@@ -4,13 +4,11 @@
 
 #ifndef SEQUENCE_SKETCHING_MODULES_H
 
-#include "../cpp/experimental/tensor_slide2.hpp"
 #include "args.hpp"
-#include "seqgen.hpp"
+#include "seqtool.hpp"
 #include "sketch/minhash.hpp"
 #include "sketch/omh.hpp"
 #include "sketch/tensor.hpp"
-#include "sketch/tensor_disc.hpp"
 #include "sketch/tensor_new.h"
 #include "sketch/tensor_slide.hpp"
 #include "sketch/tuple.hpp"
@@ -18,7 +16,8 @@
 
 namespace SeqSketch {
 
-    struct BasicModules : public BasicParams {
+    struct BasicModule : public ArgSet {
+
         SeqGen seq_gen;
         MHParams mh_params;
         WMHParams wmh_params;
@@ -53,7 +52,7 @@ namespace SeqSketch {
             params.tup_len = tup_len;
             params.sig_len = sig_len;
             params.embed_dim = embed_dim;
-            params.max_seq_len = 2 * seq_len;
+            params.max_len = 2 * seq_len;
         }
 
         void init_tensor_params(TensorParams &params) const {
@@ -68,8 +67,8 @@ namespace SeqSketch {
             init_tensor_params(params);
             params.win_len = win_len;
             params.stride = stride;
-            assert(seq_len % stride == 0);
-            params.embed_dim = embed_dim / stride + 1;
+            params.offset = offset;
+            //            assert(seq_len % stride == 0);
         }
 
 
@@ -82,30 +81,36 @@ namespace SeqSketch {
         }
 
         /**
-         * runs before module params are set, affect params in all modules
+         * runs after parsing the arguments, before model hyperparameters
+         * hence, it affects hyperparameters in all modules.
+         * Example: embed_dim = embed_dim/2; // embedding dimension halves for all
          */
-        virtual void override_pre() {}
+        virtual void override_module_params() {}
 
         /**
-         *  runs after modules parameters are set, but before rand_init()
+         *  runs after modules parameters are set, but before rand_init(), hence, it
+         *  will override individual model parameters, and their random initialization
+         *  Example: OMH.max_len = win_len
          */
-        virtual void override_post() {}
+        virtual void override_model_params() {
+            tensor_slide_params.embed_dim = embed_dim / stride + 1;
+        }
 
     public:
         void models_init() {
-            override_pre();
+            override_module_params();
             init_seqgen(seq_gen);
             init_mh_params(mh_params);
             init_wmh_params(wmh_params);
             init_omh(omh_params);
             init_tensor_params(tensor_params);
             init_tensor_slide_params(tensor_slide_params);
-            override_post();
+            override_model_params();
             rand_init();
         }
     };
 
-    struct NewModules : public BasicParams {
+    struct ComboModules_v2 : public ArgSet {
         Tensor2Params ten_2_params;
         Tensor2_slide_Params ten_2_slide_params;
 
@@ -124,7 +129,7 @@ namespace SeqSketch {
             init_ten_2_params(params);
             params.win_len = win_len;
             params.stride = stride;
-            int embed = embed_dim * stride / seq_len;
+            int embed = embed_dim / stride + 1;
             params.embed_dim = embed + 1;
         }
 

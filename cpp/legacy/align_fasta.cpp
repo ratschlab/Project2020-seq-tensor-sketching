@@ -2,9 +2,9 @@
 #include <memory>
 
 #include "args.hpp"
-#include "distances.hpp"
 #include "modules.hpp"
-#include "seqgen.hpp"
+#include "seqtool.hpp"
+#include "utils.hpp"
 
 using namespace SeqSketch;
 using namespace BasicTypes;

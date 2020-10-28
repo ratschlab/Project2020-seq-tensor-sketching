@@ -6,13 +6,14 @@
 #define SEQUENCE_SKETCHING_TENSOR_SLIDE_H
 
 #include "tensor.hpp"
-#include "vectools.hpp"
+#include "vectool.hpp"
 
 namespace SeqSketch {
 
     struct TensorSlideParams : public TensorParams {
         int win_len;
         int stride;
+        int offset;
     };
 
     template<class seq_type, class embed_type>
@@ -47,11 +48,10 @@ namespace SeqSketch {
                     auto pi = params.iphase[m][t][seq[i]];
                     cnt[t][t][pi]++;
                 }
-                if ((i + 1) % params.stride == 0 or (i + 1 == seq.size())) {
+                if (sketch_now(i, seq.size(), params.stride, params.offset)) {
                     const auto &top_cnt = cnt[0][params.tup_len - 1];
                     auto prod = std::inner_product(params.icdf[m].begin(), params.icdf[m].end(), top_cnt.begin(), (double) 0);
-                    auto norm = l1(top_cnt);
-                    prod = prod / norm;
+                    prod = prod / l1(top_cnt);
                     //                    int exp;
                     //                    frexp(prod, &exp);
                     //                    embedding[m].push_back(exp * sgn(prod));

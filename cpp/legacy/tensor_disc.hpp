@@ -5,7 +5,7 @@
 #ifndef SEQUENCE_SKETCHING_TENSOR_DISC_HPP
 #define SEQUENCE_SKETCHING_TENSOR_DISC_HPP
 
-#include "tensor_slide.hpp"
+#include "sketch/tensor_slide.hpp"
 
 namespace SeqSketch {
 

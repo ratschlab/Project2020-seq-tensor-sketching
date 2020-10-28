@@ -5,7 +5,8 @@
 #ifndef SEQUENCE_SKETCHING_TENSOR_HPP
 #define SEQUENCE_SKETCHING_TENSOR_HPP
 
-#include <math.h>
+#include <cmath>
+#include <cstdio>
 
 namespace SeqSketch {
 
@@ -26,7 +27,7 @@ namespace SeqSketch {
             std::mt19937 gen(rd());
             std::uniform_int_distribution<int> unif_iphase(0, num_phases - 1);
             std::uniform_real_distribution<double> unif(0, 1);
-            double pie = std::atan(1) * 4;
+            double pie = std::atan(1) * 2;
 
             iphase = new3D<int>(embed_dim, tup_len, sig_len);
             icdf = new2D<double>(embed_dim, num_phases);
@@ -76,7 +77,7 @@ namespace SeqSketch {
             prod = prod / norm;
             //            int exp;
             //            frexp(prod, &exp);
-            //           embedding[m]= exp * sgn(prod);
+            //            embedding[m]= exp * sgn(prod);
             embed_type bin = std::upper_bound(params.bins.begin(), params.bins.begin() + params.num_bins, prod) - params.bins.begin();
             embedding[m] = bin;
         }

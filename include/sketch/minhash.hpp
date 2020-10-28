@@ -22,9 +22,9 @@ namespace SeqSketch {
         }
     };
 
-    template<class seq_type>
-    void minhash(const Seq<seq_type> &seq, Vec<seq_type> &embed, const MHParams &params) {
-        embed = Vec<seq_type>(params.embed_dim);
+    template<class seq_type, class embed_type>
+    void minhash(const Seq<seq_type> &seq, Vec<embed_type> &embed, const MHParams &params) {
+        embed = Vec<embed_type>(params.embed_dim);
         for (int m = 0; m < params.embed_dim; m++) {
             seq_type min_char;
             size_t min_rank = params.sig_len + 1;
