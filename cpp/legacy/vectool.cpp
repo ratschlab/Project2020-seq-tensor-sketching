@@ -9,7 +9,7 @@
 
 #include "vectool.hpp"
 
-using namespace SeqSearch;
+using namespace SeqSketch;
 
 int main() {
     using std::cout;

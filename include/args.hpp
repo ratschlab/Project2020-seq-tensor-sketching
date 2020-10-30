@@ -16,12 +16,6 @@
 namespace SeqSketch {
     using namespace BasicTypes;
 
-    inline int arg_index(const Vec<std::string> &args, const std::string &str) {
-        int ind = std::distance(args.begin(), std::find(args.begin(), args.end(), str));
-        assert(ind >= 0 and ind < args.size());
-        return ind;
-    }
-
     struct Parser {
         enum ArgType {
             STRING = 1,
@@ -29,6 +23,7 @@ namespace SeqSketch {
             FLOAT = 3,
             BOOL = 4,
             INDIC = 5
+
         };
 
         struct Argument {
@@ -67,6 +62,20 @@ namespace SeqSketch {
                 }
             }
 
+            std::string type2string() const {
+                switch (type) {
+                    case STRING:
+                        return "string";
+                    case INT:
+                        return "int";
+                    case FLOAT:
+                        return "float";
+                    case BOOL:
+                    case INDIC:
+                        return "bool";
+                }
+            }
+
             std::string to_string() const {
                 switch (type) {
                     case STRING:
@@ -84,9 +93,15 @@ namespace SeqSketch {
             std::string help() const {
                 std::string str;
                 str += long_name;
-                str += ", ";
+                str += ",";
                 str += short_name;
-                str += '\t' + description;
+                while (str.size() < 25)
+                    str += " ";
+                str += "" + type2string();
+                while (str.size() < 35)
+                    str += " ";
+                str += ' ' + description;
+                str += " (default: " + this->to_string() + ")";
                 return str;
             }
         };
@@ -113,6 +128,16 @@ namespace SeqSketch {
             for (auto const &[arg_name, arg] : name2arg) {
                 if (arg_name.starts_with("--") == long_names) {
                     str += " " + arg_name + tab + arg.to_string() + sep;
+                }
+            }
+            return str;
+        }
+
+        string config() {
+            string str;
+            for (auto const &[arg_name, arg] : name2arg) {
+                if (arg_name.starts_with("--")) {
+                    str += " " + arg_name + ",\t" + arg.type2string() + ",\t" + arg.to_string() + '\n';
                 }
             }
             return str;
@@ -154,6 +179,7 @@ namespace SeqSketch {
         static const char *const L_MAX_NUM_BLOCKS = "--max-num-blocks";
         static const char *const L_MIN_NUM_BLOCKS = "--min-num-blocks";
         static const char *const L_KMER_SIZE = "--kmer-size";
+        static const char *const L_TUPLE_ON_KMER = "--tuple-on-kmer";
         static const char *const L_TUP_LEN = "--tup-len";
         static const char *const L_EMBED_DIM = "--embed-dim";
         static const char *const L_NUM_PHASES = "--num-phases";
@@ -181,6 +207,7 @@ namespace SeqSketch {
         static const char *const S_NUM_PHASES = "-P";
         static const char *const S_NUM_BINS = "-n";
         static const char *const S_KMER_SIZE = "-K";
+        static const char *const S_TUPLE_ON_KMER = "-tk";
         static const char *const S_TUP_LEN = "-T";
         static const char *const S_EMBED_DIM = "-M";
         static const char *const S_WIN_LEN = "-W";
@@ -202,26 +229,27 @@ namespace SeqSketch {
         static const Argument NUM_SEQS = {L_NUM_SEQS, S_NUM_SEQS, ArgType::INT, "number of sequences to be generated"};
         static const Argument SIG_LEN = {L_SIG_LEN, S_SIG_LEN, ArgType::INT, "sigma, size of the alphabet"};
         static const Argument SEQ_LEN = {L_SEQ_LEN, S_SEQ_LEN, ArgType::INT, "sequence length: the length of sequence to be generated"};
-        static const Argument MAX_NUM_BLOCKS = {L_MAX_NUM_BLOCKS, S_MAX_NUM_BLOCKS, ArgType::INT, " maximum number of blocks for block permutation"};
-        static const Argument MIN_NUM_BLOCKS = {L_MIN_NUM_BLOCKS, S_MIN_NUM_BLOCKS, ArgType::INT, " minimum number of blocks for block permutation"};
-        static const Argument SEQUENCE_SEEDS = {L_SEQUENCE_SEEDS, S_SEQUENCE_SEEDS, ArgType::INT, " number of initial random sequences "};
-        static const Argument MUTATION_PATTERN = {L_MUTATION_PATTERN, S_MUTATION_PATTERN, ArgType::STRING, " the mutational pattern, can be `linear`, or `tree`"};
-        static const Argument BLOCK_MUTATION_RATE = {L_BLOCK_MUTATION_RATE, S_BLOCK_MUTATION_RATE, ArgType::FLOAT, " the probability of having a block permutation"};
-        static const Argument MUTATION_RATE = {L_MUTATION_RATE, S_MUTATION_RATE, ArgType::FLOAT, " rate of point mutation rate for sequence generation"};
+        static const Argument MAX_NUM_BLOCKS = {L_MAX_NUM_BLOCKS, S_MAX_NUM_BLOCKS, ArgType::INT, "maximum number of blocks for block permutation"};
+        static const Argument MIN_NUM_BLOCKS = {L_MIN_NUM_BLOCKS, S_MIN_NUM_BLOCKS, ArgType::INT, "minimum number of blocks for block permutation"};
+        static const Argument SEQUENCE_SEEDS = {L_SEQUENCE_SEEDS, S_SEQUENCE_SEEDS, ArgType::INT, "number of initial random sequences "};
+        static const Argument MUTATION_PATTERN = {L_MUTATION_PATTERN, S_MUTATION_PATTERN, ArgType::STRING, "the mutational pattern, can be 'linear', or 'tree'"};
+        static const Argument BLOCK_MUTATION_RATE = {L_BLOCK_MUTATION_RATE, S_BLOCK_MUTATION_RATE, ArgType::FLOAT, "the probability of having a block permutation"};
+        static const Argument MUTATION_RATE = {L_MUTATION_RATE, S_MUTATION_RATE, ArgType::FLOAT, "rate of point mutation rate for sequence generation"};
         static const Argument NUM_PHASES = {L_NUM_PHASES, S_NUM_PHASES, ArgType::INT, "number of phase to be used for modular arithmetic in tensor sketching"};
-        static const Argument NUM_BINS = {L_NUM_BINS, S_NUM_BINS, ArgType::INT, " number of bins for descritization after tensor sketching"};
+        static const Argument NUM_BINS = {L_NUM_BINS, S_NUM_BINS, ArgType::INT, "number of bins for descritization after tensor sketching"};
         static const Argument KMER_SIZE = {L_KMER_SIZE, S_KMER_SIZE, ArgType::INT, "kmer length, used for sequence to kmer transformation"};
+        static const Argument TUPLE_ON_KMER = {L_TUPLE_ON_KMER, S_TUPLE_ON_KMER, ArgType::INDIC, "apply tuple-based methods (OMH, TensorSketch, and TenSlide), on kmer sequence"};
         static const Argument TUP_LEN = {L_TUP_LEN, S_TUP_LEN, ArgType::INT, "ordered tuple length, used in ordered MinHash and Tensor-based sketches"};
-        static const Argument EMBED_DIM = {L_EMBED_DIM, S_EMBED_DIM, ArgType::INT, " embedding dimension, used for all sketching methods"};
-        static const Argument WIN_LEN = {L_WIN_LEN, S_WIN_LEN, ArgType::INT, " window length: the size of sliding window, which will be all sketched"};
-        static const Argument STRIDE = {L_STRIDE, S_STRIDE, ArgType::INT, " stride for sliding window: shift step for sliding window"};
-        static const Argument OFFSET = {L_OFFSET, S_OFFSET, ArgType::INT, " initial index to start the sliding window"};
-        static const Argument SKETCH_METHOD = {L_SKETCH_METHOD, S_SKETCH_METHOD, ArgType::STRING, " the sketching method to use, options are MH, WMH, OMH, TenSketch, TenSlide"};
-        static const Argument DIRECTORY = {L_DIRECTORY, S_DIRECTORY, ArgType::STRING, " working directory for input/output reading/writing"};
-        static const Argument OUTPUT = {L_OUTPUT, S_OUTPUT, ArgType::STRING, " output file path"};
-        static const Argument INPUT = {L_INPUT, S_INPUT, ArgType::STRING, " input file path"};
-        static const Argument FORMAT_INPUT = {L_FORMAT_INPUT, S_FORMAT_INPUT, ArgType::STRING, " input format: fasta, csv"};
-        static const Argument SHOW_HELP = {L_SHOW_HELP, S_SHOW_HELP, ArgType::INDIC, " show this help "};
+        static const Argument EMBED_DIM = {L_EMBED_DIM, S_EMBED_DIM, ArgType::INT, "embedding dimension, used for all sketching methods"};
+        static const Argument WIN_LEN = {L_WIN_LEN, S_WIN_LEN, ArgType::INT, "window length: the size of sliding window, which will be all sketched"};
+        static const Argument STRIDE = {L_STRIDE, S_STRIDE, ArgType::INT, "stride for sliding window: shift step for sliding window"};
+        static const Argument OFFSET = {L_OFFSET, S_OFFSET, ArgType::INT, "initial index to start the sliding window"};
+        static const Argument SKETCH_METHOD = {L_SKETCH_METHOD, S_SKETCH_METHOD, ArgType::STRING, "the sketching method to use, options are MH, WMH, OMH, TenSketch, TenSlide"};
+        static const Argument DIRECTORY = {L_DIRECTORY, S_DIRECTORY, ArgType::STRING, "working directory for input/output reading/writing"};
+        static const Argument OUTPUT = {L_OUTPUT, S_OUTPUT, ArgType::STRING, "output file path"};
+        static const Argument INPUT = {L_INPUT, S_INPUT, ArgType::STRING, "input file path"};
+        static const Argument FORMAT_INPUT = {L_FORMAT_INPUT, S_FORMAT_INPUT, ArgType::STRING, "input format, options: 'fasta', 'csv'"};
+        static const Argument SHOW_HELP = {L_SHOW_HELP, S_SHOW_HELP, ArgType::INDIC, "show this help "};
     }// namespace ArgDefs
 
     //    using namespace Argument;
@@ -256,6 +284,7 @@ namespace SeqSketch {
         string sketch_method;
         int embed_dim;
         int tup_len;
+        bool tuple_on_kmer;
         int num_phases;
         int num_bins;
         int win_len;
@@ -287,6 +316,7 @@ namespace SeqSketch {
             add(&sketch_method, ArgDefs::SKETCH_METHOD);
             add(&embed_dim, ArgDefs::EMBED_DIM);
             add(&tup_len, ArgDefs::TUP_LEN);
+            add(&tuple_on_kmer, ArgDefs::TUPLE_ON_KMER);
             add(&num_phases, ArgDefs::NUM_PHASES);
             add(&num_bins, ArgDefs::NUM_BINS);
             add(&win_len, ArgDefs::WIN_LEN);
@@ -307,6 +337,7 @@ namespace SeqSketch {
             kmer_size = 2;
             embed_dim = 128;
             tup_len = 2;
+            bool tuple_on_kmer = false;
             num_phases = 2;
             num_bins = 255;
             win_len = 32;

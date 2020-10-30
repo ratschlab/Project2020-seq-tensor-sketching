@@ -39,7 +39,7 @@ struct SketchModule : public BasicModule {
         stride = 8;
         offset = 0;
         show_help = false;
-        sketch_method = "TenSketch";
+        sketch_method = "TenSlide";
     }
 
     Vec2D<seq_type> seqs;
@@ -101,7 +101,7 @@ struct SketchModule : public BasicModule {
                     std::stringstream ss(line);
                     string item;
                     while (std::getline(ss, item, ',')) {
-                        seq.push_back(std::stoi(item));
+                        seq.push_back(std::stoi(item, 0, 16));
                     }
                 } else {
                     std::cerr << " input format `" << format_input << "` does not exist\n";
@@ -160,9 +160,13 @@ struct SketchModule : public BasicModule {
         fo << "# " << argvals() << "\n";
         for (int si = 0; si < slide_sketch.size(); si++) {
             for (int m = 0; m < slide_sketch[si].size(); m++) {
-                fo << seq_names[si] << ">" << m << "\n";
+                fo << seq_names[si] << ">" << std::dec << m << "\n";
                 for (int i = 0; i < slide_sketch[si][m].size(); i++) {
-                    fo << slide_sketch[si][m][i] << ",";
+                    if (num_bins == 0) {
+                        fo << slide_sketch[si][m][i] << ",";
+                    } else {
+                        fo << std::hex << (int) slide_sketch[si][m][i] << ",";
+                    }
                 }
                 fo << "\n";
             }
@@ -173,7 +177,7 @@ struct SketchModule : public BasicModule {
 };
 
 int main(int argc, char *argv[]) {
-    SketchModule<int, int> sketchModule;
+    SketchModule<int, double> sketchModule;
     sketchModule.parse(argc, argv);
     sketchModule.models_init();
     sketchModule.read_fasta();

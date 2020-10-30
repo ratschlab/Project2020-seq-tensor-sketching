@@ -35,19 +35,13 @@ namespace SeqSketch {
     }
 
     inline int sketch_end(int offset, int len) {
-        return len - offset + 1;
+        return len - offset;
     }
 
     inline bool sketch_now(int i, int len, int stride, int off) {
         return (i >= off) and ((i - off) % stride == 0) and (i < sketch_end(off, len));
     }
 
-    int sketch_len(int offset, int seq_len) {
-        int len = sketch_end(offset, seq_len) - offset;
-        assert(len % offset == 0);
-        return len / offset;
-    }
-    using namespace BasicTypes;
     template<class T>
     T l1(const Vec<T> &vec) {
         T sum = 0;
@@ -158,9 +152,6 @@ namespace SeqSketch {
 
     template<class T>
     T median_dist(const Vec<T> &a, const Vec<T> &b) {
-        //        Vec<T> res;
-        //        res.reserve(a.size());
-        //        std::transform(a.begin(), a.end(), b.begin(), res.begin(), std::minus<T>());
         auto res = a - b;
         std::transform(res.begin(), res.end(), res.begin(), [](const T a) { return (a > 0) ? a : -a; });
         std::sort(res.begin(), res.end());

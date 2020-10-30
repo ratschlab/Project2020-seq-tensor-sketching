@@ -15,23 +15,23 @@ namespace SeqSketch {
     using namespace BasicTypes;
     using string = std::string;
 
-    template<class seq_type>
-    void read_fasta(Vec2D<seq_type> &seqs, Vec<string> &seq_names, const string &filename, const std::map<char, int> &tr, int max_num_seqs = 1000) {
-        std::ifstream infile(filename);
-        string line;
-        int si = -1;
-        while (std::getline(infile, line) and seqs.size() <= max_num_seqs) {
-            if (line[0] == '>') {
-                si++;
-                seqs.push_back(Vec<seq_type>());
-                seq_names.push_back(line);
-            } else {
-                for (char c : line) {
-                    seqs[si].push_back(tr[c]);
-                }
-            }
-        }
-    }
+    //    template<class seq_type>
+    //    void read_fasta(Vec2D<seq_type> &seqs, Vec<string> &seq_names, const string &filename, const std::map<char, int> &tr, int max_num_seqs = 1000) {
+    //        std::ifstream infile(filename);
+    //        string line;
+    //        int si = -1;
+    //        while (std::getline(infile, line) and seqs.size() <= max_num_seqs) {
+    //            if (line[0] == '>') {
+    //                si++;
+    //                seqs.push_back(Vec<seq_type>());
+    //                seq_names.push_back(line);
+    //            } else {
+    //                for (char c : line) {
+    //                    seqs[si].push_back(tr[c]);
+    //                }
+    //            }
+    //        }
+    //    }
 
     template<class seq_type, class embed_type, class size_type = std::size_t>
     void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
@@ -149,6 +149,29 @@ namespace SeqSketch {
                     make_fix_len(seqs[si]);
             }
         }
+        template<class T>
+        void genseqs_pairs(Vec<Seq<T>> &seqs) {
+            seqs = Vec2D<T>(num_seqs, Vec<T>());
+            assert(num_seqs % 2 == 0);
+            for (int si = 0; si < seqs.size(); si++) {
+                gen_seq(seqs[si]);
+            }
+            for (int si = 0; si < num_seqs; si += 2) {
+                int lcs = si * seq_len / num_seqs;
+                Vec<int> perm(seq_len), perm2(seq_len);
+                std::iota(perm.begin(), perm.end(), 0);
+                std::shuffle(perm.begin(), perm.end(), gen);
+                std::iota(perm2.begin(), perm2.end(), 0);
+                std::shuffle(perm2.begin(), perm2.end(), gen);
+
+                std::sort(perm.begin(), perm.begin() + lcs);
+                std::sort(perm2.begin(), perm2.begin() + lcs);
+                for (int i = 0; i < lcs; i++) {
+                    seqs[si][perm[i]] = seqs[si + 1][perm2[i]];
+                }
+            }
+        }
+
 
         template<class T>
         void genseqs_tree(Vec<Seq<T>> &seqs, int sequence_seeds) {
@@ -165,6 +188,7 @@ namespace SeqSketch {
                     block_permute(ch1);
                     point_mutate(seq, ch2);
                     block_permute(ch2);
+                    ch1 = seq;
                     children.push_back(ch1);
                     children.push_back(ch2);
                 }

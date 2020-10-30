@@ -3,7 +3,6 @@
 
 #include "args.hpp"
 #include "modules.hpp"
-#include "seqtool.hpp"
 #include "utils.hpp"
 
 using namespace SeqSketch;
@@ -43,7 +42,6 @@ struct SeqGenModule : BasicModule {
     }
 
     void generate_sequences() {
-        auto ind = arg_index({"linear", "tree"}, mutation_pattern);
         if (mutation_pattern == "linear") {
             seq_gen.genseqs_linear(seqs);
         } else if (mutation_pattern == "tree") {

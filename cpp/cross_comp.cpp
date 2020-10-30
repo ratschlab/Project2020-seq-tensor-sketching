@@ -5,7 +5,6 @@
 #include "modules.hpp"
 #include "seqtool.hpp"
 #include "utils.hpp"
-#include <filesystem>
 
 using namespace SeqSketch;
 using namespace BasicTypes;
@@ -107,6 +106,7 @@ struct SeqGenModule {
             std::cerr << " mutation pattern `" << basicModules.mutation_pattern << "` is not valid\n";
             exit(1);
         }
+        write_fasta(seqs);
     }
 
     void compute_sketches() {
@@ -121,13 +121,7 @@ struct SeqGenModule {
             seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.sig_len);
             minhash(kmer_seqs[si], mh_sketch[si], kmerModules.mh_params);
             weighted_minhash(kmer_seqs[si], wmh_sketch[si], kmerModules.wmh_params);
-            if (basicModules.tuple_on_kmer) {
-                ordered_minhash_flat(kmer_seqs[si], omh_sketch[si], kmerModules.omh_params);
-                //                tensor_sketch(kmer_seqs[si], ten_sketch[si], kmerModules.tensor_params);
-                //                tensor_slide_sketch(kmer_seqs[si], slide_sketch[si], kmerModules.tensor_slide_params);
-            } else {
-                ordered_minhash_flat(seqs[si], omh_sketch[si], basicModules.omh_params);
-            }
+            ordered_minhash_flat(seqs[si], omh_sketch[si], basicModules.omh_params);
             tensor_sketch(seqs[si], ten_sketch[si], basicModules.tensor_params);
             tensor_slide_sketch(seqs[si], slide_sketch[si], basicModules.tensor_slide_params);
         }
@@ -164,15 +158,9 @@ struct SeqGenModule {
         Vec<string> method_names = {"ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide"};
         std::ofstream fo;
 
-        std::filesystem::remove_all(std::filesystem::path(output));
-        std::filesystem::create_directories(std::filesystem::path(output + "/dists"));
-        std::filesystem::create_directories(std::filesystem::path(output + "/sketches"));
-
         fo.open(output + "conf.csv");
         fo << basicModules.config();
         fo.close();
-
-        write_fasta(seqs);
 
         int num_seqs = seqs.size();
         for (int m = 0; m < 6; m++) {
@@ -249,7 +237,6 @@ struct SeqGenModule {
             fo << "\n";
         }
         fo.close();
-
     }
 };
 

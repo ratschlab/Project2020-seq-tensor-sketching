@@ -44,14 +44,12 @@ namespace SeqSketch {
                     icdf[m][p] = (p % 2 == 0) ? 1 : -1;// use oddity of p to assign (-1) or (1)
                 }
             }
-            num_bins -= 2;
             bins = Vec<double>(num_bins);
             for (int b = 0; b < num_bins; b++) {
                 bins[b] = std::tan(pie * (((double) b + .5) / num_bins - .5));
             }
             bins.push_back(std::numeric_limits<double>::max());
             bins.insert(bins.begin(), -std::numeric_limits<double>::min());
-            num_bins += 2;
         }
     };
 
@@ -79,7 +77,11 @@ namespace SeqSketch {
             //            frexp(prod, &exp);
             //            embedding[m]= exp * sgn(prod);
             embed_type bin = std::upper_bound(params.bins.begin(), params.bins.begin() + params.num_bins, prod) - params.bins.begin();
-            embedding[m] = bin;
+            if (params.num_bins == 0) {
+                embedding[m] = prod;
+            } else {
+                embedding[m] = bin;
+            }
         }
     }
 
