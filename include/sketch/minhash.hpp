@@ -24,6 +24,7 @@ namespace SeqSketch {
 
     template<class seq_type, class embed_type>
     void minhash(const Seq<seq_type> &seq, Vec<embed_type> &embed, const MHParams &params) {
+        start_timer("minhash");
         embed = Vec<embed_type>(params.embed_dim);
         for (int m = 0; m < params.embed_dim; m++) {
             seq_type min_char;
@@ -37,6 +38,7 @@ namespace SeqSketch {
             }
             embed[m] = min_char;
         }
+        stop_timer();
     }
 }// namespace SeqSketch
 

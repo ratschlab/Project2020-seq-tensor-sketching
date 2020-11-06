@@ -337,7 +337,7 @@ namespace SeqSketch {
             kmer_size = 2;
             embed_dim = 128;
             tup_len = 2;
-            bool tuple_on_kmer = false;
+            tuple_on_kmer = false;
             num_phases = 2;
             num_bins = 255;
             win_len = 32;

@@ -35,6 +35,7 @@ namespace SeqSketch {
 
     template<class seq_type, class embed_type, class size_type = std::size_t>
     void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
+        start_timer("seq2kmer");
         vec = Vec<embed_type>(seq.size() - kmer_size + 1);
         for (size_type i = 0; i < vec.size(); i++) {
             size_type c = 1;
@@ -43,6 +44,7 @@ namespace SeqSketch {
                 c *= sig_len;
             }
         }
+        stop_timer();
     }
 
     struct SeqGen {
@@ -122,6 +124,36 @@ namespace SeqSketch {
         }
 
         template<class T>
+        void random_edit(const Seq<T> &ref) {
+            std::discrete_distribution<int> mut{1.0 / 3, 1.0 / 3, 1.0};
+            std::uniform_int_distribution<T> rchar(0, sig_len - 1);
+            std::uniform_int_distribution<size_t> rpos_inc(0, seq_len);    // inclusinve of seq_len, insertion to the very end
+            std::uniform_int_distribution<size_t> rpos_exc(0, seq_len - 1);// inclusinve of seq_len, insertion to the very end
+            switch (mut(gen)) {
+                case 0: {// insert
+                    auto pos = rpos_inc(gen);
+                    auto c = rchar(gen);
+                    ref.insert(ref.begin(), c);
+                    break;
+                }
+                case 1: {// delete
+                    auto pos = rpos_exc(gen);
+                    break;
+                }
+                case 2: {// substitute
+                    auto pos = rpos_exc(gen);
+                    auto c = rchar(gen);
+                    if (c == ref[pos]) {
+                        c++;
+                        c = (c % seq_len);
+                    }
+                    ref[pos] = c;
+                    break;
+                }
+            }
+        }
+
+        template<class T>
         void make_fix_len(Seq<T> &seq) {
             std::uniform_int_distribution<T> unif(0, sig_len - 1), blocks(min_num_blocks, max_num_blocks);
             if (seq.size() > seq_len) {
@@ -191,6 +223,28 @@ namespace SeqSketch {
                     ch1 = seq;
                     children.push_back(ch1);
                     children.push_back(ch2);
+                }
+                std::swap(seqs, children);
+            }
+            seqs.resize(num_seqs);
+            for (auto &seq : seqs)
+                if (fix_len)
+                    make_fix_len(seq);
+        }
+
+
+        template<class T>
+        void genseqs_tree2(Vec<Seq<T>> &seqs) {
+            // TODO get this to get input from command line
+            seqs = Vec2D<T>(1, Vec<T>());
+            gen_seq(seqs[0]);
+
+            Vec<Seq<T>> children;
+            while (seqs.size() < num_seqs) {
+                for (auto &seq : seqs) {
+                    Seq<T> child(seq);
+                    children.push_back(seq);
+                    children.push_back(child);
                 }
                 std::swap(seqs, children);
             }

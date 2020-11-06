@@ -169,7 +169,13 @@ struct SeqGenModule {
         std::filesystem::create_directories(std::filesystem::path(output + "/sketches"));
 
         fo.open(output + "conf.csv");
+        assert(fo.is_open());
         fo << basicModules.config();
+        fo.close();
+
+        fo.open(output + "timing.csv");
+        assert(fo.is_open());
+        fo << output_timing();
         fo.close();
 
         write_fasta(seqs);

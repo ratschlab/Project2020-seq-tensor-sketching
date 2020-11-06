@@ -18,6 +18,7 @@ namespace SeqSketch {
 
     template<class seq_type, class embed_type>
     void tensor_slide_sketch(const Seq<seq_type> &seq, Vec2D<embed_type> &embedding, const TensorSlideParams &params) {
+        start_timer("tensor_slide_sketch");
         embedding = Vec2D<embed_type>(params.embed_dim, Vec<embed_type>());
         for (int m = 0; m < params.embed_dim; m++) {
             auto cnt = new3D<float>(params.tup_len, params.tup_len, params.num_phases, 0);
@@ -60,6 +61,7 @@ namespace SeqSketch {
                 }
             }
         }
+        stop_timer();
     }
 
 }// namespace SeqSketch
