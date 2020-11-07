@@ -1,7 +1,0 @@
- edit_distance,	ED,	2242286328
- minhash,	MH,	8334766
- ordered_minhash_flat,	OMH,	327526550
- seq2kmer,	,	256487
- tensor_sketch,	TenSketch,	98512367
- tensor_slide_sketch,	TenSlide,	35311807
- weighted_minhash,	WMH,	13872815

@@ -1,5 +1,0 @@
-/cluster/home/ajoudaki/Project2020-seq-tensor-sketching/build/CMakeFiles/rebuild_cache.dir
-/cluster/home/ajoudaki/Project2020-seq-tensor-sketching/build/CMakeFiles/edit_cache.dir
-/cluster/home/ajoudaki/Project2020-seq-tensor-sketching/build/CMakeFiles/seqgen.dir
-/cluster/home/ajoudaki/Project2020-seq-tensor-sketching/build/CMakeFiles/exp_pairwise.dir
-/cluster/home/ajoudaki/Project2020-seq-tensor-sketching/build/CMakeFiles/sketch.dir

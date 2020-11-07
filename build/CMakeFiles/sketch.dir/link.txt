@@ -1,1 +1,0 @@
-/cluster/spack/apps/linux-centos7-x86_64/gcc-4.8.5/gcc-7.1.0-6ulpdnwxmmaxihax7m4tkbuo63dvwzfe/bin/g++   -O0   CMakeFiles/sketch.dir/cpp/sketch.cpp.o  -o sketch 
