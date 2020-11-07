@@ -6,6 +6,8 @@
 #define SEQUENCE_SKETCHING_UTILS_HPP
 
 #include "args.hpp"
+#include <assert.h>
+#include <algorithm>
 #include <chrono>
 
 namespace SeqSketch {

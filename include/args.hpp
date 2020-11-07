@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "utils.hpp"
@@ -126,7 +127,7 @@ namespace SeqSketch {
         string argvals(bool long_names = true, char sep = ' ', char tab = ' ') {
             string str;
             for (auto const &[arg_name, arg] : name2arg) {
-                if (arg_name.starts_with("--") == long_names) {
+                if ((arg_name.find("--") != std::string::npos) == long_names) {
                     str += " " + arg_name + tab + arg.to_string() + sep;
                 }
             }
@@ -136,7 +137,7 @@ namespace SeqSketch {
         string config() {
             string str;
             for (auto const &[arg_name, arg] : name2arg) {
-                if (arg_name.starts_with("--")) {
+                if (arg_name.find("--") != std::string::npos) {
                     str += " " + arg_name + ",\t" + arg.type2string() + ",\t" + arg.to_string() + '\n';
                 }
             }

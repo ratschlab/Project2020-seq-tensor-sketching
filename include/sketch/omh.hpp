@@ -5,6 +5,7 @@
 #ifndef SEQUENCE_SKETCHING_OMH_HPP
 #define SEQUENCE_SKETCHING_OMH_HPP
 #include "vectool.hpp"
+#include "utils.hpp"
 
 namespace SeqSketch {
 
@@ -14,14 +15,16 @@ namespace SeqSketch {
         int embed_dim;
         int tup_len;
 
-        MultiVec<int, int> perms;
+        Vec2D<int> perms;
 
         void init_rand() {
             std::random_device rd;
             auto gen = std::mt19937(rd());
             // Dimensions: #perms X #sig X max-len
             std::vector<int> dims{max_len, sig_len, embed_dim};
-            perms.init(dims, 0);
+            int total_len = sig_len * max_len; 
+            perms = Vec2D<int>(embed_dim, Vec<int>(total_len,0));
+//            perms.init(dims, 0);
             for (int pi = 0; pi < embed_dim; pi++) {
                 std::iota(perms[pi].begin(), perms[pi].end(), 0);
                 std::shuffle(perms[pi].begin(), perms[pi].end(), gen);
@@ -36,7 +39,7 @@ namespace SeqSketch {
             Vec<size_type> counts(params.sig_len, 0);
             Vec<std::pair<embed_type, size_type>> ranks;
             for (auto s : seq) {
-                ranks.push_back({params.perms[pi][s][counts[s]], s});
+                ranks.push_back({params.perms[pi][s + params.sig_len* counts[s]], s});
                 counts[s]++;
             }
             std::sort(ranks.begin(), ranks.end());

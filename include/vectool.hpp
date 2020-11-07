@@ -26,6 +26,48 @@ namespace SeqSketch {
         return Vec3D<T>(d1, new2D(d2, d3, val));
     }
 
+    // utility functions for len^D-dimensional tensor
+    template<class T, class = is_u_integral<T>>
+    bool increment_sub(Vec<T> &sub, T len) {
+        sub[0]++;
+        T i = 0;
+        while (sub[i] >= len) {
+            sub[i++] = 0;
+            if (i >= sub.size())
+                return false;
+            sub[i]++;
+        }
+        return true;
+    }
+
+    template<class T, class = is_u_integral<T>>
+    T sub2ind(const Vec<T> &sub, T len) {
+        T ind = 0, coef = 1;
+        for (size_t i = 0; i < sub.size(); i++) {
+            ind += sub[i] * coef;
+            coef *= len;
+        }
+        return ind;
+    }
+
+    template<class T, class = is_u_integral<T>>
+    T int_pow(T x, T pow) {
+        if (pow == 0) return 1;
+        if (pow == 1) return x;
+
+        T tmp = int_pow(x, pow / 2);
+        if (pow % 2 == 0) return tmp * tmp;
+        else
+            return x * tmp * tmp;
+    }
+
+/*
+    template<class T>
+    bool is_ascending(const Vec<T> &v) {
+        auto next = std::adjacent_find(v.begin(), v.end(), std::__1::less_equal<T>());
+        return (next == v.end());
+    }
+
     template<class T>
     Vec<T> &operator-=(Vec<T> &a, const Vec<T> &b) {
         assert(a.size() == b.size());
@@ -71,46 +113,6 @@ namespace SeqSketch {
         return res;
     }
 
-    // utility functions for len^D-dimensional tensor
-    template<class T, class = is_u_integral<T>>
-    bool increment_sub(Vec<T> &sub, T len) {
-        sub[0]++;
-        T i = 0;
-        while (sub[i] >= len) {
-            sub[i++] = 0;
-            if (i >= sub.size())
-                return false;
-            sub[i]++;
-        }
-        return true;
-    }
-
-    template<class T, class = is_u_integral<T>>
-    T sub2ind(const Vec<T> &sub, T len) {
-        T ind = 0, coef = 1;
-        for (size_t i = 0; i < sub.size(); i++) {
-            ind += sub[i] * coef;
-            coef *= len;
-        }
-        return ind;
-    }
-
-    template<class T, class = is_u_integral<T>>
-    T int_pow(T x, T pow) {
-        if (pow == 0) return 1;
-        if (pow == 1) return x;
-
-        T tmp = int_pow(x, pow / 2);
-        if (pow % 2 == 0) return tmp * tmp;
-        else
-            return x * tmp * tmp;
-    }
-
-    template<class T>
-    bool is_ascending(const Vec<T> &v) {
-        auto next = std::adjacent_find(v.begin(), v.end(), std::__1::less_equal<T>());
-        return (next == v.end());
-    }
 
 
 
@@ -317,6 +319,8 @@ namespace SeqSketch {
         }
         return os;
     }
+*/
+
 }// namespace VecTools
 #define SEQUENCE_SKETCHING_MULTIVEC_H
 
