@@ -9,10 +9,9 @@
 #include <iostream>
 #include <map>
 #include <string>
-#include <string_view>
 #include <vector>
-
 #include "utils.h"
+#include <string_view>
 
 namespace SeqSketch {
     using namespace BasicTypes;

@@ -6,8 +6,8 @@
 #include "seqgen.h"
 #include "timer.h"
 #include "utils.h"
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem::v1;
+#include <filesystem>
+namespace fs = std::filesystem;
 
 using namespace SeqSketch;
 using namespace BasicTypes;

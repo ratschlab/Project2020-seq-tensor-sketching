@@ -1,0 +1,38 @@
+Sender: LSF System <lsfadmin@le-a2-002>
+Subject: Job 855667: <./exp --mutation-pattern pairs --seq-len 200000 --num-seqs 20 --kmer-size 3 --tup-len 3 --embed-dim 30 -o fig3/large2/> in cluster <ethsec> Exited
+
+Job <./exp --mutation-pattern pairs --seq-len 200000 --num-seqs 20 --kmer-size 3 --tup-len 3 --embed-dim 30 -o fig3/large2/> was submitted from host <ethsec-login-02> by user <ajoudaki> in cluster <ethsec> at Fri Nov  6 14:22:42 2020
+Job was executed on host(s) <le-a2-002>, in queue <normal.4h>, as user <ajoudaki> in cluster <ethsec> at Fri Nov  6 14:22:48 2020
+</cluster/home/ajoudaki> was used as the home directory.
+</cluster/home/ajoudaki/Project2020-seq-tensor-sketching/build> was used as the working directory.
+Started at Fri Nov  6 14:22:48 2020
+Terminated at Fri Nov  6 14:43:47 2020
+Results reported at Fri Nov  6 14:43:47 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+./exp --mutation-pattern pairs --seq-len 200000 --num-seqs 20 --kmer-size 3 --tup-len 3 --embed-dim 30 -o fig3/large2/
+------------------------------------------------------------
+
+Exited with exit code 134.
+
+Resource usage summary:
+
+    CPU time :                                   1257.15 sec.
+    Max Memory :                                 9444 MB
+    Average Memory :                             9127.79 MB
+    Total Requested Memory :                     80000.00 MB
+    Delta Memory :                               70556.00 MB
+    Max Swap :                                   -
+    Max Processes :                              3
+    Max Threads :                                4
+    Run time :                                   1279 sec.
+    Turnaround time :                            1265 sec.
+
+The output (if any) follows:
+
+terminate called after throwing an instance of 'std::experimental::filesystem::v1::__cxx11::filesystem_error'
+  what():  filesystem error: cannot remove all: No such file or directory [./fig3/large2/]
+/cluster/shadow/.lsbatch/1604668962.855667: line 8:  2425 Aborted                 ./exp --mutation-pattern pairs --seq-len 200000 --num-seqs 20 --kmer-size 3 --tup-len 3 --embed-dim 30 -o fig3/large2/
