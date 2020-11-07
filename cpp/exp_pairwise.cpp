@@ -103,6 +103,7 @@ struct SeqGenModule {
             basicModules.seq_gen.genseqs_linear(seqs);
         } else if (basicModules.mutation_pattern == "tree") {
             basicModules.seq_gen.genseqs_tree(seqs, basicModules.sequence_seeds);
+            //            basicModules.seq_gen.genseqs_tree2(seqs);
         } else {
             std::cerr << " mutation pattern `" << basicModules.mutation_pattern << "` is not valid\n";
             exit(1);

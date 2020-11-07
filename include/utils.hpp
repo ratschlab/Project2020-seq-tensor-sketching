@@ -6,9 +6,10 @@
 #define SEQUENCE_SKETCHING_UTILS_HPP
 
 #include "args.hpp"
-#include <assert.h>
 #include <algorithm>
+#include <cassert>
 #include <chrono>
+#include <utility>
 
 namespace SeqSketch {
     using namespace std::chrono;
@@ -37,12 +38,12 @@ namespace SeqSketch {
 
     auto last_time = high_resolution_clock::now();
 
-    std::string last_func("");
+    std::string last_func;
 
     void start_timer(std::string func_name) {
-        assert(last_func == "");
+        assert(last_func.empty());
         last_time = high_resolution_clock::now();
-        last_func = func_name;
+        last_func = std::move(func_name);
     }
 
     void stop_timer() {
