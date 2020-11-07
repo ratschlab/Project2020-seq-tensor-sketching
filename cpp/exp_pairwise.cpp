@@ -5,7 +5,8 @@
 #include "modules.hpp"
 #include "seqtool.hpp"
 #include "utils.hpp"
-#include <filesystem>
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem::v1;
 
 using namespace SeqSketch;
 using namespace BasicTypes;
@@ -164,9 +165,12 @@ struct SeqGenModule {
         Vec<string> method_names = {"ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide"};
         std::ofstream fo;
 
-        std::filesystem::remove_all(std::filesystem::path(output));
-        std::filesystem::create_directories(std::filesystem::path(output + "/dists"));
-        std::filesystem::create_directories(std::filesystem::path(output + "/sketches"));
+        //std::filesystem::remove_all(std::filesystem::path(output));
+        //std::filesystem::create_directories(std::filesystem::path(output + "/dists"));
+        //std::filesystem::create_directories(std::filesystem::path(output + "/sketches"));
+        fs::remove_all(fs::path(output));
+        fs::create_directories(fs::path(output + "/dists"));
+        fs::create_directories(fs::path(output + "/sketches"));
 
         fo.open(output + "conf.csv");
         assert(fo.is_open());
