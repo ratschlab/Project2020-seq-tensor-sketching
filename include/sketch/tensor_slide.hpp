@@ -5,7 +5,6 @@
 #ifndef SEQUENCE_SKETCHING_TENSOR_SLIDE_H
 #define SEQUENCE_SKETCHING_TENSOR_SLIDE_H
 
-#include "../../cpp/legacy/vectool.hpp"
 #include "tensor.hpp"
 
 namespace SeqSketch {

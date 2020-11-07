@@ -4,7 +4,6 @@
 
 #ifndef SEQUENCE_SKETCHING_OMH_HPP
 #define SEQUENCE_SKETCHING_OMH_HPP
-#include "../../cpp/legacy/vectool.hpp"
 #include "utils.hpp"
 
 namespace SeqSketch {
