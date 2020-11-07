@@ -8,6 +8,8 @@
 #include <cmath>
 #include <cstdio>
 
+#include "subindex.h"
+
 namespace SeqSketch {
 
 
