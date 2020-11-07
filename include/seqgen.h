@@ -1,7 +1,7 @@
 //
 // Created by Amir Joudaki on 6/9/20.
 //
-#ifndef SEQUENCE_SKETCHING_UTILS_H
+#ifndef SEQUENCE_SKETCHING_SEQGEN_H
 
 #include <algorithm>
 #include <functional>
@@ -35,7 +35,7 @@ namespace SeqSketch {
 
     template<class seq_type, class embed_type, class size_type = std::size_t>
     void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
-        start_timer("seq2kmer");
+        Timer::start("seq2kmer");
         vec = Vec<embed_type>(seq.size() - kmer_size + 1);
         for (size_type i = 0; i < vec.size(); i++) {
             size_type c = 1;
@@ -44,7 +44,7 @@ namespace SeqSketch {
                 c *= sig_len;
             }
         }
-        stop_timer();
+        Timer::stop();
     }
 
     struct SeqGen {
@@ -258,6 +258,6 @@ namespace SeqSketch {
 }// namespace SeqSketch
 
 
-#define SEQUENCE_SKETCHING_UTILS_H
+#define SEQUENCE_SKETCHING_SEQGEN_H
 
-#endif//SEQUENCE_SKETCHING_UTILS_H
+#endif//SEQUENCE_SKETCHING_SEQGEN_H

@@ -2,8 +2,8 @@
 // Created by Amir Joudaki on 11/7/20.
 //
 
-#ifndef SEQUENCE_SKETCHING_SUBINDEX_H
-#define SEQUENCE_SKETCHING_SUBINDEX_H
+#ifndef SEQUENCE_SKETCHING_MULTIVEC_H
+#define SEQUENCE_SKETCHING_MULTIVEC_H
 
 #include "args.hpp"
 
@@ -55,4 +55,4 @@ namespace SeqSketch {
     }
 }// namespace SeqSketch
 
-#endif//SEQUENCE_SKETCHING_SUBINDEX_H
+#endif//SEQUENCE_SKETCHING_MULTIVEC_H

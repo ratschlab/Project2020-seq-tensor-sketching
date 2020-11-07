@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include "subindex.h"
+#include "multivec.h"
 
 namespace SeqSketch {
 
@@ -58,7 +58,7 @@ namespace SeqSketch {
 
     template<class seq_type, class embed_type>
     void tensor_sketch(const Seq<seq_type> &seq, Vec<embed_type> &embedding, const TensorParams &params) {
-        start_timer("tensor_sketch");
+        Timer::start("tensor_sketch");
         embedding = Vec<embed_type>(params.embed_dim, 0);
         for (int m = 0; m < params.embed_dim; m++) {
             auto cnt = new2D<double>(params.tup_len + 1, params.num_phases, 0);
@@ -86,7 +86,7 @@ namespace SeqSketch {
                 embedding[m] = bin;
             }
         }
-        stop_timer();
+        Timer::stop();
     }
 
 

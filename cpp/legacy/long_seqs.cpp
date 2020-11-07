@@ -3,8 +3,8 @@
 
 #include "args.hpp"
 #include "modules.hpp"
-#include "seqtool.hpp"
-#include "utils.hpp"
+#include "seqgen.h"
+#include "utils.h"
 
 using namespace SeqSketch;
 using namespace BasicTypes;

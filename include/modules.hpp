@@ -5,7 +5,7 @@
 #ifndef SEQUENCE_SKETCHING_MODULES_H
 
 #include "args.hpp"
-#include "seqtool.hpp"
+#include "seqgen.h"
 #include "sketch/minhash.hpp"
 #include "sketch/omh.hpp"
 #include "sketch/tensor.hpp"

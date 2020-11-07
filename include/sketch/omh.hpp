@@ -4,7 +4,7 @@
 
 #ifndef SEQUENCE_SKETCHING_OMH_HPP
 #define SEQUENCE_SKETCHING_OMH_HPP
-#include "utils.hpp"
+#include "utils.h"
 
 namespace SeqSketch {
 
@@ -53,7 +53,7 @@ namespace SeqSketch {
     template<class seq_type, class embed_type, class size_type = std::size_t>
     void ordered_minhash_flat(const Seq<seq_type> &seq, Vec<embed_type> &embed,
                               const OMHParams &params) {
-        start_timer("ordered_minhash_flat");
+        Timer::start("ordered_minhash_flat");
         Vec2D<embed_type> embed2D;
         ordered_minhash(seq, embed2D, params);
         for (const auto &tuple : embed2D) {
@@ -68,7 +68,7 @@ namespace SeqSketch {
         }
 
         //        embed.push_back(num);
-        stop_timer();
+        Timer::stop();
     }
 }// namespace SeqSketch
 

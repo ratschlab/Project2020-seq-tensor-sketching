@@ -3,7 +3,7 @@
 
 #include "args.hpp"
 #include "modules.hpp"
-#include "utils.hpp"
+#include "utils.h"
 
 using namespace SeqSketch;
 using namespace BasicTypes;

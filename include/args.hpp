@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-#include "utils.hpp"
+#include "utils.h"
 
 namespace SeqSketch {
     using namespace BasicTypes;

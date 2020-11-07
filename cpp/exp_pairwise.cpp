@@ -3,8 +3,9 @@
 
 #include "args.hpp"
 #include "modules.hpp"
-#include "seqtool.hpp"
-#include "utils.hpp"
+#include "seqgen.h"
+#include "timer.h"
+#include "utils.h"
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem::v1;
 
@@ -180,7 +181,7 @@ struct SeqGenModule {
 
         fo.open(output + "timing.csv");
         assert(fo.is_open());
-        fo << output_timing();
+        fo << Timer::summary();
         fo.close();
 
         write_fasta(seqs);
