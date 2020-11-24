@@ -1,9 +1,4 @@
-//
-// Created by Amir Joudaki on 11/7/20.
-//
-
-#ifndef SEQUENCE_SKETCHING_MULTIVEC_H
-#define SEQUENCE_SKETCHING_MULTIVEC_H
+#pragma once
 
 #include "args.hpp"
 
@@ -58,5 +53,3 @@ namespace SeqSketch {
       return result;
     }
 }// namespace SeqSketch
-
-#endif//SEQUENCE_SKETCHING_MULTIVEC_H

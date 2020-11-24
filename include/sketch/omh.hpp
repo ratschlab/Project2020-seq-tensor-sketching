@@ -1,9 +1,5 @@
-//
-// Created by Amir Joudaki on 6/18/20.
-//
+#pragma once
 
-#ifndef SEQUENCE_SKETCHING_OMH_HPP
-#define SEQUENCE_SKETCHING_OMH_HPP
 #include "utils.h"
 
 namespace SeqSketch {
@@ -21,7 +17,7 @@ namespace SeqSketch {
             auto gen = std::mt19937(rd());
             // Dimensions: #perms X #sig X max-len
             std::vector<int> dims{max_len, sig_len, embed_dim};
-            int total_len = sig_len * max_len; 
+            int total_len = sig_len * max_len;
             perms = Vec2D<int>(embed_dim, Vec<int>(total_len,0));
 //            perms.init(dims, 0);
             for (int pi = 0; pi < embed_dim; pi++) {
@@ -70,6 +66,4 @@ namespace SeqSketch {
         //        embed.push_back(num);
         Timer::stop();
     }
-}// namespace SeqSketch
-
-#endif//SEQUENCE_SKETCHING_OMH_HPP
+} // namespace SeqSketch

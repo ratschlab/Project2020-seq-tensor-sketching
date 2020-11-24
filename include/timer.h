@@ -1,9 +1,4 @@
-//
-// Created by Amir Joudaki on 11/7/20.
-//
-
-#ifndef SEQUENCE_SKETCHING_TIMER_H
-#define SEQUENCE_SKETCHING_TIMER_H
+#pragma once
 
 #include <chrono>
 #include <map>
@@ -57,7 +52,6 @@ namespace SeqSketch {
             }
             return str;
         }
-    }// namespace Timer
-}// namespace SeqSketch
+    } // namespace Timer
+} // namespace SeqSketch
 
-#endif//SEQUENCE_SKETCHING_TIMER_H

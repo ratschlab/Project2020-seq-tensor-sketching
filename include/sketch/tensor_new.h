@@ -1,10 +1,4 @@
-//
-// Created by Amir Joudaki on 10/23/20.
-//
-
-#ifndef SEQUENCE_SKETCHING_TENSOR_NEW_H
-#define SEQUENCE_SKETCHING_TENSOR_NEW_H
-
+#pragma once
 
 namespace SeqSketch {
 
@@ -174,6 +168,4 @@ namespace SeqSketch {
     }
 
 
-}// namespace SeqSketch
-
-#endif//SEQUENCE_SKETCHING_TENSOR_NEW_H
+} // namespace SeqSketch

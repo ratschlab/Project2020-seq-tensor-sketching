@@ -26,7 +26,7 @@ struct SeqGenModule : BasicModule {
         test_id = "#" + std::to_string(random());
         fo << test_id << "\n";
         fo << "# " << argvals() << "\n";
-        for (int si = 0; si < seqs.size(); si++) {
+        for (uint32_t si = 0; si < seqs.size(); si++) {
             fo << ">s" << si << "\n";
             auto &seq = seqs[si];
             for (auto &c : seq) {

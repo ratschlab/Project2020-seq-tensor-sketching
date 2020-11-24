@@ -1,9 +1,4 @@
-//
-// Created by Amir Joudaki on 6/18/20.
-//
-
-#ifndef SEQUENCE_SKETCHING_UTILS_H
-#define SEQUENCE_SKETCHING_UTILS_H
+#pragma once
 
 #include "args.hpp"
 #include "timer.h"
@@ -57,7 +52,7 @@ namespace SeqSketch {
     T l1_dist(const Vec<T> &a, const Vec<T> &b) {
         assert(a.size() == b.size());
         T res = 0;
-        for (int i = 0; i < a.size(); i++)
+        for (size_t i = 0; i < a.size(); i++)
             res += (a[i] - b[i] >= 0) ? (a[i] - b[i]) : (b[i] - a[i]);
         return res;
     }
@@ -110,8 +105,8 @@ namespace SeqSketch {
     T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
         auto len = std::min(a.size(), b.size());
         T val = 0;
-        for (int i = 0; i < len; i++) {
-            for (int j = 0; j < a[i].size() and j < b[i].size(); j++) {
+        for (size_t i = 0; i < len; i++) {
+            for (size_t j = 0; j < a[i].size() and j < b[i].size(); j++) {
                 val += (a[i][j] - b[i][j]) * ((a[i][j] - b[i][j] > 0) ? 1 : -1);
             }
         }
@@ -282,5 +277,4 @@ namespace SeqSketch {
 
         return result;
     }
-}// namespace SeqSketch
-#endif//SEQUENCE_SKETCHING_UTILS_H
+} // namespace SeqSketch

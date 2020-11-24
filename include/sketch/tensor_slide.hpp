@@ -1,9 +1,4 @@
-//
-// Created by Amir Joudaki on 6/19/20.
-//
-
-#ifndef SEQUENCE_SKETCHING_TENSOR_SLIDE_H
-#define SEQUENCE_SKETCHING_TENSOR_SLIDE_H
+#pragma once
 
 #include "tensor.hpp"
 
@@ -21,7 +16,7 @@ namespace SeqSketch {
         embedding = Vec2D<embed_type>(params.embed_dim, Vec<embed_type>());
         for (int m = 0; m < params.embed_dim; m++) {
             auto cnt = new3D<float>(params.tup_len, params.tup_len, params.num_phases, 0);
-            for (int i = 0; i < seq.size(); i++) {
+            for (size_t i = 0; i < seq.size(); i++) {
                 int j = i - params.win_len;
                 if (j >= 0) {
                     for (int t = 0; t < params.tup_len; t++) {
@@ -63,6 +58,4 @@ namespace SeqSketch {
         Timer::stop();
     }
 
-}// namespace SeqSketch
-
-#endif//SEQUENCE_SKETCHING_TENSOR_SLIDE_H
+} // namespace SeqSketch

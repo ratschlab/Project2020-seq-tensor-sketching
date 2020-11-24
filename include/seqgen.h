@@ -1,7 +1,4 @@
-//
-// Created by Amir Joudaki on 6/9/20.
-//
-#ifndef SEQUENCE_SKETCHING_SEQGEN_H
+#pragma once
 
 #include <algorithm>
 #include <functional>
@@ -37,7 +34,7 @@ namespace SeqSketch {
     void seq2kmer(const Seq<seq_type> &seq, Vec<embed_type> &vec, size_type kmer_size, size_type sig_len) {
         Timer::start("seq2kmer");
         vec = Vec<embed_type>(seq.size() - kmer_size + 1);
-        for (size_type i = 0; i < vec.size(); i++) {
+        for (size_t i = 0; i < vec.size(); i++) {
             size_type c = 1;
             for (size_type j = 0; j < kmer_size; j++) {
                 vec[i] += c * seq[i + j];
@@ -55,8 +52,8 @@ namespace SeqSketch {
         bool fix_len;
         int max_num_blocks;
         int min_num_blocks;
-        int num_seqs;
-        int seq_len;
+        uint32_t num_seqs;
+        uint32_t seq_len;
         float mutation_rate;
         float block_mutate_rate;
 
@@ -89,7 +86,7 @@ namespace SeqSketch {
         void gen_seq(Seq<T> &seq) {
             seq.clear();
             std::uniform_int_distribution<T> unif(0, sig_len - 1);
-            for (int i = 0; i < seq_len; i++) {
+            for (uint32_t i = 0; i < seq_len; i++) {
                 seq.push_back(unif(gen));
             }
         }
@@ -99,7 +96,7 @@ namespace SeqSketch {
             std::discrete_distribution<int> mut{1 - mutation_rate, mutation_rate / 3, mutation_rate / 3, mutation_rate / 3};
             std::uniform_int_distribution<T> unif(0, sig_len - 2);
             // TODO: add alignment
-            for (auto i = 0; i < ref.size(); i++) {
+            for (size_t i = 0; i < ref.size(); i++) {
                 switch (mut(gen)) {
                     case 0: {// no mutation
                         seq.push_back(ref[i]);
@@ -130,17 +127,17 @@ namespace SeqSketch {
             std::uniform_int_distribution<size_t> rpos_inc(0, seq_len);    // inclusinve of seq_len, insertion to the very end
             std::uniform_int_distribution<size_t> rpos_exc(0, seq_len - 1);// inclusinve of seq_len, insertion to the very end
             switch (mut(gen)) {
-                case 0: {// insert
-                    auto pos = rpos_inc(gen);
+                case 0: { // insert
+                    rpos_inc(gen);
                     auto c = rchar(gen);
                     ref.insert(ref.begin(), c);
                     break;
                 }
-                case 1: {// delete
-                    auto pos = rpos_exc(gen);
+                case 1: { // delete
+                    rpos_exc(gen);
                     break;
                 }
-                case 2: {// substitute
+                case 2: { // substitute
                     auto pos = rpos_exc(gen);
                     auto c = rchar(gen);
                     if (c == ref[pos]) {
@@ -174,7 +171,7 @@ namespace SeqSketch {
         void genseqs_linear(Vec<Seq<T>> &seqs) {
             seqs = Vec2D<T>(num_seqs, Vec<T>());
             gen_seq(seqs[0]);
-            for (int si = 1; si < num_seqs; si++) {
+            for (uint32_t si = 1; si < num_seqs; si++) {
                 point_mutate(seqs[si - 1], seqs[si]);
                 block_permute(seqs[si]);
                 if (fix_len)
@@ -185,10 +182,10 @@ namespace SeqSketch {
         void genseqs_pairs(Vec<Seq<T>> &seqs) {
             seqs = Vec2D<T>(num_seqs, Vec<T>());
             assert(num_seqs % 2 == 0);
-            for (int si = 0; si < seqs.size(); si++) {
+            for (size_t si = 0; si < seqs.size(); si++) {
                 gen_seq(seqs[si]);
             }
-            for (int si = 0; si < num_seqs; si += 2) {
+            for (uint32_t si = 0; si < num_seqs; si += 2) {
                 int lcs = si * seq_len / num_seqs;
                 Vec<int> perm(seq_len), perm2(seq_len);
                 std::iota(perm.begin(), perm.end(), 0);
@@ -254,10 +251,4 @@ namespace SeqSketch {
                     make_fix_len(seq);
         }
     };
-
-}// namespace SeqSketch
-
-
-#define SEQUENCE_SKETCHING_SEQGEN_H
-
-#endif//SEQUENCE_SKETCHING_SEQGEN_H
+ } // namespace SeqSketch

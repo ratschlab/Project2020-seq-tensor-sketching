@@ -1,9 +1,4 @@
-//
-// Created by Amir Joudaki on 6/17/20.
-//
-
-#ifndef SEQUENCE_SKETCHING_ARGS_HPP
-#define SEQUENCE_SKETCHING_ARGS_HPP
+#pragma once
 
 #include <cmath>
 #include <iostream>
@@ -250,7 +245,7 @@ namespace SeqSketch {
         static const Argument INPUT = {L_INPUT, S_INPUT, ArgType::STRING, "input file path"};
         static const Argument FORMAT_INPUT = {L_FORMAT_INPUT, S_FORMAT_INPUT, ArgType::STRING, "input format, options: 'fasta', 'csv'"};
         static const Argument SHOW_HELP = {L_SHOW_HELP, S_SHOW_HELP, ArgType::INDIC, "show this help "};
-    }// namespace ArgDefs
+    } // namespace ArgDefs
 
     //    using namespace Argument;
 
@@ -353,7 +348,4 @@ namespace SeqSketch {
             format_input = "fasta";
         }
     };
-}// namespace SeqSketch
-
-
-#endif//SEQUENCE_SKETCHING_ARGS_HPP
+} // namespace SeqSketch

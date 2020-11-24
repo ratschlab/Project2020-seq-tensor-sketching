@@ -1,8 +1,4 @@
-//
-// Created by Amir Joudaki on 6/17/20.
-//
-
-#ifndef SEQUENCE_SKETCHING_MODULES_H
+#pragma once
 
 #include "args.hpp"
 #include "seqgen.h"
@@ -141,7 +137,3 @@ namespace SeqSketch {
     };
 
 }// namespace SeqSketch
-
-#define SEQUENCE_SKETCHING_MODULES_H
-
-#endif//SEQUENCE_SKETCHING_MODULES_H

@@ -1,9 +1,4 @@
-//
-// Created by Amir Joudaki on 6/18/20.
-//
-
-#ifndef SEQUENCE_SKETCHING_TUPLE_H
-#define SEQUENCE_SKETCHING_TUPLE_H
+#pragma once
 
 namespace SeqSketch {
 
@@ -32,6 +27,4 @@ namespace SeqSketch {
         } while (increment_sub(sub, seq_len));
     }
 
-}// namespace SeqSketch
-
-#endif//SEQUENCE_SKETCHING_TUPLE_H
+} // namespace SeqSketch

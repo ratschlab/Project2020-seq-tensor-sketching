@@ -51,9 +51,9 @@ struct SeqGenModule {
         fo.open(output + "seqs.fa");
         test_id = "#" + std::to_string(random());
         fo << test_id << "\n";
-        for (int si = 0; si < seq_vec.size(); si++) {
+        for (size_t si = 0; si < seq_vec.size(); si++) {
             fo << "> " << si << "\n";
-            for (int i = 0; i < seq_vec[i].size(); i++) {
+            for (size_t i = 0; i < seq_vec[i].size(); i++) {
                 if (Abc) {
                     fo << (char) (seq_vec[si][i] + (int) 'A');
                 } else {
@@ -139,7 +139,7 @@ struct SeqGenModule {
         int num_seqs = seqs.size();
         if (basicModules.mutation_pattern == "pairs") {
             dists = new3D<double>(8, num_seqs, 1, -1);
-            for (int i = 0; i < seqs.size(); i += 2) {
+            for (size_t i = 0; i < seqs.size(); i += 2) {
                 int j = i + 1;
                 dists[0][i][0] = edit_distance(seqs[i], seqs[j]);
                 dists[1][i][0] = hamming_dist(mh_sketch[i], mh_sketch[j]);
@@ -150,8 +150,8 @@ struct SeqGenModule {
             }
         } else {
             dists = new3D<double>(8, num_seqs, num_seqs, 0);
-            for (int i = 0; i < seqs.size(); i++) {
-                for (int j = i + 1; j < seqs.size(); j++) {
+            for (size_t i = 0; i < seqs.size(); i++) {
+                for (size_t j = i + 1; j < seqs.size(); j++) {
                     dists[0][i][j] = edit_distance(seqs[i], seqs[j]);
                     dists[1][i][j] = hamming_dist(mh_sketch[i], mh_sketch[j]);
                     dists[2][i][j] = hamming_dist(wmh_sketch[i], wmh_sketch[j]);
@@ -186,18 +186,18 @@ struct SeqGenModule {
 
         write_fasta(seqs);
 
-        int num_seqs = seqs.size();
+        size_t num_seqs = seqs.size();
         for (int m = 0; m < 6; m++) {
             fo.open(output + "dists/" + method_names[m] + ".txt");
             assert(fo.is_open());
             if (basicModules.mutation_pattern == "pairs") {
-                for (int i = 0; i < num_seqs; i += 2) {
-                    int j = i + 1;
+                for (size_t i = 0; i < num_seqs; i += 2) {
+                    size_t j = i + 1;
                     fo << i << ", " << j << ", " << dists[m][i][0] << "\n";
                 }
             } else {
-                for (int i = 0; i < num_seqs; i++) {
-                    for (int j = i + 1; j < seqs.size(); j++) {
+                for (size_t i = 0; i < num_seqs; i++) {
+                    for (size_t j = i + 1; j < seqs.size(); j++) {
                         fo << i << ", " << j << ", " << dists[m][i][j] << "\n";
                     }
                 }
@@ -207,7 +207,7 @@ struct SeqGenModule {
 
         fo.open(output + "sketches/mh.txt");
         assert(fo.is_open());
-        for (int si = 0; si < num_seqs; si++) {
+        for (size_t si = 0; si < num_seqs; si++) {
             fo << ">> seq " << si << "\n";
             for (const auto &e : mh_sketch[si]) {
                 fo << e << ", ";
@@ -218,7 +218,7 @@ struct SeqGenModule {
 
         fo.open(output + "sketches/wmh.txt");
         assert(fo.is_open());
-        for (int si = 0; si < num_seqs; si++) {
+        for (size_t si = 0; si < num_seqs; si++) {
             fo << ">> seq " << si << "\n";
             for (const auto &e : wmh_sketch[si]) {
                 fo << e << ", ";
@@ -229,7 +229,7 @@ struct SeqGenModule {
 
         fo.open(output + "sketches/omh.txt");
         assert(fo.is_open());
-        for (int si = 0; si < num_seqs; si++) {
+        for (size_t si = 0; si < num_seqs; si++) {
             fo << ">> seq " << si << "\n";
             for (const auto &e : omh_sketch[si]) {
                 fo << e << ", ";
@@ -240,7 +240,7 @@ struct SeqGenModule {
 
         fo.open(output + "sketches/ten.txt");
         assert(fo.is_open());
-        for (int si = 0; si < seqs.size(); si++) {
+        for (size_t si = 0; si < seqs.size(); si++) {
             fo << ">> seq " << si << "\n";
             for (const auto &e : ten_sketch[si]) {
                 fo << e << ", ";
@@ -250,9 +250,9 @@ struct SeqGenModule {
         fo.close();
 
         fo.open(output + "sketches/ten_slide.txt");
-        for (int si = 0; si < seqs.size(); si++) {
+        for (size_t si = 0; si < seqs.size(); si++) {
             auto &sk = slide_sketch[si];
-            for (int dim = 0; dim < sk.size(); dim++) {
+            for (size_t dim = 0; dim < sk.size(); dim++) {
                 fo << ">> seq: " << si << ", dim: " << dim << "\n";
                 for (auto &item : sk[dim])
                     fo << item << ", ";

@@ -158,10 +158,10 @@ struct SketchModule : public BasicModule {
         }
         fo << test_id << "\n";
         fo << "# " << argvals() << "\n";
-        for (int si = 0; si < slide_sketch.size(); si++) {
-            for (int m = 0; m < slide_sketch[si].size(); m++) {
+        for (size_t si = 0; si < slide_sketch.size(); si++) {
+            for (size_t m = 0; m < slide_sketch[si].size(); m++) {
                 fo << seq_names[si] << ">" << std::dec << m << "\n";
-                for (int i = 0; i < slide_sketch[si][m].size(); i++) {
+                for (size_t i = 0; i < slide_sketch[si][m].size(); i++) {
                     if (num_bins == 0) {
                         fo << slide_sketch[si][m][i] << ",";
                     } else {

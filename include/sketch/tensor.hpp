@@ -1,9 +1,4 @@
-//
-// Created by Amir Joudaki on 6/18/20.
-//
-
-#ifndef SEQUENCE_SKETCHING_TENSOR_HPP
-#define SEQUENCE_SKETCHING_TENSOR_HPP
+#pragma once
 
 #include <cmath>
 #include <cstdio>
@@ -63,7 +58,7 @@ namespace SeqSketch {
         for (int m = 0; m < params.embed_dim; m++) {
             auto cnt = new2D<double>(params.tup_len + 1, params.num_phases, 0);
             cnt[0][0] = 1;// base case
-            for (int i = 0; i < seq.size(); i++) {
+            for (size_t i = 0; i < seq.size(); i++) {
                 for (int t = params.tup_len - 1; t >= 0; t--) {
                     auto pi = params.iphase[m][t][seq[i]];
                     for (int p = 0; p < params.num_phases; p++) {
@@ -90,6 +85,5 @@ namespace SeqSketch {
     }
 
 
-}// namespace SeqSketch
+} // namespace SeqSketch
 
-#endif//SEQUENCE_SKETCHING_TENSOR_HPP
