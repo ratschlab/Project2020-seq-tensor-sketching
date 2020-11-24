@@ -193,8 +193,8 @@ namespace SeqSketch {
         size_t n = s2.size();
         //        int L[m + 1][n + 1];
         Vec2D<int> L(m + 1, Vec<int>(n + 1, 0));
-        for (int i = 0; i <= m; i++) {
-            for (int j = 0; j <= n; j++) {
+        for (size_t i = 0; i <= m; i++) {
+            for (size_t j = 0; j <= n; j++) {
                 if (i == 0 || j == 0) {
                     L[i][j] = 0;
                 } else if (s1[i - 1] == s2[j - 1]) {

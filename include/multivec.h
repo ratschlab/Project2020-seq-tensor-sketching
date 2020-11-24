@@ -12,7 +12,7 @@ namespace SeqSketch {
 
     template<class T>
     auto new2D(int d1, int d2, T val = 0) {
-        return Vec2D<T>(d1, Vec<T>(d2, 0));
+        return Vec2D<T>(d1, Vec<T>(d2, val));
     }
     template<class T>
     auto new3D(int d1, int d2, int d3, T val = 0) {
@@ -43,15 +43,19 @@ namespace SeqSketch {
         return ind;
     }
 
-    template<class T, class = is_u_integral<T>>
+    template <class T, class = is_u_integral<T>>
     T int_pow(T x, T pow) {
-        if (pow == 0) return 1;
-        if (pow == 1) return x;
+      int result = 1;
+      for (;;) {
+        if (pow & 1)
+          result *= x;
+        pow >>= 1;
+        if (!pow)
+          break;
+        x *= x;
+      }
 
-        T tmp = int_pow(x, pow / 2);
-        if (pow % 2 == 0) return tmp * tmp;
-        else
-            return x * tmp * tmp;
+      return result;
     }
 }// namespace SeqSketch
 
