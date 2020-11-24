@@ -3,7 +3,7 @@
 
 #include "util/args.hpp"
 #include "util/modules.hpp"
-#include "util/utils.h"
+#include "util/utils.hpp"
 
 using namespace ts;
 

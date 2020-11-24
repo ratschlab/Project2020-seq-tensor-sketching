@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include "util/multivec.h"
+#include "util/multivec.hpp"
 
 namespace ts { // ts = Tensor Sketch
 

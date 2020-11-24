@@ -1,7 +1,8 @@
 #pragma once
 
+#include "util/alphabets.hpp"
 #include "util/args.hpp"
-#include "util/seqgen.h"
+#include "util/seqgen.hpp"
 #include "sketch/minhash.hpp"
 #include "sketch/omh.hpp"
 #include "sketch/tensor.hpp"
@@ -9,6 +10,10 @@
 #include "sketch/tensor_slide.hpp"
 #include "sketch/tuple.hpp"
 #include "sketch/wminhash.hpp"
+
+#include <gflags/gflags.h>
+
+DEFINE_string(alphabet, "dna", "Alphabet of the input data: DNA or Protein [DNA]");
 
 namespace ts { // ts = Tensor Sketch
 
@@ -91,6 +96,7 @@ struct BasicModule : public ArgSet {
 
   public:
     void models_init() {
+        init_alphabet(FLAGS_alphabet);
         override_module_params();
         init_seqgen(seq_gen);
         init_mh_params(mh_params);

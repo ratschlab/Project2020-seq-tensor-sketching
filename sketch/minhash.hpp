@@ -1,7 +1,7 @@
 #pragma once
 
-#include "util/timer.h"
-#include "util/utils.h"
+#include "util/timer.hpp"
+#include "util/utils.hpp"
 
 #include <cstdint>
 #include <random>

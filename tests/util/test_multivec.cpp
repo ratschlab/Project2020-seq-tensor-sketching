@@ -1,4 +1,4 @@
-#include "util/multivec.h"
+#include "util/multivec.hpp"
 
 #include <gtest/gtest.h>
 

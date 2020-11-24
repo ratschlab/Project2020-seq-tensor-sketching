@@ -11,40 +11,36 @@
 namespace ts { // ts = Tensor Sketch
 using string = std::string;
 
-//    template<class seq_type>
-//    void read_fasta(Vec2D<seq_type> &seqs, Vec<string> &seq_names, const string &filename, const
-//    std::map<char, int> &tr, int max_num_seqs = 1000) {
-//        std::ifstream infile(filename);
-//        string line;
-//        int si = -1;
-//        while (std::getline(infile, line) and seqs.size() <= max_num_seqs) {
-//            if (line[0] == '>') {
-//                si++;
-//                seqs.push_back(Vec<seq_type>());
-//                seq_names.push_back(line);
-//            } else {
-//                for (char c : line) {
-//                    seqs[si].push_back(tr[c]);
-//                }
-//            }
-//        }
-//    }
-
+/**
+ * Extracts kmers from a sequence.
+ * @tparam seq_type types of elements in the sequence
+ * @tparam embed_type type that stores a kmer
+ * @tparam size_type
+ * @param seq
+ * @param kmer_size
+ * @param sig_len
+ * @return
+ */
 template <class seq_type, class embed_type, class size_type = std::size_t>
-void seq2kmer(const Seq<seq_type> &seq,
-              Vec<embed_type> &vec,
+Vec<embed_type> seq2kmer(const Seq<seq_type> &seq,
               size_type kmer_size,
               size_type sig_len) {
-    Timer::start("seq2kmer");
-    vec = Vec<embed_type>(seq.size() - kmer_size + 1);
-    for (size_t i = 0; i < vec.size(); i++) {
+    if (seq.size() < (size_t)kmer_size) {
+        return Vec<embed_type>();
+    }
+    Timer::start("seq2kmer");t
+
+    Vec<embed_type> result(seq.size() - kmer_size + 1);
+
+    for (size_t i = 0; i < result.size(); i++) {
         size_type c = 1;
         for (size_type j = 0; j < kmer_size; j++) {
-            vec[i] += c * seq[i + j];
+            result[i] += c * seq[i + j];
             c *= sig_len;
         }
     }
     Timer::stop();
+    return result;
 }
 
 struct SeqGen {

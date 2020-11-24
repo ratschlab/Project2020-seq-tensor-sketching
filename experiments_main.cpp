@@ -1,9 +1,9 @@
 #include "util/args.hpp"
 #include "util/modules.hpp"
-#include "util/multivec.h"
-#include "util/seqgen.h"
-#include "util/timer.h"
-#include "util/utils.h"
+#include "util/multivec.hpp"
+#include "util/seqgen.hpp"
+#include "util/timer.hpp"
+#include "util/utils.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -14,10 +14,7 @@ namespace fs = std::filesystem;
 using namespace ts;
 
 struct KmerModule : public BasicModule {
-    int original_sig_len {};
-
     void override_module_params() override {
-        original_sig_len = sig_len;
         sig_len = int_pow<size_t>(sig_len, kmer_size);
     }
 };
@@ -115,15 +112,15 @@ struct SeqGenModule {
     }
 
     void compute_sketches() {
-        int num_seqs = seqs.size();
+        size_t num_seqs = seqs.size();
         kmer_seqs.resize(num_seqs);
         wmh_sketch.resize(num_seqs);
         mh_sketch.resize(num_seqs);
         omh_sketch.resize(num_seqs);
         ten_sketch.resize(num_seqs);
         slide_sketch.resize(num_seqs);
-        for (int si = 0; si < num_seqs; si++) {
-            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.sig_len);
+        for (size_t si = 0; si < num_seqs; si++) {
+            kmer_seqs[si] = seq2kmer<seq_type, seq_type>(seqs[si], basicModules.kmer_size, basicModules.sig_len);
             minhash(kmer_seqs[si], mh_sketch[si], kmerModules.mh_params);
             weighted_minhash(kmer_seqs[si], wmh_sketch[si], kmerModules.wmh_params);
             if (basicModules.tuple_on_kmer) {
@@ -138,6 +135,7 @@ struct SeqGenModule {
             tensor_slide_sketch(seqs[si], slide_sketch[si], basicModules.tensor_slide_params);
         }
     }
+
     void compute_pairwise_dists() {
         int num_seqs = seqs.size();
         if (basicModules.mutation_pattern == "pairs") {

@@ -3,14 +3,16 @@
 
 #include "util/args.hpp"
 #include "util/modules.hpp"
-#include "util/seqgen.h"
-#include "util/utils.h"
+#include "util/seqgen.hpp"
+#include "util/utils.hpp"
 #include <sstream>
+#include <util/fasta.hpp>
 
 using namespace ts;
 
 template <typename seq_type, class embed_type>
-struct SketchModule : public BasicModule {
+class SketchModule : public BasicModule {
+  public:
     int original_sig_len {};
 
     void override_module_params() override {
@@ -19,8 +21,6 @@ struct SketchModule : public BasicModule {
         wmh_params.max_len = win_len;
         omh_params.max_len = win_len;
     }
-
-    void override_model_params() override { tensor_slide_params.embed_dim = embed_dim; }
 
     SketchModule() {
         directory = "./";
@@ -39,82 +39,15 @@ struct SketchModule : public BasicModule {
         sketch_method = "TenSlide";
     }
 
-    Vec2D<seq_type> seqs;
-    Vec<std::string> seq_names;
-    string test_id;
-
-
-    std::map<char, seq_type> chr2int
-            = { { 'a', 1 }, { 'c', 2 }, { 'g', 3 }, { 't', 4 }, { 'n', 0 },
-                { 'A', 1 }, { 'C', 2 }, { 'G', 3 }, { 'T', 4 }, { 'N', 0 } };
-    std::map<char, seq_type> chr2int_mask
-            = { { 'a', -1 }, { 'c', -2 }, { 'g', -3 }, { 't', -4 }, { 'n', 0 },
-                { 'A', 1 },  { 'C', 2 },  { 'G', 3 },  { 'T', 4 },  { 'N', 0 } };
-    void read_fasta() {
-        seqs.clear();
-        string file = (directory + input);
-        std::ifstream infile = std::ifstream(file);
-        assert(infile.is_open());
-
-        string line;
-        std::getline(infile, line);
-        if (line[0] == '#') {
-            test_id = line;
-            std::getline(infile, line);
-        }
-        while (line[0] != '>') {
-            std::getline(infile, line);
-        }
-        string name = line;
-        Vec<seq_type> seq;
-        while (std::getline(infile, line)) {
-            if (line[0] == '>') {
-                seqs.push_back(seq);
-                seq_names.push_back(name);
-                seq.clear();
-                name = line;
-            } else if (!line.empty()) {
-                if (format_input == "fasta") {
-                    for (char c : line) {
-                        seq.push_back(chr2int[c]);
-                    }
-                } else if (format_input == "csv") {
-                    std::stringstream ss(line);
-                    string item;
-                    while (std::getline(ss, item, ',')) {
-                        seq.push_back(std::stoi(item, 0, 16));
-                    }
-                } else {
-                    std::cerr << " input format `" << format_input << "` does not exist\n";
-                    exit(1);
-                }
-            }
-        }
+    void read_input() {
+        std::tie(test_id, seqs, seq_names) = read_fasta<seq_type>(directory + input, format_input);
     }
 
-    void sketch_slice(Seq<seq_type> seq, Vec<embed_type> &embed) {
-        if (sketch_method == "MH") {
-            minhash(seq, embed, mh_params);
-        } else if (sketch_method == "WMH") {
-            weighted_minhash(seq, embed, wmh_params);
-        } else if (sketch_method == "OMH") {
-            ordered_minhash_flat(seq, embed, omh_params);
-        } else if (sketch_method == "TenSketch") {
-            tensor_sketch(seq, embed, tensor_params);
-        } else {
-            std::cerr << "method not recognized\n";
-            exit(1);
-        }
-    }
-
-    Vec3D<embed_type> slide_sketch;
     void compute_sketches() {
-        //        Vec<string> args = {"MH", "WMH", "OMH", "TenSketch", "TenSlide"};
-        int num_seqs = seqs.size();
+        size_t num_seqs = seqs.size();
         slide_sketch = new3D<embed_type>(seqs.size(), embed_dim, 0);
-        for (int si = 0; si < num_seqs; si++) {
-            Vec<seq_type> kmers;
-            seq2kmer(seqs[si], kmers, kmer_size, original_sig_len);
+        for (size_t si = 0; si < num_seqs; si++) {
+            Vec<seq_type> kmers = seq2kmer<seq_type, seq_type>(seqs[si], kmer_size, original_sig_len);
             if (sketch_method == "TenSlide") {
                 tensor_slide_sketch(kmers, slide_sketch[si], tensor_slide_params);
             } else {
@@ -156,13 +89,35 @@ struct SketchModule : public BasicModule {
         }
         fo.close();
     }
+
+  private:
+    void sketch_slice(Seq<seq_type> seq, Vec<embed_type> &embed) {
+        if (sketch_method == "MH") {
+            minhash(seq, embed, mh_params);
+        } else if (sketch_method == "WMH") {
+            weighted_minhash(seq, embed, wmh_params);
+        } else if (sketch_method == "OMH") {
+            ordered_minhash_flat(seq, embed, omh_params);
+        } else if (sketch_method == "TenSketch") {
+            tensor_sketch(seq, embed, tensor_params);
+        } else {
+            std::cerr << "Unkknown method: " << sketch_method << std::endl;
+            exit(1);
+        }
+    }
+
+  private:
+    Vec2D<seq_type> seqs;
+    Vec<std::string> seq_names;
+    Vec3D<embed_type> slide_sketch;
+    string test_id;
 };
 
 int main(int argc, char *argv[]) {
     SketchModule<int, double> sketchModule;
     sketchModule.parse(argc, argv);
     sketchModule.models_init();
-    sketchModule.read_fasta();
+    sketchModule.read_input();
     sketchModule.compute_sketches();
     sketchModule.save_output();
 }

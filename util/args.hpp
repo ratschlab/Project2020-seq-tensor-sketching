@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/utils.h"
+#include "util/utils.hpp"
 
 #include <cmath>
 #include <iostream>

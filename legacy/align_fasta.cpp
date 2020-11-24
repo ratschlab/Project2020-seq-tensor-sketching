@@ -3,8 +3,8 @@
 
 #include "util/args.hpp"
 #include "util/modules.hpp"
-#include "util/seqgen.h"
-#include "util/utils.h"
+#include "util/seqgen.hpp"
+#include "util/utils.hpp"
 
 using namespace ts;
 using namespace BasicTypes;

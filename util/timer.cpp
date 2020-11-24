@@ -1,21 +1,14 @@
-#pragma once
+#include "timer.hpp"
 
-#include <chrono>
-#include <map>
-#include <string>
-#include <utility>
-#include <cassert>
-
-namespace ts { // ts = Tensor Sketch
-
+namespace ts {
 namespace Timer {
+
 using namespace std::chrono;
 
-std::map<std::string, nanoseconds> durations;
-
-auto last_time = high_resolution_clock::now();
-
 std::string last_func;
+auto last_time = std::chrono::high_resolution_clock::now();
+
+std::map<std::string, std::chrono::nanoseconds> durations;
 
 void start(std::string func_name) {
     assert(last_func.empty());
