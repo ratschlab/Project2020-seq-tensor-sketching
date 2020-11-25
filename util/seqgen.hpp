@@ -12,32 +12,36 @@ namespace ts { // ts = Tensor Sketch
 using string = std::string;
 
 /**
- * Extracts kmers from a sequence.
- * @tparam seq_type types of elements in the sequence
- * @tparam embed_type type that stores a kmer
- * @tparam size_type
- * @param seq
- * @param kmer_size
- * @param sig_len
- * @return
+ * Extracts k-mers from a sequence. The k-mer is treated as a number in base alphabet_size and then
+ * converted to decimal, i.e. the sequence s1...sk is converted to s1*S^(k-1) + s2*S^(k-2) + ... +
+ * sk, where k is the k-mer size.
+ * @tparam chr types of elements in the sequence
+ * @tparam kmer type that stores a kmer
+ * @param seq the sequence to extract kmers from
+ * @param kmer_size number of characters in a kmer
+ * @param alphabet_size size of the alphabet
+ * @return the extracted kmers, as integers converted from base #alphabet_size
  */
-template <class seq_type, class embed_type, class size_type = std::size_t>
-Vec<embed_type> seq2kmer(const Seq<seq_type> &seq,
-              size_type kmer_size,
-              size_type sig_len) {
+template <class chr, class kmer>
+Vec<kmer> seq2kmer(const Seq<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size) {
     if (seq.size() < (size_t)kmer_size) {
-        return Vec<embed_type>();
+        return Vec<kmer>();
     }
-    Timer::start("seq2kmer");t
+    Timer::start("seq2kmer");
 
-    Vec<embed_type> result(seq.size() - kmer_size + 1);
+    Vec<kmer> result(seq.size() - kmer_size + 1, 0);
 
-    for (size_t i = 0; i < result.size(); i++) {
-        size_type c = 1;
-        for (size_type j = 0; j < kmer_size; j++) {
-            result[i] += c * seq[i + j];
-            c *= sig_len;
-        }
+    kmer c = 1;
+    for (uint8_t i = 0; i < kmer_size; i++) {
+        result[0] += c * seq[i];
+        c *= alphabet_size;
+    }
+    c /= alphabet_size;
+
+    for (size_t i = 0; i < result.size() - 1; i++) {
+        kmer base = result[i] - seq[i];
+        assert(base % alphabet_size == 0);
+        result[i + 1] = base / alphabet_size + seq[i + kmer_size] * c;
     }
     Timer::stop();
     return result;
