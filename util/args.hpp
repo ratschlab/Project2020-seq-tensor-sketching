@@ -2,6 +2,8 @@
 
 #include "util/utils.hpp"
 
+#include <gflags/gflags.h>
+
 #include <cmath>
 #include <iostream>
 #include <map>
@@ -115,15 +117,6 @@ struct Parser {
         name2arg[arg.short_name] = arg;
     }
 
-    std::string argvals(bool long_names = true, char sep = ' ', char tab = ' ') {
-        std::string str;
-        for (auto const &[arg_name, arg] : name2arg) {
-            if ((arg_name.find("--") != std::string::npos) == long_names) {
-                str += " " + arg_name + tab + arg.to_string() + sep;
-            }
-        }
-        return str;
-    }
 
     std::string config() {
         std::string str;
@@ -168,7 +161,7 @@ using ArgType = Parser::ArgType;
 
 static const char *const L_FIX_LEN = "--fix-len";
 static const char *const L_NUM_SEQS = "--num-seqs";
-static const char *const L_SIG_LEN = "--sig-len";
+static const char *const L_alphabet_size = "--sig-len";
 static const char *const L_SEQ_LEN = "--seq-len";
 static const char *const L_MAX_NUM_BLOCKS = "--max-num-blocks";
 static const char *const L_MIN_NUM_BLOCKS = "--min-num-blocks";
@@ -194,7 +187,7 @@ static const char *const L_SHOW_HELP = "--help";
 
 static const char *const S_FIX_LEN = "-F";
 static const char *const S_NUM_SEQS = "-N";
-static const char *const S_SIG_LEN = "-A";
+static const char *const S_alphabet_size = "-A";
 static const char *const S_SEQ_LEN = "-L";
 static const char *const S_MAX_NUM_BLOCKS = "-B";
 static const char *const S_MIN_NUM_BLOCKS = "-b";
@@ -223,8 +216,8 @@ static const Argument FIX_LEN
         = { L_FIX_LEN, S_FIX_LEN, ArgType::BOOL, "force generated sequence length to be equal" };
 static const Argument NUM_SEQS
         = { L_NUM_SEQS, S_NUM_SEQS, ArgType::INT, "number of sequences to be generated" };
-static const Argument SIG_LEN
-        = { L_SIG_LEN, S_SIG_LEN, ArgType::INT, "sigma, size of the alphabet" };
+static const Argument alphabet_size
+        = { L_alphabet_size, S_alphabet_size, ArgType::INT, "sigma, size of the alphabet" };
 static const Argument SEQ_LEN = { L_SEQ_LEN, S_SEQ_LEN, ArgType::INT,
                                   "sequence length: the length of sequence to be generated" };
 static const Argument MAX_NUM_BLOCKS = { L_MAX_NUM_BLOCKS, S_MAX_NUM_BLOCKS, ArgType::INT,
@@ -293,7 +286,7 @@ struct VirtualArgSet : public Parser {
     std::string output;
     std::string input;
     std::string format_input;
-    int sig_len;
+    int alphabet_size;
     // sequence generation
     int num_seqs;
     int seq_len;
@@ -323,7 +316,7 @@ struct VirtualArgSet : public Parser {
         add(&input, ArgDefs::INPUT);
         add(&format_input, ArgDefs::FORMAT_INPUT);
         add(&directory, ArgDefs::DIRECTORY);
-        add(&sig_len, ArgDefs::SIG_LEN);
+        add(&alphabet_size, ArgDefs::alphabet_size);
 
         // sequence generation
         add(&num_seqs, ArgDefs::NUM_SEQS);
@@ -353,7 +346,7 @@ struct VirtualArgSet : public Parser {
 struct ArgSet : public VirtualArgSet {
     ArgSet() : VirtualArgSet() {
         fix_len = true;
-        sig_len = 4;
+        alphabet_size = 4;
         max_num_blocks = 4;
         min_num_blocks = 2;
         num_seqs = 200;

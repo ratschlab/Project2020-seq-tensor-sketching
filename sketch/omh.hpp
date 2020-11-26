@@ -5,7 +5,7 @@
 namespace ts { // ts = Tensor Sketch
 
 struct OMHParams {
-    int sig_len;
+    int alphabet_size;
     int max_len;
     int embed_dim;
     int tup_len;
@@ -16,8 +16,8 @@ struct OMHParams {
         std::random_device rd;
         auto gen = std::mt19937(rd());
         // Dimensions: #perms X #sig X max-len
-        std::vector<int> dims { max_len, sig_len, embed_dim };
-        int total_len = sig_len * max_len;
+        std::vector<int> dims { max_len, alphabet_size, embed_dim };
+        int total_len = alphabet_size * max_len;
         perms = Vec2D<int>(embed_dim, Vec<int>(total_len, 0));
         //            perms.init(dims, 0);
         for (int pi = 0; pi < embed_dim; pi++) {
@@ -30,10 +30,10 @@ struct OMHParams {
 template <class seq_type, class embed_type, class size_type = std::size_t>
 void ordered_minhash(const Seq<seq_type> &seq, Vec2D<embed_type> &embed, const OMHParams &params) {
     for (int pi = 0; pi < params.embed_dim; pi++) {
-        Vec<size_type> counts(params.sig_len, 0);
+        Vec<size_type> counts(params.alphabet_size, 0);
         Vec<std::pair<embed_type, size_type>> ranks;
         for (auto s : seq) {
-            ranks.push_back({ params.perms[pi][s + params.sig_len * counts[s]], s });
+            ranks.push_back({ params.perms[pi][s + params.alphabet_size * counts[s]], s });
             counts[s]++;
         }
         std::sort(ranks.begin(), ranks.end());
@@ -55,7 +55,7 @@ void ordered_minhash_flat(const Seq<seq_type> &seq,
     for (const auto &tuple : embed2D) {
         int sum = 0;
         for (const auto &item : tuple) {
-            sum = sum * params.sig_len + item;
+            sum = sum * params.alphabet_size + item;
         }
         embed.push_back(sum);
         //            for (const auto & item : col) {

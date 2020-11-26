@@ -9,7 +9,7 @@ namespace ts { // ts = Tensor Sketch
 
 
 struct TensorParams {
-    int sig_len;
+    int alphabet_size;
     int embed_dim;
     int num_phases;
     int num_bins;
@@ -26,13 +26,13 @@ struct TensorParams {
         std::uniform_real_distribution<double> unif(0, 1);
         double pie = std::atan(1) * 2;
 
-        iphase = new3D<int>(embed_dim, tup_len, sig_len);
+        iphase = new3D<int>(embed_dim, tup_len, alphabet_size);
         icdf = new2D<double>(embed_dim, num_phases);
         for (int m = 0; m < embed_dim; m++) {
             double bias = 0;
             for (int t = 0; t < tup_len; t++) {
                 bias += unif(gen);
-                for (int c = 0; c < sig_len; c++) {
+                for (int c = 0; c < alphabet_size; c++) {
                     iphase[m][t][c] = unif_iphase(gen);
                 }
             }

@@ -10,16 +10,16 @@ using namespace ts;
 using namespace BasicTypes;
 
 struct KmerModule : public BasicModules {
-    int original_sig_len {};
+    int original_alphabet_size {};
 
     void override_pre() override {
-        sig_len = 5;
-        original_sig_len = sig_len;
-        sig_len = int_pow<size_t>(sig_len, kmer_size);
+        alphabet_size = 5;
+        original_alphabet_size = alphabet_size;
+        alphabet_size = int_pow<size_t>(alphabet_size, kmer_size);
     }
 
     void override_post() override {
-        //        tensor_slide_params.sig_len = original_sig_len;
+        //        tensor_slide_params.alphabet_size = original_alphabet_size;
         //        tensor_slide_params.tup_len = 2;
         tensor_slide_params.embed_dim = 50;
         tensor_slide_params.num_bins = 250;
@@ -41,7 +41,7 @@ struct HGModule {
 
     void parse(int argc, char **argv) {
         basicModules.parse(argc, argv);
-        basicModules.sig_len = 5;
+        basicModules.alphabet_size = 5;
         basicModules.models_init();
         kmerModules.parse(argc, argv);
         kmerModules.models_init();
@@ -80,7 +80,7 @@ struct HGModule {
         string name = read_first(), next_name;
         while (not name.empty()) {
             next_name = read_next_seq(seq, mask);
-            seq2kmer(seq, kmer_seq, basicModules.kmer_size, basicModules.sig_len);
+            seq2kmer(seq, kmer_seq, basicModules.kmer_size, basicModules.alphabet_size);
             tensor_slide_sketch(kmer_seq, slide_sketch, kmerModules.tensor_slide_params);
             save_output(name, slide_sketch);
             name = next_name;

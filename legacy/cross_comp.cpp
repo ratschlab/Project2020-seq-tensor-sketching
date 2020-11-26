@@ -10,11 +10,11 @@ using namespace ts;
 using namespace BasicTypes;
 
 struct KmerModule : public BasicModule {
-    int original_sig_len {};
+    int original_alphabet_size {};
 
     void override_module_params() override {
-        original_sig_len = sig_len;
-        sig_len = int_pow<size_t>(sig_len, kmer_size);
+        original_alphabet_size = alphabet_size;
+        alphabet_size = int_pow<size_t>(alphabet_size, kmer_size);
     }
 };
 
@@ -119,7 +119,7 @@ struct SeqGenModule {
         ten_sketch.resize(num_seqs);
         slide_sketch.resize(num_seqs);
         for (int si = 0; si < num_seqs; si++) {
-            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.sig_len);
+            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.alphabet_size);
             minhash(kmer_seqs[si], mh_sketch[si], kmerModules.mh_params);
             weighted_minhash(kmer_seqs[si], wmh_sketch[si], kmerModules.wmh_params);
             ordered_minhash_flat(seqs[si], omh_sketch[si], basicModules.omh_params);

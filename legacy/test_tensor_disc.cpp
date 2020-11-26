@@ -10,15 +10,15 @@ using namespace ts;
 using namespace BasicTypes;
 
 struct KmerModule : public BasicModules {
-    int original_sig_len {};
+    int original_alphabet_size {};
 
     void override_pre() override {
-        original_sig_len = sig_len;
-        sig_len = int_pow<size_t>(sig_len, kmer_size);
+        original_alphabet_size = alphabet_size;
+        alphabet_size = int_pow<size_t>(alphabet_size, kmer_size);
     }
 
     void override_post() override {
-        tensor_slide_params.sig_len = original_sig_len;
+        tensor_slide_params.alphabet_size = original_alphabet_size;
         tensor_slide_params.tup_len = 2;
     }
 };
@@ -49,7 +49,7 @@ struct DiscModules : public BasicModules {
         for (int i = 0; i < dims[l - 1]; i++) {
             auto params = layer0();
             params.tup_len = tup_lens[l];
-            params.sig_len = num_phases[l];
+            params.alphabet_size = num_phases[l];
             params.num_phases = num_phases[l];
             params.embed_dim = dims[l] / dims[l - 1];
             params.stride = (dims[l] / dims[l - 1]);
@@ -112,7 +112,7 @@ struct TestModule1 {
         for (auto &l : lay2)
             l.rand_init();
         for (int si = 0; si < num_seqs; si++) {
-            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.sig_len);
+            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.alphabet_size);
             minhash(kmer_seqs[si], mh_sketch[si], kmerModules.mh_params);
             weighted_minhash(kmer_seqs[si], wmh_sketch[si], kmerModules.wmh_params);
             ordered_minhash(kmer_seqs[si], omh_sketch[si], kmerModules.omh_params);

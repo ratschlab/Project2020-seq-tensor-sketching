@@ -14,14 +14,19 @@ file(GLOB util_files "util/*.cpp")
 add_library(util ${util_files})
 target_link_libraries(util gflags)
 
+file(GLOB sequence_files "sequence/*.cpp")
+add_library(sequence ${sequence_files})
+target_link_libraries(sequence gflags)
+
+
 add_executable(exp_pairwise experiments_main.cpp)
-target_link_libraries(exp_pairwise util)
+target_link_libraries(exp_pairwise sequence util)
 
 add_executable(sketch tensor_sketch_main.cpp)
-target_link_libraries(sketch util)
+target_link_libraries(sketch sequence util)
 
-add_executable(seqgen util/seqgen.cpp)
-target_link_libraries(seqgen util)
+add_executable(seqgen sequence_generator_main.cpp)
+target_link_libraries(seqgen sequence util)
 
 # TESTS
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Werror")

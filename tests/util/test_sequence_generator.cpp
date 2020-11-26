@@ -1,4 +1,4 @@
-#include "util/seqgen.hpp"
+#include "sequence/sequence_generator.hpp"
 
 #include <gtest/gtest.h>
 

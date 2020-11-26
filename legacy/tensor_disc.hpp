@@ -147,7 +147,7 @@ Vec3D<embed_type> tensor_disc_slide(const Seq<seq_type> &seq, const TensorSlideP
 
 template <class seq_type, class embed_type>
 Vec3D<embed_type> tensor_disc_slide2(const Vec2D<seq_type> &seq, const TensorSlideParams &params) {
-    assert(params.num_phases == params.sig_len);
+    assert(params.num_phases == params.alphabet_size);
     Vec3D<embed_type> embedding = Vec3D<embed_type>(params.embed_dim, Vec2D<embed_type>());
     for (int m = 0; m < params.embed_dim; m++) {
         Vec3D<embed_type> cnt

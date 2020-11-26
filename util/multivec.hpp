@@ -36,19 +36,4 @@ T sub2ind(const Vec<T> &sub, T len) {
     return ind;
 }
 
-template <class T, class = is_u_integral<T>>
-T int_pow(T x, T pow) {
-    int result = 1;
-    for (;;) {
-        if (pow & 1)
-            result *= x;
-        pow >>= 1;
-        if (!pow)
-            break;
-        x *= x;
-    }
-
-    return result;
-}
-
 } // namespace ts

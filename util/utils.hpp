@@ -2,6 +2,8 @@
 
 #include "util/timer.hpp"
 
+#include <gflags/gflags.h>
+
 #include <algorithm>
 #include <cassert>
 #include <vector>
@@ -29,6 +31,42 @@ using Vec4D = Vec<Vec3D<T>>;
 
 template <class T>
 using Seq = std::vector<T>;
+
+/**
+ * Extracts k-mers from a sequence. The k-mer is treated as a number in base alphabet_size and then
+ * converted to decimal, i.e. the sequence s1...sk is converted to s1*S^(k-1) + s2*S^(k-2) + ... +
+ * sk, where k is the k-mer size.
+ * @tparam chr types of elements in the sequence
+ * @tparam kmer type that stores a kmer
+ * @param seq the sequence to extract kmers from
+ * @param kmer_size number of characters in a kmer
+ * @param alphabet_size size of the alphabet
+ * @return the extracted kmers, as integers converted from base #alphabet_size
+ */
+template <class chr, class kmer>
+Vec<kmer> seq2kmer(const Seq<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size) {
+    if (seq.size() < (size_t)kmer_size) {
+        return Vec<kmer>();
+    }
+    Timer::start("seq2kmer");
+
+    Vec<kmer> result(seq.size() - kmer_size + 1, 0);
+
+    kmer c = 1;
+    for (uint8_t i = 0; i < kmer_size; i++) {
+        result[0] += c * seq[i];
+        c *= alphabet_size;
+    }
+    c /= alphabet_size;
+
+    for (size_t i = 0; i < result.size() - 1; i++) {
+        kmer base = result[i] - seq[i];
+        assert(base % alphabet_size == 0);
+        result[i + 1] = base / alphabet_size + seq[i + kmer_size] * c;
+    }
+    Timer::stop();
+    return result;
+}
 
 template <typename T>
 inline int sgn(T val) {
@@ -251,5 +289,22 @@ size_t edit_distance(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
     Timer::stop();
     return result;
 }
+
+template <class T, class = is_u_integral<T>>
+T int_pow(T x, T pow) {
+    int result = 1;
+    for (;;) {
+        if (pow & 1)
+            result *= x;
+        pow >>= 1;
+        if (!pow)
+            break;
+        x *= x;
+    }
+
+    return result;
+}
+
+std::string flag_values();
 
 } // namespace ts

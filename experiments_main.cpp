@@ -1,7 +1,8 @@
+#include "sequence/fasta_io.hpp"
+#include "sequence/sequence_generator.hpp"
 #include "util/args.hpp"
 #include "util/modules.hpp"
 #include "util/multivec.hpp"
-#include "util/seqgen.hpp"
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
@@ -9,13 +10,33 @@
 #include <fstream>
 #include <memory>
 
-namespace fs = std::filesystem;
+DEFINE_int32(alphabet_size, 4, "Size of the alphabet for generated sequences");
+DEFINE_bool(fix_len, false, "");
+DEFINE_int32(max_num_blocks, 4, "Maximum number of blocks for block permutation");
+DEFINE_int32(min_num_blocks, 2, "Minimum number of blocks for block permutation");
+DEFINE_uint32(num_seqs, 200, "Number of sequences to be generated");
+DEFINE_uint32(seq_len, 256, "The length of sequence to be generated");
+DEFINE_double(mutation_rate, 0.015, "Rate of point mutation rate for sequence generation");
+DEFINE_double(block_mutate_rate, 0.02, "The probability of having a block permutation");
+DEFINE_uint32(sequence_seeds, 1, "Number of initial random sequences");
 
+DEFINE_string(output, "./seqs.fa", "File name where the generated sequence should be written");
+
+static bool ValidateMutationPattern(const char *flagname, const std::string &value) {
+    if (value == "linear" || value == "tree" || value == "pairs")
+        return true;
+    printf("Invalid value for --%s: %s\n", flagname, value.c_str());
+    return false;
+}
+DEFINE_string(mutation_pattern, "linear", "the mutational pattern, can be 'linear', or 'tree'");
+DEFINE_validator(mutation_pattern, &ValidateMutationPattern);
+
+namespace fs = std::filesystem;
 using namespace ts;
 
 struct KmerModule : public BasicModule {
     void override_module_params() override {
-        sig_len = int_pow<size_t>(sig_len, kmer_size);
+        alphabet_size = int_pow<size_t>(alphabet_size, kmer_size);
     }
 };
 
@@ -23,7 +44,7 @@ template <class seq_type, class embed_type>
 struct SeqGenModule {
     Vec2D<seq_type> seqs;
     Vec<std::string> seq_names;
-    string test_id;
+    std::string test_id;
     Vec2D<seq_type> kmer_seqs;
     Vec2D<embed_type> mh_sketch;
     Vec2D<embed_type> wmh_sketch;
@@ -34,7 +55,7 @@ struct SeqGenModule {
 
     BasicModule basicModules;
     KmerModule kmerModules;
-    string output;
+    std::string output;
 
     void parse(int argc, char **argv) {
         basicModules.parse(argc, argv);
@@ -44,70 +65,23 @@ struct SeqGenModule {
         output = basicModules.directory + basicModules.output;
     }
 
-    void write_fasta(Vec2D<seq_type> &seq_vec, bool Abc = false) {
-        std::ofstream fo;
-        fo.open(output + "seqs.fa");
-        test_id = "#" + std::to_string(random());
-        fo << test_id << "\n";
-        for (size_t si = 0; si < seq_vec.size(); si++) {
-            fo << "> " << si << "\n";
-            for (size_t i = 0; i < seq_vec[i].size(); i++) {
-                if (Abc) {
-                    fo << (char)(seq_vec[si][i] + (int)'A');
-                } else {
-                    fo << seq_vec[si][i] << ",";
-                }
-            }
-            fo << "\n\n";
-        }
-        fo.close();
-    }
-
-    void read_fasta(Vec2D<seq_type> &seq_vec) {
-        seq_vec.clear();
-        string file = (output + "/seqs.fa");
-        std::ifstream infile = std::ifstream(file);
-        string line;
-
-        std::getline(infile, line);
-        if (line[0] == '#') {
-            test_id = line;
-            std::getline(infile, line);
-        }
-        while (line[0] != '>') {
-            std::cout << line << "\n";
-            std::getline(infile, line);
-        }
-        string name = line;
-        Vec<seq_type> seq;
-        while (std::getline(infile, line)) {
-            if (line[0] == '>') {
-                seq_vec.push_back(seq);
-                seq_names.push_back(name);
-                seq.clear();
-                name = line;
-            } else if (!line.empty()) {
-                for (char c : line) {
-                    int ic = c - (int)'A';
-                    seq.push_back(ic);
-                }
-            }
-        }
-    }
-
-
     void generate_sequences() {
-        if (basicModules.mutation_pattern == "pairs") {
-            basicModules.seq_gen.genseqs_pairs(seqs);
-        } else if (basicModules.mutation_pattern == "linear") {
-            basicModules.seq_gen.genseqs_linear(seqs);
-        } else if (basicModules.mutation_pattern == "tree") {
-            basicModules.seq_gen.genseqs_tree(seqs, basicModules.sequence_seeds);
-            //            basicModules.seq_gen.genseqs_tree2(seqs);
-        } else {
-            std::cerr << " mutation pattern `" << basicModules.mutation_pattern
-                      << "` is not valid\n";
-            exit(1);
+        ts::SeqGen::Config config = { FLAGS_alphabet_size,
+                                      FLAGS_fix_len,
+                                      FLAGS_max_num_blocks,
+                                      FLAGS_min_num_blocks,
+                                      FLAGS_num_seqs,
+                                      FLAGS_seq_len,
+                                      (float)FLAGS_mutation_rate,
+                                      (float)FLAGS_block_mutate_rate };
+        ts::SeqGen seq_gen(config);
+
+        if (FLAGS_mutation_pattern == "pairs") {
+            seq_gen.genseqs_pairs(seqs);
+        } else if (FLAGS_mutation_pattern == "linear") {
+            seq_gen.genseqs_linear(seqs);
+        } else if (FLAGS_mutation_pattern == "tree") {
+            seq_gen.genseqs_tree(seqs, basicModules.sequence_seeds);
         }
     }
 
@@ -120,7 +94,8 @@ struct SeqGenModule {
         ten_sketch.resize(num_seqs);
         slide_sketch.resize(num_seqs);
         for (size_t si = 0; si < num_seqs; si++) {
-            kmer_seqs[si] = seq2kmer<seq_type, seq_type>(seqs[si], basicModules.kmer_size, basicModules.sig_len);
+            kmer_seqs[si] = seq2kmer<seq_type, seq_type>(seqs[si], basicModules.kmer_size,
+                                                         basicModules.alphabet_size);
             minhash(kmer_seqs[si], mh_sketch[si], kmerModules.mh_params);
             weighted_minhash(kmer_seqs[si], wmh_sketch[si], kmerModules.wmh_params);
             if (basicModules.tuple_on_kmer) {
@@ -165,7 +140,7 @@ struct SeqGenModule {
     }
 
     void save_output() {
-        Vec<string> method_names
+        Vec<std::string> method_names
                 = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide" };
         std::ofstream fo;
 
@@ -186,7 +161,7 @@ struct SeqGenModule {
         fo << Timer::summary();
         fo.close();
 
-        write_fasta(seqs);
+        write_fasta(output + "seqs.fa", seqs);
 
         size_t num_seqs = seqs.size();
         for (int m = 0; m < 6; m++) {
@@ -267,6 +242,8 @@ struct SeqGenModule {
 };
 
 int main(int argc, char *argv[]) {
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
+
     SeqGenModule<int, double> experiment;
     experiment.parse(argc, argv);
     if (experiment.basicModules.show_help) {

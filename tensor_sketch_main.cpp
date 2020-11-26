@@ -1,23 +1,23 @@
-#include <fstream>
-#include <memory>
-
+#include "sequence/fasta_io.hpp"
 #include "util/args.hpp"
 #include "util/modules.hpp"
-#include "util/seqgen.hpp"
 #include "util/utils.hpp"
+
+#include <fstream>
+#include <memory>
 #include <sstream>
-#include <util/fasta.hpp>
+
 
 using namespace ts;
 
 template <typename seq_type, class embed_type>
 class SketchModule : public BasicModule {
   public:
-    int original_sig_len {};
+    int original_alphabet_size {};
 
     void override_module_params() override {
-        original_sig_len = sig_len;
-        sig_len = int_pow<size_t>(sig_len, kmer_size);
+        original_alphabet_size = alphabet_size;
+        alphabet_size = int_pow<size_t>(alphabet_size, kmer_size);
         wmh_params.max_len = win_len;
         omh_params.max_len = win_len;
     }
@@ -26,7 +26,7 @@ class SketchModule : public BasicModule {
         directory = "./";
         output = "data/sketches/";
         input = "data/fasta/seqs.fa";
-        sig_len = 5;
+        alphabet_size = 5;
         kmer_size = 1;
         embed_dim = 128;
         tup_len = 2;
@@ -47,7 +47,7 @@ class SketchModule : public BasicModule {
         size_t num_seqs = seqs.size();
         slide_sketch = new3D<embed_type>(seqs.size(), embed_dim, 0);
         for (size_t si = 0; si < num_seqs; si++) {
-            Vec<seq_type> kmers = seq2kmer<seq_type, seq_type>(seqs[si], kmer_size, original_sig_len);
+            Vec<seq_type> kmers = seq2kmer<seq_type, seq_type>(seqs[si], kmer_size, original_alphabet_size);
             if (sketch_method == "TenSlide") {
                 tensor_slide_sketch(kmers, slide_sketch[si], tensor_slide_params);
             } else {
@@ -72,7 +72,7 @@ class SketchModule : public BasicModule {
             std::cerr << "otuput file not opened\n";
         }
         fo << test_id << "\n";
-        fo << "# " << argvals() << "\n";
+        fo << "# " << flag_values() << "\n";
         for (size_t si = 0; si < slide_sketch.size(); si++) {
             for (size_t m = 0; m < slide_sketch[si].size(); m++) {
                 fo << seq_names[si] << ">" << std::dec << m << "\n";
@@ -110,7 +110,7 @@ class SketchModule : public BasicModule {
     Vec2D<seq_type> seqs;
     Vec<std::string> seq_names;
     Vec3D<embed_type> slide_sketch;
-    string test_id;
+    std::string test_id;
 };
 
 int main(int argc, char *argv[]) {

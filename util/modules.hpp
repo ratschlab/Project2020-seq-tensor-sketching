@@ -1,8 +1,7 @@
 #pragma once
 
-#include "util/alphabets.hpp"
+#include "sequence/alphabets.hpp"
 #include "util/args.hpp"
-#include "util/seqgen.hpp"
 #include "sketch/minhash.hpp"
 #include "sketch/omh.hpp"
 #include "sketch/tensor.hpp"
@@ -18,7 +17,6 @@ DEFINE_string(alphabet, "dna", "Alphabet of the input data: DNA or Protein [DNA]
 namespace ts { // ts = Tensor Sketch
 
 struct BasicModule : public ArgSet {
-    SeqGen seq_gen;
     MHParams mh_params;
     WMHParams wmh_params;
     OMHParams omh_params;
@@ -26,38 +24,27 @@ struct BasicModule : public ArgSet {
     TensorSlideParams tensor_slide_params;
 
   protected:
-    void init_seqgen(SeqGen &seqgen) const {
-        seqgen.sig_len = sig_len;
-        seqgen.fix_len = fix_len;
-        seqgen.max_num_blocks = max_num_blocks;
-        seqgen.min_num_blocks = min_num_blocks;
-        seqgen.num_seqs = num_seqs;
-        seqgen.seq_len = seq_len;
-        seqgen.mutation_rate = mutation_rate;
-        seqgen.block_mutate_rate = block_mutate_rate;
-    }
-
     void init_mh_params(MHParams &params) const {
-        params.sig_len = sig_len;
+        params.alphabet_size = alphabet_size;
         params.embed_dim = embed_dim;
     }
 
     void init_wmh_params(WMHParams &params) const {
         params.embed_dim = embed_dim;
-        params.sig_len = sig_len;
+        params.alphabet_size = alphabet_size;
         params.max_len = 2 * seq_len;
     }
 
     void init_omh(OMHParams &params) const {
         params.tup_len = tup_len;
-        params.sig_len = sig_len;
+        params.alphabet_size = alphabet_size;
         params.embed_dim = embed_dim;
         params.max_len = 2 * seq_len;
     }
 
     void init_tensor_params(TensorParams &params) const {
         params.embed_dim = embed_dim;
-        params.sig_len = sig_len;
+        params.alphabet_size = alphabet_size;
         params.tup_len = tup_len;
         params.num_phases = num_phases;
         params.num_bins = num_bins;
@@ -98,7 +85,6 @@ struct BasicModule : public ArgSet {
     void models_init() {
         init_alphabet(FLAGS_alphabet);
         override_module_params();
-        init_seqgen(seq_gen);
         init_mh_params(mh_params);
         init_wmh_params(wmh_params);
         init_omh(omh_params);
@@ -120,7 +106,7 @@ struct ComboModules_v2 : public ArgSet {
 
     void init_ten_2_params(Tensor2Params &params) const {
         params.tup_len = tup_len;
-        params.sig_len = sig_len;
+        params.alphabet_size = alphabet_size;
         params.embed_dim = embed_dim;
         params.num_phases = num_phases;
     }

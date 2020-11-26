@@ -4,7 +4,7 @@ namespace ts { // ts = Tensor Sketch
 
 
 struct Tensor2Params {
-    int sig_len;
+    int alphabet_size;
     int embed_dim;
     int num_phases;
     int tup_len;
@@ -18,9 +18,9 @@ struct Tensor2Params {
         std::mt19937 gen(rd());
         std::uniform_int_distribution<int> rand_hash2(0, hash_len - 1);
 
-        hash = new2D<int>(tup_len, sig_len);
+        hash = new2D<int>(tup_len, alphabet_size);
         for (int h = 0; h < tup_len; h++) {
-            for (int c = 0; c < sig_len; c++) {
+            for (int c = 0; c < alphabet_size; c++) {
                 hash[h][c] = rand_hash2(gen);
             }
         }
@@ -138,7 +138,7 @@ void conv_slide_sketch(const Vec2D<seq_type> &seq,
     }
 
     for (int i = 0; i < seq.size(); i++) {
-        assert(seq[i].size() == params.sig_len);
+        assert(seq[i].size() == params.alphabet_size);
         for (int p = 0; p < params.tup_len; p++) {
             for (int q = params.tup_len - 1; q >= p; q--) {
                 double z = (double)(q - p + 1) / std::min(i + 1, params.win_len);

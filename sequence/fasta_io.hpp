@@ -1,9 +1,12 @@
 #pragma once
 
-#include "util/alphabets.hpp"
+#include "sequence/alphabets.hpp"
 #include "util/utils.hpp"
 
+#include <fstream>
+#include <iostream>
 #include <string>
+#include <sstream>
 
 namespace ts { // ts = Tensor Sketch
 
@@ -55,6 +58,25 @@ read_fasta(const std::string &file_name, const std::string &format_input) {
         }
     }
     return { test_id, seqs, seq_names };
+}
+
+template <class seq_type>
+void write_fasta(const std::string& file_name, const Vec2D<seq_type> &sequences, bool Abc = false) {
+    std::ofstream fo(file_name);
+    fo << "#" + std::to_string(random()) << std::endl;
+    fo << "# " << flag_values() << std::endl;
+    for (uint32_t si = 0; si < sequences.size(); si++) {
+        fo << ">s" << si << "\n";
+        auto &seq = sequences[si];
+        for (auto &c : seq) {
+            if (Abc) {
+                fo << (char)(c + (int)'A');
+            } else {
+                fo << c << ",";
+            }
+        }
+        fo << "\n\n";
+    }
 }
 
 } // namespace ts

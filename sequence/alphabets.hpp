@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 
+// Defines the alphabets that TensorSketch can operate on
 namespace ts {
 
 extern std::function<uint32_t(uint8_t c)> char2int;
