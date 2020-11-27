@@ -1,5 +1,9 @@
 #pragma once
 
+#include "util/multivec.hpp"
+
+#include <random>
+
 namespace ts { // ts = Tensor Sketch
 
 

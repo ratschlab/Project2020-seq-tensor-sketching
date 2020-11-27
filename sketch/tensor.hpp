@@ -8,17 +8,65 @@
 namespace ts { // ts = Tensor Sketch
 
 
-struct TensorParams {
-    int alphabet_size;
-    int embed_dim;
-    int num_phases;
-    int num_bins;
-    int tup_len;
+/**
+ * Computes tensor sketches for a given sequence.
+ * @tparam T the type of elements in the sequences to be sketched.
+ */
+template <class T>
+class Tensor {
+  public:
+    /**
+     * @param set_size the number of elements in S,
+     * @param sketch_dim the number of components (elements) in the sketch vector.
+     */
+    Tensor(T set_size, size_t sketch_dim, size_t num_phases, size_t num_bins, size_t tup_len)
+        : sketch_dim(sketch_dim),
+          set_size(set_size),
+          num_phases(num_phases),
+          num_bins(num_bins),
+          tup_len(tup_len) {
+        rand_init();
+    }
 
-    Vec3D<int> iphase;
-    Vec2D<double> icdf;
-    Vec<double> bins;
+    template <class embed_type>
+    Vec<embed_type> compute(const std::vector<T> &seq) {
+        Vec<embed_type> sketch;
+        Timer::start("tensor_sketch");
+        sketch = Vec<embed_type>(sketch_dim, 0);
+        for (size_t m = 0; m < sketch_dim; m++) {
+            auto cnt = new2D<double>(tup_len + 1, num_phases, 0);
+            cnt[0][0] = 1; // base case
+            for (size_t i = 0; i < seq.size(); i++) {
+                for (int32_t t = (int32_t)tup_len - 1; t >= 0; t--) {
+                    auto pi = iphase[m][t][seq[i]];
+                    for (size_t p = 0; p < num_phases; p++) {
+                        auto shift = (p + pi) % num_phases;
+                        cnt[t + 1][shift] += cnt[t][p];
+                    }
+                }
+            }
+            const auto &top_cnt = cnt[tup_len];
+            auto prod = std::inner_product(icdf[m].begin(), icdf[m].end(), top_cnt.begin(),
+                                           (double)0);
+            double norm = l1(top_cnt);
+            prod = prod / norm;
+            //            int exp;
+            //            frexp(prod, &exp);
+            //            embedding[m]= exp * sgn(prod);
+            embed_type bin
+                    = std::upper_bound(bins.begin(), bins.begin() + num_bins, prod) - bins.begin();
+            if (num_bins == 0) {
+                sketch[m] = prod;
+            } else {
+                sketch[m] = bin;
+            }
+        }
+        Timer::stop();
 
+        return sketch;
+    }
+
+  protected:
     virtual void rand_init() {
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -26,68 +74,39 @@ struct TensorParams {
         std::uniform_real_distribution<double> unif(0, 1);
         double pie = std::atan(1) * 2;
 
-        iphase = new3D<int>(embed_dim, tup_len, alphabet_size);
-        icdf = new2D<double>(embed_dim, num_phases);
-        for (int m = 0; m < embed_dim; m++) {
+        iphase = new3D<int>(sketch_dim, tup_len, set_size);
+        icdf = new2D<double>(sketch_dim, num_phases);
+        for (size_t m = 0; m < sketch_dim; m++) {
             double bias = 0;
-            for (int t = 0; t < tup_len; t++) {
+            for (size_t t = 0; t < tup_len; t++) {
                 bias += unif(gen);
-                for (int c = 0; c < alphabet_size; c++) {
+                for (size_t c = 0; c < set_size; c++) {
                     iphase[m][t][c] = unif_iphase(gen);
                 }
             }
-            for (int p = 0; p < num_phases; p++) {
+            for (size_t p = 0; p < num_phases; p++) {
                 icdf[m][p] = 1 - 2 * unif(gen); // use random sign (-1) or (1)
                 icdf[m][p] = (p % 2 == 0) ? 1 : -1; // use oddity of p to assign (-1) or (1)
             }
         }
         bins = Vec<double>(num_bins);
-        for (int b = 0; b < num_bins; b++) {
+        for (size_t b = 0; b < num_bins; b++) {
             bins[b] = std::tan(pie * (((double)b + .5) / num_bins - .5));
         }
         bins.push_back(std::numeric_limits<double>::max());
         bins.insert(bins.begin(), -std::numeric_limits<double>::min());
     }
+
+  protected:
+    size_t sketch_dim;
+    size_t set_size;
+    size_t num_phases;
+    size_t num_bins;
+    size_t tup_len;
+
+    Vec3D<int> iphase;
+    Vec2D<double> icdf;
+    Vec<double> bins;
 };
-
-
-template <class seq_type, class embed_type>
-void tensor_sketch(const Seq<seq_type> &seq,
-                   Vec<embed_type> &embedding,
-                   const TensorParams &params) {
-    Timer::start("tensor_sketch");
-    embedding = Vec<embed_type>(params.embed_dim, 0);
-    for (int m = 0; m < params.embed_dim; m++) {
-        auto cnt = new2D<double>(params.tup_len + 1, params.num_phases, 0);
-        cnt[0][0] = 1; // base case
-        for (size_t i = 0; i < seq.size(); i++) {
-            for (int t = params.tup_len - 1; t >= 0; t--) {
-                auto pi = params.iphase[m][t][seq[i]];
-                for (int p = 0; p < params.num_phases; p++) {
-                    auto shift = (p + pi) % params.num_phases;
-                    cnt[t + 1][shift] += cnt[t][p];
-                }
-            }
-        }
-        const auto &top_cnt = cnt[params.tup_len];
-        auto prod = std::inner_product(params.icdf[m].begin(), params.icdf[m].end(),
-                                       top_cnt.begin(), (double)0);
-        double norm = l1(top_cnt);
-        prod = prod / norm;
-        //            int exp;
-        //            frexp(prod, &exp);
-        //            embedding[m]= exp * sgn(prod);
-        embed_type bin
-                = std::upper_bound(params.bins.begin(), params.bins.begin() + params.num_bins, prod)
-                - params.bins.begin();
-        if (params.num_bins == 0) {
-            embedding[m] = prod;
-        } else {
-            embedding[m] = bin;
-        }
-    }
-    Timer::stop();
-}
-
 
 } // namespace ts

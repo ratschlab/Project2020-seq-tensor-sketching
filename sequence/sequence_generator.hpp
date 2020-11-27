@@ -1,12 +1,12 @@
 #pragma once
 
+#include "util/utils.hpp"
+
 #include <algorithm>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <random>
-
-#include "util/args.hpp"
 
 namespace ts { // ts = Tensor Sketch
 
