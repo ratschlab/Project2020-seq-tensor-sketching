@@ -42,4 +42,23 @@ TEST(MinHash, PermuteAndRepeat) {
     ASSERT_THAT(sketch1, ElementsAreArray(sketch2));
 }
 
+Vec2D<size_t> hash_init(uint32_t set_size, uint32_t sketch_dim) {
+    Vec2D<size_t> hashes = Vec2D<size_t>(sketch_dim, Vec<size_t>(set_size, 0));
+    for (size_t m = 0; m < sketch_dim; m++) {
+        std::iota(hashes[m].begin(), hashes[m].end(), 0);
+    }
+    return hashes;
+}
+
+TEST(MinHash, PresetHash) {
+    MinHash<uint8_t> under_test(4 * 4, 3);
+    under_test.set_hashes_for_testing(hash_init(4 * 4, 3));
+    for (uint32_t i = 0; i < 4 * 4; ++i) {
+        std::vector<uint8_t> sequence(4*4-i);
+        std::iota(sequence.begin(), sequence.end(), i);
+        Vec<uint32_t> sketch = under_test.template compute<uint32_t>(sequence);
+        ASSERT_THAT(sketch, ElementsAreArray({ i, i, i }));
+    }
+}
+
 } // namespace

@@ -55,6 +55,10 @@ class MinHash {
         return sketch;
     }
 
+    void set_hashes_for_testing(const Vec2D<size_t>& hashes) {
+        this->hashes = hashes;
+    }
+
   private:
     void rand_init() {
         std::random_device rd;

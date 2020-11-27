@@ -4,8 +4,8 @@ set(CMAKE_CXX_STANDARD 20)
 
 include_directories(.)
 
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -O0")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -O0")
+#set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -O0")
+#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -O0")
 
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)

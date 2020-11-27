@@ -45,4 +45,36 @@ TEST(WeightedMinHash, PermuteAndRepeat) {
     }
 }
 
+Vec2D<size_t> hash_init(uint32_t set_size, uint32_t sketch_dim, uint32_t max_len) {
+    Vec2D<size_t> hashes = Vec2D<size_t>(sketch_dim, Vec<size_t>(set_size * max_len, 0));
+    for (size_t m = 0; m < sketch_dim; m++) {
+        std::iota(hashes[m].begin(), hashes[m].end(), 0);
+    }
+    return hashes;
+}
+
+TEST(WeightedMinHash, PresetHash) {
+    WeightedMinHash<uint8_t> under_test(4 * 4, 3, 100);
+    under_test.set_hashes_for_testing(hash_init(4 * 4, 3, 100));
+    for (uint32_t i = 0; i < 4 * 4; ++i) {
+        std::vector<uint8_t> sequence(4 * 4 - i);
+        std::iota(sequence.begin(), sequence.end(), i);
+        Vec<uint32_t> sketch = under_test.template compute<uint32_t>(sequence);
+        ASSERT_THAT(sketch, ElementsAreArray({ i, i, i }));
+    }
+}
+
+TEST(WeightedMinHash, PresetHashRepeat) {
+    uint32_t set_size = 4 * 4; // corresponds to k-mers of length 2 over the DNA alphabet
+    WeightedMinHash<uint8_t> under_test(set_size, 3, 100);
+    under_test.set_hashes_for_testing(hash_init(set_size, 3, 100));
+    for (uint32_t i = 0; i < set_size; ++i) {
+        std::vector<uint8_t> sequence(2 * (set_size - i));
+        std::iota(sequence.begin(), sequence.begin() + sequence.size() / 2, i);
+        std::iota(sequence.begin() + sequence.size() / 2, sequence.end(), i);
+        Vec<uint32_t> sketch = under_test.template compute<uint32_t>(sequence);
+        ASSERT_THAT(sketch, ElementsAreArray({ i, i, i }));
+    }
+}
+
 } // namespace
