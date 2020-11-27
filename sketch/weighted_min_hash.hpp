@@ -3,6 +3,7 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
+#include <iostream>
 #include <random>
 
 namespace ts { // ts = Tensor Sketch
