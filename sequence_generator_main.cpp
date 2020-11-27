@@ -84,15 +84,14 @@ int main(int argc, char *argv[]) {
     ts::Vec<std::string> seq_names;
     std::string test_id;
 
-    ts::SeqGen::Config config = { FLAGS_alphabet_size,
-                                  FLAGS_fix_len,
-                                  FLAGS_max_num_blocks,
-                                  FLAGS_min_num_blocks,
-                                  FLAGS_num_seqs,
-                                  FLAGS_seq_len,
-                                  (float)FLAGS_mutation_rate,
-                                  (float)FLAGS_block_mutation_rate };
-    ts::SeqGen seq_gen(config);
+    ts::SeqGen seq_gen(FLAGS_alphabet_size,
+                       FLAGS_fix_len,
+                       FLAGS_max_num_blocks,
+                       FLAGS_min_num_blocks,
+                       FLAGS_num_seqs,
+                       FLAGS_seq_len,
+                       (float)FLAGS_mutation_rate,
+                       (float)FLAGS_block_mutation_rate);
 
     if (FLAGS_mutation_pattern == "linear") {
         seq_gen.genseqs_linear(seqs);
