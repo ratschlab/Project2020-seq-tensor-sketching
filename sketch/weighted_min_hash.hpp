@@ -1,5 +1,7 @@
 #pragma once
 
+#include "hash_base.hpp"
+
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
@@ -21,7 +23,7 @@ namespace ts { // ts = Tensor Sketch
  * @tparam T the type of S's elements
  */
 template <class T>
-class WeightedMinHash {
+class WeightedMinHash : public HashBase<T> {
   public:
     /**
      * Constructs a weighted min-hasher for the given alphabet size which constructs sketches of the
@@ -31,25 +33,26 @@ class WeightedMinHash {
      * @param max_len maximum sequence length to be hashed.
      */
     WeightedMinHash(T set_size, size_t sketch_dim, size_t max_len)
-        : set_size(set_size), sketch_dim(sketch_dim), max_len(max_len) {
-        rand_init();
-    }
+        : HashBase<T>(set_size, sketch_dim, max_len * set_size), max_len(max_len) {}
 
-    template <class embed_type>
-    Vec<embed_type> compute(const std::vector<T> &seq) {
-        if (seq.size() > max_len) {
+    Vec<T> compute(const std::vector<T> &kmers) {
+        if (kmers.size() > max_len) {
             throw std::invalid_argument("Sequence too long. Maximum sequence length is "
                                         + std::to_string(max_len)
                                         + ". Set --max_length to a higher value.");
         }
         Timer::start("weighted_minhash");
-        Vec<embed_type> sketch = Vec<embed_type>(sketch_dim);
-        for (size_t si = 0; si < sketch_dim; si++) {
+        Vec<T> sketch = Vec<T>(this->sketch_dim);
+        if (kmers.empty()) {
+            Timer::stop();
+            return sketch;
+        }
+        for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char;
-            size_t min_rank = hashes[0].size() + 1; // set_size * max_len + 1
-            Vec<size_t> cnts(set_size, 0);
-            for (const auto s : seq) {
-                auto r = hashes[si][s + cnts[s] * set_size];
+            size_t min_rank = this->hashes[0].size() + 1;
+            Vec<size_t> cnts(this->set_size, 0);
+            for (const auto s : kmers) {
+                auto r = this->hashes[si][s + cnts[s] * this->set_size];
                 cnts[s]++;
                 if (r < min_rank) {
                     min_rank = r;
@@ -63,24 +66,26 @@ class WeightedMinHash {
         return sketch;
     }
 
-    void set_hashes_for_testing(const Vec2D<size_t> &hashes) { this->hashes = hashes; }
-
-  private:
-    void rand_init() {
-        std::random_device rd;
-        auto eng = std::mt19937(rd());
-        hashes = Vec2D<size_t>(sketch_dim, Vec<size_t>(set_size * max_len, 0));
-        for (size_t m = 0; m < sketch_dim; m++) {
-            std::iota(hashes[m].begin(), hashes[m].end(), 0);
-            std::shuffle(hashes[m].begin(), hashes[m].end(), eng);
-        }
+    /**
+     * Computes the ordered min-hash sketch for the given sequence.
+     * @param sequence the sequence to compute the ordered min-hash for
+     * @param k-mer length; the sequence will be transformed into k-mers and the k-mers will be
+     * hashed
+     * @param number of characters in the alphabet over which sequence is defined
+     * @return the ordered min-hash sketch of #sequence
+     * @tparam C the type of characters in #sequence
+     */
+    template <typename C>
+    Vec<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
+        Timer::start("compute_sequence");
+        Vec<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
+        Vec<T> sketch = compute(kmers);
+        Timer::stop();
+        return sketch;
     }
 
   private:
-    T set_size;
-    size_t sketch_dim;
     size_t max_len;
-    Vec2D<size_t> hashes;
 };
 
 } // namespace ts
