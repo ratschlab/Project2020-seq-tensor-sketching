@@ -34,17 +34,6 @@ TEST(WeightedMinHash, Permute) {
     ASSERT_THAT(sketch1, ElementsAreArray(sketch2));
 }
 
-TEST(WeightedMinHash, PermuteAndRepeat) {
-    WeightedMinHash<uint8_t> under_test(4 * 4 * 4, 3, 100);
-    std::vector<uint8_t> sequence1 = { 0, 1, 2, 3, 4, 5 };
-    std::vector<uint8_t> sequence2 = { 5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2, 1, 1, 1, 0, 0, 0 };
-    Vec<uint32_t> sketch1 = under_test.template compute<uint32_t>(sequence1);
-    Vec<uint32_t> sketch2 = under_test.template compute<uint32_t>(sequence2);
-    for (uint32_t i = 0; i < 3; ++i) {
-        ASSERT_TRUE(sketch1[i] >= sketch2[i]);
-    }
-}
-
 Vec2D<size_t> hash_init(uint32_t set_size, uint32_t sketch_dim, uint32_t max_len) {
     Vec2D<size_t> hashes = Vec2D<size_t>(sketch_dim, Vec<size_t>(set_size * max_len, 0));
     for (size_t m = 0; m < sketch_dim; m++) {
@@ -65,7 +54,7 @@ TEST(WeightedMinHash, PresetHash) {
 }
 
 TEST(WeightedMinHash, PresetHashRepeat) {
-    uint32_t set_size = 4 * 4; // corresponds to k-mers of length 2 over the DNA alphabet
+    constexpr uint32_t set_size = 4 * 4; // corresponds to k-mers of length 2 over the DNA alphabet
     WeightedMinHash<uint8_t> under_test(set_size, 3, 100);
     under_test.set_hashes_for_testing(hash_init(set_size, 3, 100));
     for (uint32_t i = 0; i < set_size; ++i) {
@@ -75,6 +64,13 @@ TEST(WeightedMinHash, PresetHashRepeat) {
         Vec<uint32_t> sketch = under_test.template compute<uint32_t>(sequence);
         ASSERT_THAT(sketch, ElementsAreArray({ i, i, i }));
     }
+}
+
+TEST(WeightedMinhash, SequenceTooLong) {
+    constexpr uint32_t set_size = 4 * 4; // corresponds to k-mers of length 2 over the DNA alphabet
+    WeightedMinHash<uint8_t> under_test(set_size, 3, 100);
+    std::vector<uint8_t> sequence(100 + 1);
+    ASSERT_THROW(under_test.template compute<uint32_t>(sequence), std::invalid_argument);
 }
 
 } // namespace

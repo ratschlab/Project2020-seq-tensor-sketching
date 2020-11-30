@@ -38,8 +38,9 @@ class WeightedMinHash {
     template <class embed_type>
     Vec<embed_type> compute(const std::vector<T> &seq) {
         if (seq.size() > max_len) {
-            std::cerr << "Sequence too long. Maximum sequence length is " << max_len
-                      << ". Set --max_length to a higher value." << std::endl;
+            throw std::invalid_argument("Sequence too long. Maximum sequence length is "
+                                        + std::to_string(max_len)
+                                        + ". Set --max_length to a higher value.");
         }
         Timer::start("weighted_minhash");
         Vec<embed_type> sketch = Vec<embed_type>(sketch_dim);
@@ -59,12 +60,10 @@ class WeightedMinHash {
         }
         Timer::stop();
 
-        return  sketch;
+        return sketch;
     }
 
-    void set_hashes_for_testing(const Vec2D<size_t>& hashes) {
-        this->hashes = hashes;
-    }
+    void set_hashes_for_testing(const Vec2D<size_t> &hashes) { this->hashes = hashes; }
 
   private:
     void rand_init() {

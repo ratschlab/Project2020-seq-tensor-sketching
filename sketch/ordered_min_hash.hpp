@@ -2,6 +2,9 @@
 
 #include "util/utils.hpp"
 
+#include <iostream>
+#include <random>
+
 namespace ts { // ts = Tensor Sketch
 
 /**
@@ -27,20 +30,24 @@ class OrderedMinHash {
     template <class embed_type>
     Vec2D<embed_type> compute(const Seq<T> &seq) {
         Vec2D<embed_type> sketch;
+        if (seq.size() < tup_len) {
+            throw std::invalid_argument("Sequence must be longer than tuple length");
+        }
         if (seq.size() > max_len) {
-            std::cerr << "Sequence too long. Maximum sequence length is " << max_len
-                      << ". Set --max_length to a higher value." << std::endl;
+            throw std::invalid_argument("Sequence too long. Maximum sequence length is "
+                                        + std::to_string(max_len)
+                                        + ". Set --max_length to a higher value.");
         }
         for (size_t pi = 0; pi < sketch_dim; pi++) {
             Vec<size_t> counts(set_size, 0);
             Vec<std::pair<embed_type, T>> ranks;
             for (auto s : seq) {
-                ranks.push_back({ perms[pi][s + set_size * counts[s]], s });
+                ranks.push_back({ hashes[pi][s + set_size * counts[s]], s });
                 counts[s]++;
             }
             std::sort(ranks.begin(), ranks.end());
             Vec<embed_type> tup;
-            for (auto pair = ranks.begin(); pair != ranks.begin() + tup_len; pair++) {
+            for (auto pair = ranks.begin(); pair != ranks.end() && pair != ranks.begin() + tup_len; pair++) {
                 tup.push_back(pair->second);
             }
             sketch.push_back(tup);
@@ -66,23 +73,25 @@ class OrderedMinHash {
         return sketch;
     }
 
+    void set_hashes_for_testing(const Vec2D<size_t> &hashes) { this->hashes = hashes; }
+
   private:
     size_t set_size;
     size_t sketch_dim;
     size_t max_len;
     size_t tup_len;
 
-    Vec2D<int> perms;
+    Vec2D<size_t> hashes;
 
     void rand_init() {
         std::random_device rd;
         auto gen = std::mt19937(rd());
 
         int total_len = set_size * max_len;
-        perms = Vec2D<int>(sketch_dim, Vec<int>(total_len, 0));
+        hashes = Vec2D<size_t>(sketch_dim, Vec<size_t>(total_len, 0));
         for (size_t pi = 0; pi < sketch_dim; pi++) {
-            std::iota(perms[pi].begin(), perms[pi].end(), 0);
-            std::shuffle(perms[pi].begin(), perms[pi].end(), gen);
+            std::iota(hashes[pi].begin(), hashes[pi].end(), 0);
+            std::shuffle(hashes[pi].begin(), hashes[pi].end(), gen);
         }
     }
 };
