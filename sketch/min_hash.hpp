@@ -14,7 +14,8 @@ namespace ts { // ts = Tensor Sketch
  * {hmin_1(s), hmin_2(s), ..., hmin_sketch_size(s)}, where hmin_k(s)=s_i, such that h_k(s_i) is the
  * smallest of h_k(s_1), h_k(s_2), ..., h_k(s_n) and h_k:S->{1..#set_size} is a random permuation of
  * the elements in S.
- * @tparam T the type of S's elements
+ * This class assumes that S= {0,1,2....,#set_size}.
+ * @tparam T the type of S's elements.
  */
 template <class T>
 class MinHash {
@@ -30,20 +31,19 @@ class MinHash {
     }
 
     /**
-     * Computes the min-hash sketch for the given sequence.
-     * @param seq the sequence to compute the min-hash for
-     * @return the min-hash sketch of seq
+     * Computes the min-hash sketch for the given kmers.
+     * @param kmers kmers extracted from a sequence
+     * @return the min-hash sketch of #kmers
      */
-    template <class embed_type>
-    Vec<embed_type> compute(const std::vector<T> &seq) {
-        Vec<embed_type> sketch;
+    Vec<T> compute(const std::vector<T> &kmers) {
+        Vec<T> sketch;
         Timer::start("minhash");
-        sketch = Vec<embed_type>(sketch_dim);
+        sketch = Vec<T>(sketch_dim);
         for (size_t si = 0; si < sketch_dim; si++) {
             T min_char;
             size_t min_rank = set_size + 1;
-            Vec<size_t> h = hashes[si];
-            for (auto s : seq) {
+            Vec<T> h = hashes[si];
+            for (auto s : kmers) {
                 if (h[s] < min_rank) {
                     min_rank = h[s];
                     min_char = s;
@@ -55,17 +55,46 @@ class MinHash {
         return sketch;
     }
 
-    void set_hashes_for_testing(const Vec2D<size_t>& hashes) {
-        this->hashes = hashes;
+    /**
+     * Computes the min-hash sketch for the given sequence.
+     * @param sequence the sequence to compute the min-hash for
+     * @param k-mer length; the sequence will be transformed into k-mers and the k-mers will be
+     * hashed
+     * @param number of characters in the alphabet over which sequence is defined
+     * @return the min-hash sketch of sequence
+     * @tparam C the type of characters in the sequence
+     */
+    template <typename C>
+    Vec<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
+        Timer::start("compute_sequence");
+        Vec<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
+        Vec<T> sketch;
+        sketch = Vec<T>(sketch_dim);
+        for (size_t si = 0; si < sketch_dim; si++) {
+            T min_char;
+            size_t min_rank = set_size + 1;
+            Vec<T> h = hashes[si];
+            for (auto kmer : kmers) {
+                if (h[kmer] < min_rank) {
+                    min_rank = h[kmer];
+                    min_char = kmer;
+                }
+            }
+            sketch[si] = min_char;
+        }
+        Timer::stop();
+        return sketch;
     }
+
+    void set_hashes_for_testing(const Vec2D<T> &hashes) { this->hashes = hashes; }
 
   private:
     void rand_init() {
         std::random_device rd;
         auto eng = std::mt19937(rd());
-        hashes = Vec2D<size_t>(sketch_dim, Vec<size_t>(set_size, 0));
+        hashes = Vec2D<T>(sketch_dim, Vec<T>(set_size, T(0)));
         for (size_t m = 0; m < sketch_dim; m++) {
-            std::iota(hashes[m].begin(), hashes[m].end(), 0);
+            std::iota(hashes[m].begin(), hashes[m].end(), T(0));
             std::shuffle(hashes[m].begin(), hashes[m].end(), eng);
         }
     }
@@ -74,6 +103,6 @@ class MinHash {
     T set_size;
     size_t sketch_dim;
     /** Contains the sketch_dim permutations (hashes) that are used to compute the min-hash */
-    Vec2D<size_t> hashes;
+    Vec2D<T> hashes;
 };
 } // namespace ts
