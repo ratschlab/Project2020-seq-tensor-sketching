@@ -95,7 +95,7 @@ class Tensor {
             bins[b] = std::tan(M_PI * (((double)b + .5) / num_bins - .5));
         }
         bins.push_back(std::numeric_limits<double>::max());
-        bins.insert(bins.begin(), -std::numeric_limits<double>::min());
+        bins.insert(bins.begin(), -std::numeric_limits<double>::lowest());
     }
 
   protected:
