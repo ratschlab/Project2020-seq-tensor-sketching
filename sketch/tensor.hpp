@@ -28,11 +28,10 @@ class Tensor {
         rand_init();
     }
 
-    template <class embed_type>
-    Vec<embed_type> compute(const std::vector<T> &seq) {
-        Vec<embed_type> sketch;
+    Vec<T> compute(const std::vector<T> &seq) {
+        Vec<T> sketch;
         Timer::start("tensor_sketch");
-        sketch = Vec<embed_type>(sketch_dim, 0);
+        sketch = Vec<T>(sketch_dim, 0);
         for (size_t m = 0; m < sketch_dim; m++) {
             auto cnt = new2D<double>(tup_len + 1, num_phases, 0);
             cnt[0][0] = 1; // base case
@@ -53,8 +52,7 @@ class Tensor {
             //            int exp;
             //            frexp(prod, &exp);
             //            embedding[m]= exp * sgn(prod);
-            embed_type bin
-                    = std::upper_bound(bins.begin(), bins.begin() + num_bins, prod) - bins.begin();
+            T bin = std::upper_bound(bins.begin(), bins.begin() + num_bins, prod) - bins.begin();
             if (num_bins == 0) {
                 sketch[m] = prod;
             } else {

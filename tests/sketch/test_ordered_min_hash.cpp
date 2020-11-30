@@ -1,4 +1,4 @@
-#include "sketch/ordered_min_hash.hpp"
+#include "sketch/hash_ordered.hpp"
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>

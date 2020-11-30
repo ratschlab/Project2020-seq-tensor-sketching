@@ -30,10 +30,9 @@ class TensorSlide : public Tensor<T> {
         this->rand_init();
     }
 
-    template <class embed_type>
-    void compute(const Seq<T> &seq, Vec2D<embed_type> &sketch) {
+    void compute(const Seq<T> &seq, Vec2D<T> &sketch) {
         Timer::start("tensor_slide_sketch");
-        sketch = Vec2D<embed_type>(this->sketch_dim, Vec<embed_type>());
+        sketch = Vec2D<T>(this->sketch_dim, Vec<T>());
         for (size_t m = 0; m < this->sketch_dim; m++) {
             auto cnt = new3D<float>(this->tup_len, this->tup_len, this->num_phases, 0);
             for (size_t i = 0; i < seq.size(); i++) {
@@ -71,8 +70,8 @@ class TensorSlide : public Tensor<T> {
                     //                    int exp;
                     //                    frexp(prod, &exp);
                     //                    embedding[m].push_back(exp * sgn(prod));
-                    embed_type bin = std::upper_bound(this->bins.begin(),
-                                                      this->bins.begin() + this->num_bins, prod)
+                    T bin = std::upper_bound(this->bins.begin(),
+                                             this->bins.begin() + this->num_bins, prod)
                             - this->bins.begin();
                     sketch[m].push_back(bin);
                 }

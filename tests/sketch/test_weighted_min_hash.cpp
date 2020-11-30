@@ -1,5 +1,5 @@
 
-#include "sketch/weighted_min_hash.hpp"
+#include "sketch/hash_weighted.hpp"
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>

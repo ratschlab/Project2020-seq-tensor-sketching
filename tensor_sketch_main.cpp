@@ -1,8 +1,8 @@
 #include "sequence/fasta_io.hpp"
 
-#include "sketch/min_hash.hpp"
-#include "sketch/ordered_min_hash.hpp"
-#include "sketch/weighted_min_hash.hpp"
+#include "sketch/hash_min.hpp"
+#include "sketch/hash_ordered.hpp"
+#include "sketch/hash_weighted.hpp"
 #include "sketch/tensor.hpp"
 #include "sketch/tensor_slide.hpp"
 

@@ -1,4 +1,4 @@
-#include "sketch/min_hash.hpp"
+#include "sketch/hash_min.hpp"
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
