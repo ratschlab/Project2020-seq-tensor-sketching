@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <string>
 
 // Defines the alphabets that TensorSketch can operate on
