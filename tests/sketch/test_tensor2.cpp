@@ -14,7 +14,7 @@ constexpr uint32_t tuple_length = 3;
 constexpr uint32_t num_phases = 2;
 
 TEST(Tensor2, Empty) {
-Tensor2<uint8_t> under_test(alphabet_size, sketch_dim, num_phases, tuple_length);
+Tensor2<uint8_t, double> under_test(alphabet_size, sketch_dim, num_phases, tuple_length);
 // Vec<uint8_t> sketch = under_test.compute(std::vector<uint8_t>());
 //ASSERT_THAT(sketch, ElementsAre(0, 0, 0));
 }
