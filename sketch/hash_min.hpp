@@ -44,7 +44,7 @@ class MinHash : public HashBase<T> {
             return sketch;
         }
         for (size_t si = 0; si < this->sketch_dim; si++) {
-            T min_char;
+            T min_char = T(0);
             size_t min_rank = this->set_size + 1;
             Vec<T> h = this->hashes[si];
             for (auto s : kmers) {

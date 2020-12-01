@@ -50,7 +50,7 @@ class WeightedMinHash : public HashBase<T> {
             return sketch;
         }
         for (size_t si = 0; si < this->sketch_dim; si++) {
-            T min_char;
+            T min_char = T(0);
             size_t min_rank = this->hashes[0].size() + 1;
             Vec<size_t> cnts(this->set_size, 0);
             for (const auto s : kmers) {
