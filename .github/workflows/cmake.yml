@@ -27,6 +27,7 @@ jobs:
 
     - name: create build dir
       mkdir ${{runner.workspace}}/build
+      
     - name: Configure CMake
       working-directory: ${{runner.workspace}}/build
       shell: bash
