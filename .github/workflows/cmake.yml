@@ -26,13 +26,12 @@ jobs:
       run: git submodule update --init --recursive
 
     - name: create build dir
-      mkdir ${{runner.workspace}}/build
-      
+      run: mkdir ${{runner.workspace}}/build
+
     - name: Configure CMake
       working-directory: ${{runner.workspace}}/build
       shell: bash
-      run: |
-        cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ..
+      run: cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ..
 
     - name: Build
       working-directory: ${{runner.workspace}}/build
