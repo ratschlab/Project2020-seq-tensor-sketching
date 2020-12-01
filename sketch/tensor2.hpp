@@ -123,7 +123,7 @@ class TensorSlide2 : public Tensor2<T> {
         for (size_t i = 0; i < seq.size(); i++) {
             for (size_t p = 0; p < this->tup_len; p++) {
                 for (size_t q = this->tup_len - 1; q >= p; q--) {
-                    double z = (double)(q - p + 1) / std::min(i + 1, win_len);
+                    double z = (double)(q - p + 1) / std::min(i + 1, (size_t)win_len);
                     auto r = this->hash[q][seq[i]];
                     shift_sum(M[p + 1][q + 1], M[p + 1][q], r, z);
                 }
@@ -167,7 +167,7 @@ class TensorSlide2 : public Tensor2<T> {
             assert(seq[i].size() == this->alphabet_size);
             for (size_t p = 0; p < this->tup_len; p++) {
                 for (int32_t q = (int32_t)this->tup_len - 1; q >= (int32_t)p; q--) {
-                    double z = (double)(q - p + 1) / std::min((size_t)i + 1, win_len);
+                    double z = (double)(q - p + 1) / std::min((size_t)i + 1, (size_t)win_len);
                     auto r = this->hash[q][seq[i]];
                     shift_sum(M[p + 1][q + 1], M[p + 1][q], r, z);
                 }

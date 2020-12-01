@@ -9,6 +9,7 @@
 #include "util/multivec.hpp"
 #include "util/utils.hpp"
 
+#include <filesystem>
 #include <memory>
 #include <sstream>
 
