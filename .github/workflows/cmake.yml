@@ -33,7 +33,7 @@ jobs:
       # Use a bash shell so we can use the same syntax for environment variable
       # access regardless of the host operating system
       shell: bash
-      run: 
+      run: |
         mkdir ${{runner.workspace}}/build
         cd ${{runner.workspace}}/build
         cmake -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ..
