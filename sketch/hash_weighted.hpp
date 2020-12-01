@@ -25,6 +25,8 @@ namespace ts { // ts = Tensor Sketch
 template <class T>
 class WeightedMinHash : public HashBase<T> {
   public:
+    WeightedMinHash() {}
+
     /**
      * Constructs a weighted min-hasher for the given alphabet size which constructs sketches of the
      * given set size, dimension and maximum length.

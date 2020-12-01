@@ -21,8 +21,8 @@ constexpr uint32_t stride = 8;
 constexpr uint32_t offset = 0;
 
 TEST(TensorSlide, Empty) {
-    TensorSlide<uint8_t> under_test(set_size, sketch_dim, num_phases, num_bins, tuple_length, window_length, stride, offset);
-    Vec2D<uint8_t> sketch;
+    TensorSlide<uint8_t, uint32_t> under_test(set_size, sketch_dim, num_phases, num_bins, tuple_length, window_length, stride, offset);
+    Vec2D<uint32_t> sketch;
     under_test.compute(std::vector<uint8_t>(), sketch);
     //ASSERT_THAT(sketch, ElementsAre(0, 0, 0));
 }

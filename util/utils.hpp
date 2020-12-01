@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <numeric>
 #include <vector>
 
 namespace ts { // ts = Tensor Sketch
@@ -83,10 +84,7 @@ inline bool sketch_now(int i, int len, int stride, int off) {
 
 template <class T>
 T l1(const Vec<T> &vec) {
-    T sum = 0;
-    for (auto v : vec)
-        sum += (v >= 0) ? v : -v;
-    return sum;
+    return std::accumulate(vec.begin(), vec.end(), T(0));
 }
 
 template <class T>
@@ -94,7 +92,7 @@ T l1_dist(const Vec<T> &a, const Vec<T> &b) {
     assert(a.size() == b.size());
     T res = 0;
     for (size_t i = 0; i < a.size(); i++)
-        res += (a[i] - b[i] >= 0) ? (a[i] - b[i]) : (b[i] - a[i]);
+        res += std::abs(a[i] - b[i]);
     return res;
 }
 

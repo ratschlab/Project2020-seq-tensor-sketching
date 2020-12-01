@@ -22,6 +22,7 @@ namespace ts { // ts = Tensor Sketch
 template <class T>
 class MinHash : public HashBase<T> {
   public:
+    MinHash() {}
     /**
      * Constructs a min-hasher for the given alphabet size which constructs sketches of the set size
      * and sketch dimension.

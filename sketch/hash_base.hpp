@@ -9,6 +9,8 @@ namespace ts {
 template <typename T>
 class HashBase {
   public:
+    HashBase() {}
+
     HashBase(T set_size, size_t sketch_dim, size_t hash_size)
         : set_size(set_size), sketch_dim(sketch_dim) {
         rand_init(hash_size);

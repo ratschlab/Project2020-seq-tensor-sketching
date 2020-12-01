@@ -104,29 +104,32 @@ void adjust_short_names() {
 
 using namespace ts;
 
-template <typename seq_type, class embed_type>
+template <typename seq_type, class kmer_type, class embed_type>
 class SketchHelper {
   public:
+    SketchHelper(const std::function<Vec<embed_type>(const Seq<kmer_type> &)> &sketcher)
+        : sketcher(sketcher) {}
+
     void compute_sketches() {
         size_t num_seqs = seqs.size();
         slide_sketch = new3D<embed_type>(seqs.size(), FLAGS_embed_dim, 0);
         for (size_t si = 0; si < num_seqs; si++) {
-            Vec<seq_type> kmers
-                    = seq2kmer<seq_type, seq_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
+            Vec<kmer_type> kmers
+                    = seq2kmer<seq_type, kmer_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
             if (FLAGS_sketch_method == "TenSlide") {
-                embed_type kmer_word_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
+                kmer_type kmer_word_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
                 embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
-                TensorSlide<seq_type> tensor_slide(kmer_word_size, slide_sketch_dim,
-                                                   FLAGS_num_phases, FLAGS_num_bins, FLAGS_tup_len,
-                                                   FLAGS_win_len, FLAGS_stride, FLAGS_offset);
+                TensorSlide<kmer_type, embed_type> tensor_slide(kmer_word_size, slide_sketch_dim,
+                                                                FLAGS_num_phases, FLAGS_num_bins,
+                                                                FLAGS_tup_len, FLAGS_win_len,
+                                                                FLAGS_stride, FLAGS_offset);
                 tensor_slide.compute(kmers, slide_sketch[si]);
             } else {
                 for (int i = FLAGS_offset; i < sketch_end(FLAGS_offset, kmers.size());
                      i += FLAGS_stride) {
-                    Vec<embed_type> embed_slice;
                     auto end = std::min(kmers.begin() + i + FLAGS_win_len, kmers.end());
-                    Vec<seq_type> kmer_slice(kmers.begin() + i, end);
-                    sketch_slice(kmer_slice, embed_slice);
+                    Vec<kmer_type> kmer_slice(kmers.begin() + i, end);
+                    Vec<embed_type> embed_slice = sketcher(kmer_slice);
                     for (int m = 0; m < FLAGS_embed_dim; m++) {
                         slide_sketch[si][m].push_back(embed_slice[m]);
                     }
@@ -164,40 +167,59 @@ class SketchHelper {
     }
 
   private:
-    void sketch_slice(Seq<seq_type> seq, Vec<embed_type> &embed) {
-        embed_type kmer_word_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
-        if (FLAGS_sketch_method == "MH") {
-            MinHash<seq_type> min_hash(kmer_word_size, FLAGS_embed_dim);
-            embed = min_hash.template compute<embed_type>(seq);
-        } else if (FLAGS_sketch_method == "WMH") {
-            WeightedMinHash<seq_type> wmin_hash(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len);
-            embed = wmin_hash.template compute<embed_type>(seq);
-        } else if (FLAGS_sketch_method == "OMH") {
-            OrderedMinHash<seq_type> omin_hash(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                               FLAGS_tup_len);
-            embed = omin_hash.template compute_flat<embed_type>(seq);
-        } else if (FLAGS_sketch_method == "TenSketch") {
-            Tensor<seq_type> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_num_phases,
-                                           FLAGS_num_bins, FLAGS_tup_len);
-            embed = tensor_sketch.template compute<embed_type>(seq);
-        } else {
-            std::cerr << "Unkknown method: " << FLAGS_sketch_method << std::endl;
-            exit(1);
-        }
-    }
-
-  private:
     Vec2D<seq_type> seqs;
     Vec<std::string> seq_names;
     Vec3D<embed_type> slide_sketch;
     std::string test_id;
+
+    std::function<Vec<embed_type>(const Seq<kmer_type> &)> sketcher;
 };
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     adjust_short_names();
-    SketchHelper<int, double> sketchModule;
-    sketchModule.read_input();
-    sketchModule.compute_sketches();
-    sketchModule.save_output();
+
+    if (std::pow(FLAGS_alphabet_size, FLAGS_kmer_size)
+        > (double)std::numeric_limits<uint64_t>::max()) {
+        std::cerr << "Kmer size is too large to fit in 64 bits " << std::endl;
+        std::exit(1);
+    }
+
+    uint64_t kmer_word_size = int_pow<uint64_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
+
+    if (FLAGS_sketch_method.ends_with("MH")) {
+        std::function<Vec<uint64_t>(const Seq<uint64_t> &)> sketcher;
+        MinHash<uint64_t> min_hash;
+        WeightedMinHash<uint64_t> wmin_hash;
+        OrderedMinHash<uint64_t> omin_hash;
+        if (FLAGS_sketch_method == "MH") {
+            min_hash = MinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim);
+            sketcher = [&](const std::vector<uint64_t> &seq) { return min_hash.compute(seq); };
+        } else if (FLAGS_sketch_method == "WMH") {
+            wmin_hash = WeightedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len);
+            sketcher = [&](const std::vector<uint64_t> &seq) { return wmin_hash.compute(seq); };
+        } else if (FLAGS_sketch_method == "OMH") {
+            omin_hash = OrderedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
+                                                 FLAGS_tup_len);
+            sketcher
+                    = [&](const std::vector<uint64_t> &seq) { return omin_hash.compute_flat(seq); };
+        }
+        SketchHelper<uint8_t, uint64_t, uint64_t> sketch_helper(sketcher);
+        sketch_helper.read_input();
+        sketch_helper.compute_sketches();
+        sketch_helper.save_output();
+    } else if (FLAGS_sketch_method == "TenSketch") {
+        Tensor<uint64_t, double> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_num_phases,
+                                               FLAGS_num_bins, FLAGS_tup_len);
+        // TODO: when binning, using double is a waste
+        std::function<Vec<double>(const Seq<uint64_t> &)> sketcher
+                = [&](const std::vector<uint64_t> &seq) { return tensor_sketch.compute(seq); };
+        SketchHelper<uint8_t, uint64_t, double> sketch_helper(sketcher);
+        sketch_helper.read_input();
+        sketch_helper.compute_sketches();
+        sketch_helper.save_output();
+    } else {
+        std::cerr << "Unkknown method: " << FLAGS_sketch_method << std::endl;
+        exit(1);
+    }
 }

@@ -18,6 +18,7 @@ namespace ts { // ts = Tensor Sketch
 template <class T>
 class OrderedMinHash : public HashBase<T> {
   public:
+    OrderedMinHash() {}
     /**
      * @param set_size the number of elements in S
      * @param sketch_dim the number of components (elements) in the sketch vector.
@@ -60,7 +61,7 @@ class OrderedMinHash : public HashBase<T> {
     Vec<T> compute_flat(const Seq<T> &kmers) {
         Vec<T> sketch;
         Timer::start("ordered_minhash_flat");
-        Vec2D<T> sketch2D = compute<T>(kmers);
+        Vec2D<T> sketch2D = compute(kmers);
         for (const auto &tuple : sketch2D) {
             T sum = 0;
             for (const auto &item : tuple) {

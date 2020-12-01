@@ -153,15 +153,15 @@ void adjust_short_names() {
 namespace fs = std::filesystem;
 using namespace ts;
 
-template <class seq_type, class embed_type>
+template <class char_type, class kmer_type, class embed_type>
 struct SeqGenModule {
-    Vec2D<seq_type> seqs;
+    Vec2D<char_type> seqs;
     Vec<std::string> seq_names;
     std::string test_id;
-    Vec2D<seq_type> kmer_seqs;
-    Vec2D<embed_type> mh_sketch;
-    Vec2D<embed_type> wmh_sketch;
-    Vec2D<embed_type> omh_sketch;
+    Vec2D<kmer_type> kmer_seqs;
+    Vec2D<kmer_type> mh_sketch;
+    Vec2D<kmer_type> wmh_sketch;
+    Vec2D<kmer_type> omh_sketch;
     Vec2D<embed_type> ten_sketch;
     Vec3D<embed_type> slide_sketch;
     Vec3D<embed_type> dists;
@@ -169,15 +169,9 @@ struct SeqGenModule {
     std::string output;
 
     void generate_sequences() {
-        ts::SeqGen::Config config = { FLAGS_alphabet_size,
-                                      FLAGS_fix_len,
-                                      FLAGS_max_num_blocks,
-                                      FLAGS_min_num_blocks,
-                                      FLAGS_num_seqs,
-                                      FLAGS_seq_len,
-                                      (float)FLAGS_mutation_rate,
-                                      (float)FLAGS_block_mutation_rate };
-        ts::SeqGen seq_gen(config);
+        ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len, FLAGS_max_num_blocks,
+                           FLAGS_min_num_blocks, FLAGS_num_seqs, FLAGS_seq_len,
+                           (float)FLAGS_mutation_rate, (float)FLAGS_block_mutation_rate);
 
         if (FLAGS_mutation_pattern == "pairs") {
             seq_gen.genseqs_pairs(seqs);
@@ -190,16 +184,16 @@ struct SeqGenModule {
 
     void compute_sketches() {
         embed_type set_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
-        MinHash<seq_type> min_hash(set_size, FLAGS_embed_dim);
-        WeightedMinHash<seq_type> wmin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len);
+        MinHash<kmer_type> min_hash(set_size, FLAGS_embed_dim);
+        WeightedMinHash<kmer_type> wmin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len);
         // TODO(dd) - this is fishy - there is no reason to compute omh on characters
-        embed_type omh_set_size = FLAGS_tuple_on_kmer ? set_size : FLAGS_alphabet_size;
-        OrderedMinHash<seq_type> omin_hash(omh_set_size, FLAGS_embed_dim, FLAGS_max_len,
-                                           FLAGS_tup_len);
-        Tensor<seq_type> tensor_sketch(set_size, FLAGS_embed_dim, FLAGS_num_phases, FLAGS_num_bins,
+        kmer_type omh_set_size = FLAGS_tuple_on_kmer ? set_size : FLAGS_alphabet_size;
+        OrderedMinHash<kmer_type> omin_hash(omh_set_size, FLAGS_embed_dim, FLAGS_max_len,
+                                             FLAGS_tup_len);
+        Tensor<char_type, embed_type> tensor_sketch(set_size, FLAGS_embed_dim, FLAGS_num_phases, FLAGS_num_bins,
                                        FLAGS_tup_len);
         embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
-        TensorSlide<seq_type> tensor_slide(set_size, slide_sketch_dim, FLAGS_num_phases,
+        TensorSlide<char_type, embed_type> tensor_slide(set_size, slide_sketch_dim, FLAGS_num_phases,
                                            FLAGS_num_bins, FLAGS_tup_len, FLAGS_win_len,
                                            FLAGS_stride, FLAGS_offset);
 
@@ -212,11 +206,11 @@ struct SeqGenModule {
         slide_sketch.resize(num_seqs);
         for (size_t si = 0; si < num_seqs; si++) {
             kmer_seqs[si]
-                    = seq2kmer<seq_type, seq_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
-            mh_sketch[si] = min_hash.template compute<embed_type>(kmer_seqs[si]);
-            wmh_sketch[si] = wmin_hash.template compute<embed_type>(kmer_seqs[si]);
-            omh_sketch[si] = omin_hash.template compute_flat<embed_type>(kmer_seqs[si]);
-            ten_sketch[si] = tensor_sketch.template compute<embed_type>(seqs[si]);
+                    = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
+            mh_sketch[si] = min_hash.compute(kmer_seqs[si]);
+            wmh_sketch[si] = wmin_hash.compute(kmer_seqs[si]);
+            omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
+            ten_sketch[si] = tensor_sketch.compute(seqs[si]);
             tensor_slide.compute(seqs[si], slide_sketch[si]);
         }
     }
@@ -351,7 +345,7 @@ struct SeqGenModule {
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-    SeqGenModule<int, double> experiment;
+    SeqGenModule<uint8_t, uint64_t, double> experiment;
     experiment.generate_sequences();
     experiment.compute_sketches();
     experiment.compute_pairwise_dists();
