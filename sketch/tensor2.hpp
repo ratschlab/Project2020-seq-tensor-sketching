@@ -21,68 +21,82 @@ class Tensor2 {
      * @param tup_len the length of the subsequences considered for sketching, denoted by t in the
      * paper
      */
-    Tensor2(set_type alphabet_size, size_t embed_dim, size_t num_phases, size_t tup_len)
-        : alphabet_size(alphabet_size),
-          embed_dim(embed_dim),
-          num_phases(num_phases),
-          tup_len(tup_len),
-          hash_len(num_phases * embed_dim) {
+    Tensor2(set_type alphabet_size, size_t embed_dim, size_t tup_len)
+        : alphabet_size(alphabet_size), embed_dim(embed_dim), tup_len(tup_len) {
         rand_init();
     }
 
     Vec<sketch_type> compute(const Seq<set_type> &seq) {
-        auto T = new2D<sketch_type>(tup_len + 1, hash_len, 0);
-        T[0][0] = 1;
+        if (seq.empty()) {
+            return Vec<sketch_type>(embed_dim);
+        }
+        auto T1 = new2D<sketch_type>(tup_len + 1, embed_dim, 0);
+        auto T2 = new2D<sketch_type>(tup_len + 1, embed_dim, 0);
+        auto T1n = new2D<sketch_type>(tup_len + 1, embed_dim, 0);
+        auto T2n = new2D<sketch_type>(tup_len + 1, embed_dim, 0);
+        T1n[0][0] = T1[0][0] = signs[0][seq[0]] ? 1 : 0;
+        T2n[0][0] = T2[0][0] = !signs[0][seq[0]] ? 1 : 0;
         for (uint32_t i = 0; i < seq.size(); i++) {
-            for (int32_t t = (int32_t)tup_len - 1; t >= 0; t--) {
-                double z = (t + 1.0) / (i + 1);
-                set_type r = hashes[t][seq[i]];
-                shift_sum(T[t + 1], T[t], r, z);
+            for (uint32_t t = 1; t <= std::min(i + 1, (uint32_t)tup_len); ++t) {
+                double z = t / (i + 1.0); // probability that the last index is i
+                set_type r = hashes[t - 1][seq[i]];
+                bool s = signs[t - 1][seq[i]];
+                if (s) {
+                    T1n[t] = shift_sum(T1[t], T1[t - 1], r, z);
+                    T2n[t] = shift_sum(T2[t], T2[t - 1], r, z);
+                } else {
+                    T1n[t] = shift_sum(T1[t], T2[t - 1], r, z);
+                    T2n[t] = shift_sum(T2[t], T1[t - 1], r, z);
+                }
             }
+            std::swap(T1, T1n);
+            std::swap(T2, T2n);
         }
         Vec<sketch_type> sketch(embed_dim, 0);
-        for (int32_t m = 0; m < embed_dim; m++) {
-            sketch_type prod = 0;
-            for (int32_t r = 0; r < num_phases; r++) {
-                prod += ((r % 2 == 0) ? 1 : -1) * T[tup_len][m * num_phases + r];
-            }
-            sketch[m] = prod;
+        for (uint32_t m = 0; m < embed_dim; m++) {
+            sketch[m] = T1[tup_len][m] - T2[tup_len][m];
         }
         return sketch;
     }
 
   private:
-    void shift_sum(Vec<sketch_type> &a, const Vec<sketch_type> &b, set_type shift, double z) {
+    Vec<sketch_type>
+    shift_sum(Vec<sketch_type> &a, const Vec<sketch_type> &b, set_type shift, double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
+        Vec<sketch_type> result(a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
-            a[i] = (1 - z) * a[i] + z * b[(i - shift + len) % len];
+            result[i] = (1 - z) * a[i] + z * b[(len + i - shift ) % len];
+            assert(std::abs(result[i]) <= 1);
         }
+        return result;
     }
 
   protected:
     set_type alphabet_size;
     uint8_t embed_dim;
-    size_t num_phases;
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
     uint8_t tup_len;
-    /** The size of the embedded space, denoted by D in the paper */
-    size_t hash_len;
 
     /**
-     * Denotes the hash functions h1,....ht:A->{1....D}, where t is #tup_len and D is #hash_len
+     * Denotes the hash functions h1,....ht:A->{1....D}, where t is #tup_len and D is #embed_dim
      */
     Vec2D<set_type> hashes;
+
+    Vec2D<bool> signs;
 
     virtual void rand_init() {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<set_type> rand_hash2(0, hash_len - 1);
+        std::uniform_int_distribution<set_type> rand_hash2(0, embed_dim - 1);
+        std::uniform_int_distribution<set_type> rand_bool(0, 1);
 
         hashes = new2D<set_type>(tup_len, alphabet_size);
+        signs = new2D<bool>(tup_len, alphabet_size);
         for (size_t h = 0; h < tup_len; h++) {
             for (size_t c = 0; c < alphabet_size; c++) {
                 hashes[h][c] = rand_hash2(gen);
+                signs[h][c] = rand_bool(gen);
             }
         }
     }
