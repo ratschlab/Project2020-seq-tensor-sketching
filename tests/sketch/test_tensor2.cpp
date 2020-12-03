@@ -44,7 +44,8 @@ TEST(Tensor2, FullStringDistinctChars) {
             for (uint32_t i = 0; i < sketch_dimension; ++i) {
                 ASSERT_TRUE(std::abs(sketch[i]) == 0 || std::abs(sketch[i]) == 1);
             }
-            ASSERT_EQ(1, std::abs(std::accumulate(sketch.begin(), sketch.end(), 0)));
+            ASSERT_EQ(1, std::abs(std::accumulate(sketch.begin(), sketch.end(), 0)))
+                    << "D=" << sketch_dimension << " t=" << tuple_len;
         }
     }
 }

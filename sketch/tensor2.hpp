@@ -21,19 +21,19 @@ class Tensor2 {
      * @param tup_len the length of the subsequences considered for sketching, denoted by t in the
      * paper
      */
-    Tensor2(set_type alphabet_size, size_t embed_dim, size_t tup_len)
-        : alphabet_size(alphabet_size), embed_dim(embed_dim), tup_len(tup_len) {
+    Tensor2(set_type alphabet_size, size_t sketch_size, size_t tup_len)
+        : alphabet_size(alphabet_size), sketch_size(sketch_size), tup_len(tup_len) {
         rand_init();
     }
 
     Vec<sketch_type> compute(const Seq<set_type> &seq) {
         if (seq.empty()) {
-            return Vec<sketch_type>(embed_dim);
+            return Vec<sketch_type>(sketch_size);
         }
-        auto T1 = new2D<sketch_type>(tup_len + 1, embed_dim, 0);
-        auto T2 = new2D<sketch_type>(tup_len + 1, embed_dim, 0);
-        auto T1n = new2D<sketch_type>(tup_len + 1, embed_dim, 0);
-        auto T2n = new2D<sketch_type>(tup_len + 1, embed_dim, 0);
+        auto T1 = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
+        auto T2 = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
+        auto T1n = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
+        auto T2n = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
         T1n[0][0] = T1[0][0] = signs[0][seq[0]] ? 1 : 0;
         T2n[0][0] = T2[0][0] = !signs[0][seq[0]] ? 1 : 0;
         for (uint32_t i = 0; i < seq.size(); i++) {
@@ -52,12 +52,31 @@ class Tensor2 {
             std::swap(T1, T1n);
             std::swap(T2, T2n);
         }
-        Vec<sketch_type> sketch(embed_dim, 0);
-        for (uint32_t m = 0; m < embed_dim; m++) {
+        Vec<sketch_type> sketch(sketch_size, 0);
+        for (uint32_t m = 0; m < sketch_size; m++) {
             sketch[m] = T1[tup_len][m] - T2[tup_len][m];
         }
         return sketch;
     }
+
+    Vec<sketch_type>  compute_old(const Seq<set_type> &seq) {
+        Vec<sketch_type> embedding;
+        auto M = new2D<double>(tup_len + 1, sketch_size, 0);
+        M[0][0] = 1;
+        for (int i = 0; i < (int)seq.size(); i++) {
+            for (int t = tup_len - 1; t >= 0; t--) {
+                double z = (t + 1.0) / (i + 1);
+                auto r = hashes[t][seq[i]];
+                shift_sum(M[t + 1], M[t], r, z);
+            }
+        }
+        embedding = Vec<sketch_type>(sketch_size, 0);
+        for (int m = 0; m < sketch_size; m++) {
+            embedding[m] = M[tup_len][m];
+        }
+        return embedding;
+    }
+
 
   private:
     Vec<sketch_type>
@@ -66,7 +85,7 @@ class Tensor2 {
         size_t len = a.size();
         Vec<sketch_type> result(a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
-            result[i] = (1 - z) * a[i] + z * b[(len + i - shift ) % len];
+            result[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
             assert(std::abs(result[i]) <= 1);
         }
         return result;
@@ -74,12 +93,12 @@ class Tensor2 {
 
   protected:
     set_type alphabet_size;
-    uint8_t embed_dim;
+    uint8_t sketch_size;
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
     uint8_t tup_len;
 
     /**
-     * Denotes the hash functions h1,....ht:A->{1....D}, where t is #tup_len and D is #embed_dim
+     * Denotes the hash functions h1,....ht:A->{1....D}, where t is #tup_len and D is #sketch_size
      */
     Vec2D<set_type> hashes;
 
@@ -88,7 +107,7 @@ class Tensor2 {
     virtual void rand_init() {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<set_type> rand_hash2(0, embed_dim - 1);
+        std::uniform_int_distribution<set_type> rand_hash2(0, sketch_size - 1);
         std::uniform_int_distribution<set_type> rand_bool(0, 1);
 
         hashes = new2D<set_type>(tup_len, alphabet_size);
@@ -106,17 +125,17 @@ template <class set_type, class sketch_type>
 class TensorSlide2 : public Tensor2<set_type, sketch_type> {
   public:
     TensorSlide2(set_type alphabet_size,
-                 size_t embed_dim,
-                 size_t num_phases,
+                 size_t sketch_size,
                  size_t tup_len,
                  size_t win_len,
                  size_t stride)
-        : Tensor2<set_type, sketch_type>(alphabet_size, embed_dim, num_phases, tup_len),
+        : Tensor2<set_type, sketch_type>(alphabet_size, sketch_size, tup_len),
           win_len(win_len),
           stride(stride) {}
 
     void compute(const Vec<set_type> &seq, Vec2D<sketch_type> &embedding) {
-        auto T = new3D<sketch_type>(this->tup_len + 1, this->tup_len + 1, this->hash_len, 0);
+        auto T = new3D<sketch_type>(this->tup_len + 1, this->tup_len + 1, this->sketch_size,
+                                    sketch_type(0));
         for (size_t p = 0; p < this->tup_len; p++) {
             T[p + 1][p][0] = 1;
         }
@@ -131,8 +150,8 @@ class TensorSlide2 : public Tensor2<set_type, sketch_type> {
             }
 
             if ((i + 1) % stride == 0) {
-                Vec<sketch_type> em(this->embed_dim);
-                for (size_t m = 0; m < this->embed_dim; m++) {
+                Vec<sketch_type> em(this->sketch_size);
+                for (size_t m = 0; m < this->sketch_size; m++) {
                     sketch_type prod = 0;
                     for (size_t r = 0; r < this->num_phases; r++) {
                         prod += ((r % 2 == 0) ? 1 : -1)
@@ -174,8 +193,8 @@ class TensorSlide2 : public Tensor2<set_type, sketch_type> {
             }
 
             if ((i + 1) % stride == 0) {
-                Vec<sketch_type> em(this->embed_dim);
-                for (size_t m = 0; m < this->embed_dim; m++) {
+                Vec<sketch_type> em(this->sketch_size);
+                for (size_t m = 0; m < this->sketch_size; m++) {
                     sketch_type prod = 0;
                     for (size_t r = 0; r < this->num_phases; r++) {
                         prod += ((r % 2 == 0) ? 1 : -1)
