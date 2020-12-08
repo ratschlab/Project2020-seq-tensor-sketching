@@ -13,6 +13,20 @@ const uint32_t set_size = int_pow<uint32_t>(alphabet_size, 3); // k-mers of leng
 constexpr uint32_t sketch_dim = 2;
 constexpr uint32_t tuple_length = 3;
 
+template <typename set_type>
+void rand_init(uint32_t sketch_size, Vec2D<set_type> *hashes, Vec2D<bool> *signs) {
+    std::mt19937 gen(3412343);
+    std::uniform_int_distribution<set_type> rand_hash2(0, sketch_size - 1);
+    std::uniform_int_distribution<set_type> rand_bool(0, 1);
+
+    for (size_t h = 0; h < hashes->size(); h++) {
+        for (size_t c = 0; c < alphabet_size; c++) {
+            (*hashes)[h][c] = rand_hash2(gen);
+            (*signs)[h][c] = rand_bool(gen);
+        }
+    }
+}
+
 TEST(Tensor2, Empty) {
     Tensor2<uint8_t, double> under_test(alphabet_size, sketch_dim, tuple_length);
     Vec<double> sketch = under_test.compute(std::vector<uint8_t>());
@@ -26,6 +40,26 @@ TEST(Tensor2, OneChar) {
     for (uint8_t c = 0; c < alphabet_size; ++c) {
         Vec<double> sketch = under_test.compute({ c });
         ASSERT_THAT(sketch, ElementsAre(0, 0));
+    }
+}
+
+/** The sequence has one char, the tuple length is 1, so we should have a value of +/-1 on position
+ * h(seq[0]) */
+TEST(Tensor2, OneCharTuple1) {
+    constexpr uint32_t tuple_len = 1;
+    Tensor2<uint8_t, double> under_test(alphabet_size, sketch_dim, tuple_len);
+
+    Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
+    Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
+    rand_init(sketch_dim, &hashes, &signs);
+    under_test.set_hashes_for_testing(hashes, signs);
+
+    for (uint8_t c = 0; c < alphabet_size; ++c) {
+        Vec<double> sketch = under_test.compute({ c });
+        for (uint32_t i = 0; i < sketch_dim; ++i) {
+            int8_t sign = signs[0][c] ? 1 : -1;
+            ASSERT_EQ(sketch[i] * sign, hashes[0][c] % sketch_dim == i) << "Char: " << (int)c;
+        }
     }
 }
 
@@ -135,7 +169,9 @@ TEST(Tensor2, DistinctCharsTupleTMinus1) {
             Tensor2<uint8_t, double> under_test(alphabet_size, sketch_dimension, tuple_len);
 
             Vec<double> sketch = under_test.compute(sequence);
+            Vec<double> sketch2 = under_test.compute_old(sequence);
             ASSERT_EQ(sketch.size(), sketch_dimension);
+            ASSERT_EQ(sketch2.size(), sketch_dimension);
             for (uint32_t i = 0; i < sketch_dimension; ++i) {
                 double factor = sketch[i] / (1. / alphabet_size);
                 ASSERT_NEAR(0, std::round(factor) - factor, 1e-3);

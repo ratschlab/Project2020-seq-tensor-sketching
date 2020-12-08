@@ -30,12 +30,15 @@ class Tensor2 {
         if (seq.empty()) {
             return Vec<sketch_type>(sketch_size);
         }
+
+        // T1 is T(x,p,+1), T2 is T(x,p,-1) in the paper
         auto T1 = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
         auto T2 = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
         auto T1n = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
         auto T2n = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
-        T1n[0][0] = T1[0][0] = signs[0][seq[0]] ? 1 : 0;
-        T2n[0][0] = T2[0][0] = !signs[0][seq[0]] ? 1 : 0;
+
+        // the initial condition states that the sketch for the empty string is (1,0,..)
+        T1n[0][0] = T1[0][0] = 1;
         for (uint32_t i = 0; i < seq.size(); i++) {
             for (uint32_t t = 1; t <= std::min(i + 1, (uint32_t)tup_len); ++t) {
                 double z = t / (i + 1.0); // probability that the last index is i
@@ -59,39 +62,44 @@ class Tensor2 {
         return sketch;
     }
 
-    Vec<sketch_type>  compute_old(const Seq<set_type> &seq) {
-        Vec<sketch_type> embedding;
+    Vec<sketch_type> compute_old(const Seq<set_type> &seq) {
+        Vec<sketch_type> sketch;
         auto M = new2D<double>(tup_len + 1, sketch_size, 0);
         M[0][0] = 1;
         for (int i = 0; i < (int)seq.size(); i++) {
             for (int t = tup_len - 1; t >= 0; t--) {
                 double z = (t + 1.0) / (i + 1);
                 auto r = hashes[t][seq[i]];
-                shift_sum(M[t + 1], M[t], r, z);
+                M[t + 1] = shift_sum(M[t + 1], M[t], r, z);
             }
         }
-        embedding = Vec<sketch_type>(sketch_size, 0);
+        sketch = Vec<sketch_type>(sketch_size, 0);
         for (int m = 0; m < sketch_size; m++) {
-            embedding[m] = M[tup_len][m];
+            sketch[m] = M[tup_len][m];
         }
-        return embedding;
+        return sketch;
+    }
+
+    void set_hashes_for_testing(const Vec2D<set_type> &hashes,
+                                const Vec2D<bool> &signs) {
+        this->hashes = hashes;
+        this->signs = signs;
     }
 
 
-  private:
+  protected:
     Vec<sketch_type>
-    shift_sum(Vec<sketch_type> &a, const Vec<sketch_type> &b, set_type shift, double z) {
+    shift_sum(const Vec<sketch_type> &a, const Vec<sketch_type> &b, set_type shift, double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
         Vec<sketch_type> result(a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
             result[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
-            assert(std::abs(result[i]) <= 1);
+            assert(result[i] <= 1 + 1e-5 && result[i] >= -1 - 1e-5);
         }
         return result;
     }
 
-  protected:
     set_type alphabet_size;
     uint8_t sketch_size;
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
@@ -121,106 +129,4 @@ class Tensor2 {
     }
 };
 
-template <class set_type, class sketch_type>
-class TensorSlide2 : public Tensor2<set_type, sketch_type> {
-  public:
-    TensorSlide2(set_type alphabet_size,
-                 size_t sketch_size,
-                 size_t tup_len,
-                 size_t win_len,
-                 size_t stride)
-        : Tensor2<set_type, sketch_type>(alphabet_size, sketch_size, tup_len),
-          win_len(win_len),
-          stride(stride) {}
-
-    void compute(const Vec<set_type> &seq, Vec2D<sketch_type> &embedding) {
-        auto T = new3D<sketch_type>(this->tup_len + 1, this->tup_len + 1, this->sketch_size,
-                                    sketch_type(0));
-        for (size_t p = 0; p < this->tup_len; p++) {
-            T[p + 1][p][0] = 1;
-        }
-
-        for (size_t i = 0; i < seq.size(); i++) {
-            for (size_t p = 0; p < this->tup_len; p++) {
-                for (size_t q = this->tup_len - 1; q >= p; q--) {
-                    double z = (double)(q - p + 1) / std::min(i + 1, (size_t)win_len);
-                    auto r = this->hash[q][seq[i]];
-                    shift_sum(T[p + 1][q + 1], T[p + 1][q], r, z);
-                }
-            }
-
-            if ((i + 1) % stride == 0) {
-                Vec<sketch_type> em(this->sketch_size);
-                for (size_t m = 0; m < this->sketch_size; m++) {
-                    sketch_type prod = 0;
-                    for (size_t r = 0; r < this->num_phases; r++) {
-                        prod += ((r % 2 == 0) ? 1 : -1)
-                                * T[1][this->tup_len][m * this->num_phases + r];
-                    }
-                    em[m] = prod;
-                }
-                embedding.push_back(em);
-            }
-
-            if (i < win_len) {
-                continue;
-            }
-
-            for (size_t p = 0; p < this->tup_len; p++) {
-                for (size_t q = p; q < this->tup_len; q++) {
-                    double z = (double)(q - p + 1) / (win_len - q + p);
-                    auto r = this->hash[q][seq[i]];
-                    shift_sum(T[p + 1][q + 1], T[p + 1][q], r, -z);
-                }
-            }
-        }
-    }
-
-    void conv_slide_sketch(const Vec2D<set_type> &seq, Vec2D<sketch_type> &embedding) {
-        auto M = new3D<double>(this->tup_len + 1, this->tup_len + 1, this->hash_len, 0);
-        for (size_t p = 0; p < this->tup_len; p++) {
-            M[p + 1][p][0] = 1;
-        }
-
-        for (size_t i = 0; i < seq.size(); i++) {
-            assert(seq[i].size() == this->alphabet_size);
-            for (size_t p = 0; p < this->tup_len; p++) {
-                for (int32_t q = (int32_t)this->tup_len - 1; q >= (int32_t)p; q--) {
-                    double z = (double)(q - p + 1) / std::min((size_t)i + 1, (size_t)win_len);
-                    auto r = this->hash[q][seq[i]];
-                    shift_sum(M[p + 1][q + 1], M[p + 1][q], r, z);
-                }
-            }
-
-            if ((i + 1) % stride == 0) {
-                Vec<sketch_type> em(this->sketch_size);
-                for (size_t m = 0; m < this->sketch_size; m++) {
-                    sketch_type prod = 0;
-                    for (size_t r = 0; r < this->num_phases; r++) {
-                        prod += ((r % 2 == 0) ? 1 : -1)
-                                * M[1][this->tup_len][m * this->num_phases + r];
-                    }
-                    em[m] = prod;
-                }
-                embedding.push_back(em);
-            }
-
-            if (i < win_len) {
-                continue;
-            }
-
-            for (size_t p = 0; p < this->tup_len; p++) {
-                for (size_t q = p; q < this->tup_len; q++) {
-                    double z = (double)(q - p + 1) / (win_len - q + p);
-                    auto r = this->hash[q][seq[i]];
-                    shift_sum(M[p + 1][q + 1], M[p + 1][q], r, -z);
-                }
-            }
-        }
-    }
-
-  private:
-    int win_len;
-    int stride;
-};
 } // namespace ts
