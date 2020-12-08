@@ -118,13 +118,11 @@ class SketchHelper {
             Vec<kmer_type> kmers
                     = seq2kmer<seq_type, kmer_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
             if (FLAGS_sketch_method == "TenSlide") {
-                kmer_type kmer_word_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
-                embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
-                TensorSlide<kmer_type, embed_type> tensor_slide(kmer_word_size, slide_sketch_dim,
-                                                                FLAGS_num_phases, FLAGS_num_bins,
-                                                                FLAGS_tup_len, FLAGS_win_len,
-                                                                FLAGS_stride, FLAGS_offset);
-                tensor_slide.compute(kmers, slide_sketch[si]);
+//                kmer_type kmer_word_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
+//                embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
+//                TensorSlide<kmer_type> tensor_slide(kmer_word_size, slide_sketch_dim,
+//                                                     FLAGS_tup_len, FLAGS_win_len, FLAGS_stride);
+//                slide_sketch[si] = tensor_slide.compute(kmers);
             } else {
                 for (int i = FLAGS_offset; i < sketch_end(FLAGS_offset, kmers.size());
                      i += FLAGS_stride) {
@@ -210,9 +208,7 @@ int main(int argc, char *argv[]) {
         sketch_helper.compute_sketches();
         sketch_helper.save_output();
     } else if (FLAGS_sketch_method == "TenSketch") {
-        Tensor<uint64_t, double> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_num_phases,
-                                               FLAGS_num_bins, FLAGS_tup_len);
-        // TODO: when binning, using double is a waste
+        Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tup_len);
         std::function<Vec<double>(const Seq<uint64_t> &)> sketcher
                 = [&](const std::vector<uint64_t> &seq) { return tensor_sketch.compute(seq); };
         SketchHelper<uint8_t, uint64_t, double> sketch_helper(sketcher);

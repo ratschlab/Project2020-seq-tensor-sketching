@@ -144,7 +144,7 @@ class TensorSlide : public Tensor<set_type> {
         }
         return result;
     }
-    
+
     size_t win_len;
     size_t stride;
 };

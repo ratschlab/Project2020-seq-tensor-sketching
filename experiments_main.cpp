@@ -189,13 +189,11 @@ struct SeqGenModule {
         // TODO(dd) - this is fishy - there is no reason to compute omh on characters
         kmer_type omh_set_size = FLAGS_tuple_on_kmer ? set_size : FLAGS_alphabet_size;
         OrderedMinHash<kmer_type> omin_hash(omh_set_size, FLAGS_embed_dim, FLAGS_max_len,
-                                             FLAGS_tup_len);
-        Tensor<char_type, embed_type> tensor_sketch(set_size, FLAGS_embed_dim, FLAGS_num_phases, FLAGS_num_bins,
-                                       FLAGS_tup_len);
+                                            FLAGS_tup_len);
+        Tensor<char_type> tensor_sketch(set_size, FLAGS_embed_dim, FLAGS_tup_len);
         embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
-        TensorSlide<char_type, embed_type> tensor_slide(set_size, slide_sketch_dim, FLAGS_num_phases,
-                                           FLAGS_num_bins, FLAGS_tup_len, FLAGS_win_len,
-                                           FLAGS_stride, FLAGS_offset);
+        TensorSlide<char_type> tensor_slide(set_size, slide_sketch_dim, FLAGS_tup_len,
+                                            FLAGS_win_len, FLAGS_stride);
 
         size_t num_seqs = seqs.size();
         kmer_seqs.resize(num_seqs);
@@ -205,13 +203,13 @@ struct SeqGenModule {
         ten_sketch.resize(num_seqs);
         slide_sketch.resize(num_seqs);
         for (size_t si = 0; si < num_seqs; si++) {
-            kmer_seqs[si]
-                    = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
+            kmer_seqs[si] = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size,
+                                                           FLAGS_alphabet_size);
             mh_sketch[si] = min_hash.compute(kmer_seqs[si]);
             wmh_sketch[si] = wmin_hash.compute(kmer_seqs[si]);
             omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
             ten_sketch[si] = tensor_sketch.compute(seqs[si]);
-            tensor_slide.compute(seqs[si], slide_sketch[si]);
+            slide_sketch[si] = tensor_slide.compute(seqs[si]);
         }
     }
 
