@@ -12,7 +12,7 @@ namespace ts { // ts = Tensor Sketch
  * https://www.biorxiv.org/content/10.1101/2020.11.13.381814v1
  * @tparam T the type of elements in the sketch and in the sequences to be sketched.
  */
-template <class set_type, class sketch_type>
+template <class set_type>
 class Tensor2 {
   public:
     /**
@@ -26,16 +26,16 @@ class Tensor2 {
         rand_init();
     }
 
-    Vec<sketch_type> compute(const Seq<set_type> &seq) {
+    Vec<double> compute(const Seq<set_type> &seq) {
         if (seq.empty()) {
-            return Vec<sketch_type>(sketch_size);
+            return Vec<double>(sketch_size);
         }
 
         // T1 is T(x,p,+1), T2 is T(x,p,-1) in the paper
-        auto T1 = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
-        auto T2 = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
-        auto T1n = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
-        auto T2n = new2D<sketch_type>(tup_len + 1, sketch_size, 0);
+        auto T1 = new2D<double>(tup_len + 1, sketch_size, 0);
+        auto T2 = new2D<double>(tup_len + 1, sketch_size, 0);
+        auto T1n = new2D<double>(tup_len + 1, sketch_size, 0);
+        auto T2n = new2D<double>(tup_len + 1, sketch_size, 0);
 
         // the initial condition states that the sketch for the empty string is (1,0,..)
         T1n[0][0] = T1[0][0] = 1;
@@ -55,15 +55,15 @@ class Tensor2 {
             std::swap(T1, T1n);
             std::swap(T2, T2n);
         }
-        Vec<sketch_type> sketch(sketch_size, 0);
+        Vec<double> sketch(sketch_size, 0);
         for (uint32_t m = 0; m < sketch_size; m++) {
             sketch[m] = T1[tup_len][m] - T2[tup_len][m];
         }
         return sketch;
     }
 
-    Vec<sketch_type> compute_old(const Seq<set_type> &seq) {
-        Vec<sketch_type> sketch;
+    Vec<double> compute_old(const Seq<set_type> &seq) {
+        Vec<double> sketch;
         auto M = new2D<double>(tup_len + 1, sketch_size, 0);
         M[0][0] = 1;
         for (int i = 0; i < (int)seq.size(); i++) {
@@ -73,44 +73,30 @@ class Tensor2 {
                 M[t + 1] = shift_sum(M[t + 1], M[t], r, z);
             }
         }
-        sketch = Vec<sketch_type>(sketch_size, 0);
+        sketch = Vec<double>(sketch_size, 0);
         for (int m = 0; m < sketch_size; m++) {
             sketch[m] = M[tup_len][m];
         }
         return sketch;
     }
 
-    void set_hashes_for_testing(const Vec2D<set_type> &hashes,
-                                const Vec2D<bool> &signs) {
+    void set_hashes_for_testing(const Vec2D<set_type> &hashes, const Vec2D<bool> &signs) {
         this->hashes = hashes;
         this->signs = signs;
     }
 
 
   protected:
-    Vec<sketch_type>
-    shift_sum(const Vec<sketch_type> &a, const Vec<sketch_type> &b, set_type shift, double z) {
+    Vec<double> shift_sum(const Vec<double> &a, const Vec<double> &b, set_type shift, double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
-        Vec<sketch_type> result(a.size());
+        Vec<double> result(a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
             result[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
             assert(result[i] <= 1 + 1e-5 && result[i] >= -1 - 1e-5);
         }
         return result;
     }
-
-    set_type alphabet_size;
-    uint8_t sketch_size;
-    /** The length of the subsequences considered for sketching, denoted by t in the paper */
-    uint8_t tup_len;
-
-    /**
-     * Denotes the hash functions h1,....ht:A->{1....D}, where t is #tup_len and D is #sketch_size
-     */
-    Vec2D<set_type> hashes;
-
-    Vec2D<bool> signs;
 
     virtual void rand_init() {
         std::random_device rd;
@@ -127,6 +113,21 @@ class Tensor2 {
             }
         }
     }
+
+    /** Size of the alphabet over which sequences to be sketched are defined, e.g. 4 for DNA */
+    set_type alphabet_size;
+    /** Number of elements in the sketch, denoted by D in the paper */
+    uint8_t sketch_size;
+    /** The length of the subsequences considered for sketching, denoted by t in the paper */
+    uint8_t tup_len;
+
+    /**
+     * Denotes the hash functions h1,....ht:A->{1....D}, where t is #tup_len and D is #sketch_size
+     */
+    Vec2D<set_type> hashes;
+
+    /** The sign functions s1...st:A->{-1,1} */
+    Vec2D<bool> signs;
 };
 
 } // namespace ts

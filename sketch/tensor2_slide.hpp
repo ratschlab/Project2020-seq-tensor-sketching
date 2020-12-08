@@ -3,25 +3,25 @@
 #include "tensor2.hpp"
 
 namespace ts {
-template <class set_type, class sketch_type>
-class TensorSlide2 : public Tensor2<set_type, sketch_type> {
+template <class set_type>
+class TensorSlide2 : public Tensor2<set_type> {
   public:
     TensorSlide2(set_type alphabet_size,
                  size_t sketch_size,
                  size_t tup_len,
                  size_t win_len,
                  size_t stride)
-        : Tensor2<set_type, sketch_type>(alphabet_size, sketch_size, tup_len),
+        : Tensor2<set_type>(alphabet_size, sketch_size, tup_len),
           win_len(win_len),
           stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
     }
 
-    Vec2D<sketch_type> compute_old(const Vec<set_type> &seq) {
-        Vec2D<sketch_type> sketch;
-        auto T = new3D<sketch_type>(this->tup_len + 1, this->tup_len + 1, this->sketch_size,
-                                    sketch_type(0));
+    Vec2D<double> compute_old(const Vec<set_type> &seq) {
+        Vec2D<double> sketch;
+        auto T = new3D<double>(this->tup_len + 1, this->tup_len + 1, this->sketch_size,
+                                    double(0));
         for (size_t p = 0; p < this->tup_len; p++) {
             T[p + 1][p][0] = 1;
         }
@@ -36,9 +36,9 @@ class TensorSlide2 : public Tensor2<set_type, sketch_type> {
             }
 
             if ((i + 1) % stride == 0) {
-                Vec<sketch_type> em(this->sketch_size);
+                Vec<double> em(this->sketch_size);
                 for (size_t m = 0; m < this->sketch_size; m++) {
-                    sketch_type prod = 0;
+                    double prod = 0;
                     for (size_t r = 0; r < this->num_phases; r++) {
                         prod += ((r % 2 == 0) ? 1 : -1)
                                 * T[1][this->tup_len][m * this->num_phases + r];
@@ -62,35 +62,39 @@ class TensorSlide2 : public Tensor2<set_type, sketch_type> {
         }
     }
 
-    std::vector<sketch_type> diff(const std::vector<sketch_type> &a,
-                                  const std::vector<sketch_type> &b) {
+    std::vector<double> diff(const std::vector<double> &a,
+                                  const std::vector<double> &b) {
         assert(a.size() == b.size());
-        std::vector<sketch_type> result(a.size());
+        std::vector<double> result(a.size());
         for (uint32_t i = 0; i < result.size(); ++i) {
             result[i] = a[i] - b[i];
         }
         return result;
     }
 
-    void set_zero(std::initializer_list<std::vector<sketch_type> *> list) {
+    void set_zero(std::initializer_list<std::vector<double> *> list) {
         for (auto elem : list) {
-            std::fill(elem->begin(), elem->end(), sketch_type(0));
+            std::fill(elem->begin(), elem->end(), double(0));
         }
     }
 
-
-    Vec2D<sketch_type> compute(const Vec<set_type> &seq) {
-        Vec2D<sketch_type> sketches;
+    /**
+     * Computes the sketch for the given sequence.
+     * A sketch is computed every #stride characters on substrings of length #window.
+     * @return seq.size()/stride sketches of size #sketch_size
+     */
+    Vec2D<double> compute(const Vec<set_type> &seq) {
+        Vec2D<double> sketches;
         if (seq.size() < this->tup_len) {
-            return new2D<sketch_type>(seq.size() / this->stride, this->sketch_size, sketch_type(0));
+            return new2D<double>(seq.size() / this->stride, this->sketch_size, double(0));
         }
         auto &hashes = this->hashes;
         auto &signs = this->signs;
         auto tup_len = this->tup_len;
         // first index: p; second index: q; third index: r
         // p,q go from 1 to tup_len; p==0 and p==tup_len+1 are sentinels for termination condition
-        auto T1 = new3D<sketch_type>(tup_len + 2, tup_len + 1, this->sketch_size, 0);
-        auto T2 = new3D<sketch_type>(tup_len + 2, tup_len + 1, this->sketch_size, 0);
+        auto T1 = new3D<double>(tup_len + 2, tup_len + 1, this->sketch_size, 0);
+        auto T2 = new3D<double>(tup_len + 2, tup_len + 1, this->sketch_size, 0);
 
         for (size_t p = 0; p <= tup_len; p++) {
             T1[p + 1][p][0] = 1;
@@ -142,7 +146,7 @@ class TensorSlide2 : public Tensor2<set_type, sketch_type> {
         return sketches;
     }
 
-    void conv_slide_sketch(const Vec2D<set_type> &seq, Vec2D<sketch_type> &sketch) {
+    void conv_slide_sketch(const Vec2D<set_type> &seq, Vec2D<double> &sketch) {
         auto M = new3D<double>(this->tup_len + 1, this->tup_len + 1, this->hash_len, 0);
         for (size_t p = 0; p < this->tup_len; p++) {
             M[p + 1][p][0] = 1;
@@ -159,9 +163,9 @@ class TensorSlide2 : public Tensor2<set_type, sketch_type> {
             }
 
             if ((i + 1) % stride == 0) {
-                Vec<sketch_type> em(this->sketch_size);
+                Vec<double> em(this->sketch_size);
                 for (size_t m = 0; m < this->sketch_size; m++) {
-                    sketch_type prod = 0;
+                    double prod = 0;
                     for (size_t r = 0; r < this->num_phases; r++) {
                         prod += ((r % 2 == 0) ? 1 : -1)
                                 * M[1][this->tup_len][m * this->num_phases + r];
