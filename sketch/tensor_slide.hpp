@@ -23,66 +23,6 @@ class TensorSlide : public Tensor<set_type> {
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
     }
 
-    Vec2D<double> compute_old(const Vec<set_type> &seq) {
-        Vec2D<double> sketch;
-        auto T = new3D<double>(this->tup_len + 1, this->tup_len + 1, this->sketch_size,
-                                    double(0));
-        for (size_t p = 0; p < this->tup_len; p++) {
-            T[p + 1][p][0] = 1;
-        }
-
-        for (size_t i = 0; i < seq.size(); i++) {
-            for (size_t p = 0; p < this->tup_len; p++) {
-                for (size_t q = this->tup_len - 1; q >= p; q--) {
-                    double z = (double)(q - p + 1) / std::min(i + 1, (size_t)win_len);
-                    auto r = this->hash[q][seq[i]];
-                    shift_sum(T[p + 1][q + 1], T[p + 1][q], r, z);
-                }
-            }
-
-            if ((i + 1) % stride == 0) {
-                Vec<double> em(this->sketch_size);
-                for (size_t m = 0; m < this->sketch_size; m++) {
-                    double prod = 0;
-                    for (size_t r = 0; r < this->num_phases; r++) {
-                        prod += ((r % 2 == 0) ? 1 : -1)
-                                * T[1][this->tup_len][m * this->num_phases + r];
-                    }
-                    em[m] = prod;
-                }
-                sketch.push_back(em);
-            }
-
-            if (i < win_len) {
-                continue;
-            }
-
-            for (size_t p = 0; p < this->tup_len; p++) {
-                for (size_t q = p; q < this->tup_len; q++) {
-                    double z = (double)(q - p + 1) / (win_len - q + p);
-                    auto r = this->hash[q][seq[i]];
-                    shift_sum(T[p + 1][q + 1], T[p + 1][q], r, -z);
-                }
-            }
-        }
-    }
-
-    std::vector<double> diff(const std::vector<double> &a,
-                                  const std::vector<double> &b) {
-        assert(a.size() == b.size());
-        std::vector<double> result(a.size());
-        for (uint32_t i = 0; i < result.size(); ++i) {
-            result[i] = a[i] - b[i];
-        }
-        return result;
-    }
-
-    void set_zero(std::initializer_list<std::vector<double> *> list) {
-        for (auto elem : list) {
-            std::fill(elem->begin(), elem->end(), double(0));
-        }
-    }
-
     /**
      * Computes the sketch for the given sequence.
      * A sketch is computed every #stride characters on substrings of length #window.
@@ -195,6 +135,16 @@ class TensorSlide : public Tensor<set_type> {
     }
 
   private:
+    std::vector<double> diff(const std::vector<double> &a,
+                             const std::vector<double> &b) {
+        assert(a.size() == b.size());
+        std::vector<double> result(a.size());
+        for (uint32_t i = 0; i < result.size(); ++i) {
+            result[i] = a[i] - b[i];
+        }
+        return result;
+    }
+    
     size_t win_len;
     size_t stride;
 };
