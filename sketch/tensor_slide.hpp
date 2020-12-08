@@ -6,16 +6,16 @@ namespace ts { // ts = Tensor Sketch
 
 /**
  * Computes tensor slide sketches for a given sequence.
- * @tparam T the type of elements in the sequences to be sketched.
+ * @tparam sketch_type the type of elements in the sequences to be sketched.
  */
-template <class C, class T>
-class TensorSlide : public Tensor<C, T> {
+template <class set_type, class sketch_type>
+class TensorSlide : public Tensor<set_type, sketch_type> {
   public:
     /**
      * @param set_size the number of elements in S,
      * @param sketch_dim the number of components (elements) in the sketch vector.
      */
-    TensorSlide(T set_size,
+    TensorSlide(sketch_type set_size,
                 size_t sketch_dim,
                 size_t num_phases,
                 size_t num_bins,
@@ -23,16 +23,16 @@ class TensorSlide : public Tensor<C, T> {
                 size_t win_len,
                 size_t stride,
                 size_t offset)
-        : Tensor<C, T>(set_size, sketch_dim, num_phases, num_bins, tup_len),
+        : Tensor<set_type, sketch_type>(set_size, sketch_dim, num_phases, num_bins, tup_len),
           win_len(win_len),
           stride(stride),
           offset(offset) {
         this->rand_init();
     }
 
-    void compute(const Seq<C> &seq, Vec2D<T> &sketch) {
+    void compute(const Seq<set_type> &seq, Vec2D<sketch_type> &sketch) {
         Timer::start("tensor_slide_sketch");
-        sketch = Vec2D<T>(this->sketch_count, Vec<T>());
+        sketch = Vec2D<sketch_type>(this->sketch_count, Vec<sketch_type>());
         for (size_t m = 0; m < this->sketch_count; m++) {
             auto cnt = new3D<float>(this->tup_len, this->tup_len, this->embedded_dim, 0);
             for (size_t i = 0; i < seq.size(); i++) {
@@ -70,7 +70,7 @@ class TensorSlide : public Tensor<C, T> {
                     //                    int exp;
                     //                    frexp(prod, &exp);
                     //                    embedding[m].push_back(exp * sgn(prod));
-                    T bin = std::upper_bound(this->bins.begin(),
+                    sketch_type bin = std::upper_bound(this->bins.begin(),
                                              this->bins.begin() + this->num_bins, prod)
                             - this->bins.begin();
                     sketch[m].push_back(bin);
