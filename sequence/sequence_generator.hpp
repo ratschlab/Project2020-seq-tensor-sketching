@@ -128,17 +128,17 @@ class SeqGen {
         std::uniform_int_distribution<T> unif(0, alphabet_size - 1),
                 blocks(min_num_blocks, max_num_blocks);
         int num_blocks = blocks(gen);
-        std::vector<Index> perm(num_blocks);
+        std::vector<size_t> perm(num_blocks);
         std::iota(perm.begin(), perm.end(), 0);
         std::shuffle(perm.begin(), perm.end(), gen);
         while (seq.size() % num_blocks != 0) { // make length divisible by num_blocks
             seq.push_back(unif(gen));
         }
         std::vector<T> res(seq.size());
-        Index block_size = seq.size() / num_blocks;
+        size_t block_size = seq.size() / num_blocks;
         for (size_t i = 0; i < block_size; i++) {
             for (int pi = 0; pi < num_blocks; pi++) {
-                Index bi = pi * block_size + i, bj = perm[pi] * block_size + i;
+                size_t bi = pi * block_size + i, bj = perm[pi] * block_size + i;
                 res[bj] = seq[bi];
             }
         }

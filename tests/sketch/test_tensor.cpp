@@ -1,4 +1,5 @@
 #include "sketch/tensor.hpp"
+#include "util/utils.hpp"
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "util/multivec.hpp"
 #include "util/timer.hpp"
 
 #include <gflags/gflags.h>
@@ -10,22 +11,6 @@
 #include <vector>
 
 namespace ts { // ts = Tensor Sketch
-
-template <class T>
-using is_u_integral = typename std::enable_if<std::is_unsigned<T>::value>::type;
-
-using Index = std::size_t;
-
-using Size_t = std::size_t;
-
-template <class T>
-using Vec2D = std::vector<std::vector<T>>;
-
-template <class T>
-using Vec3D = std::vector<Vec2D<T>>;
-
-template <class T>
-using Vec4D = std::vector<Vec3D<T>>;
 
 /**
  * Extracts k-mers from a sequence. The k-mer is treated as a number in base alphabet_size and then
