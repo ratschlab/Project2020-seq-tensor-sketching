@@ -24,11 +24,11 @@ struct KmerModule : public BasicModules {
 };
 
 struct DiscModules : public BasicModules {
-    Vec<int> dims = { 16, 64, 256 };
-    Vec<int> win2stride = { 2, 2, 2 };
-    Vec<int> tup_lens = { 4, 4, 4 };
-    Vec<int> num_phases = { 5, 5, 5 };
-    Vec<int> strid2dim = { 2, 2, 2 };
+    std::vector<int> dims = { 16, 64, 256 };
+    std::vector<int> win2stride = { 2, 2, 2 };
+    std::vector<int> tup_lens = { 4, 4, 4 };
+    std::vector<int> num_phases = { 5, 5, 5 };
+    std::vector<int> strid2dim = { 2, 2, 2 };
 
     void override_post() override {}
 
@@ -43,9 +43,9 @@ struct DiscModules : public BasicModules {
         return tensorParams;
     }
 
-    Vec<TensorSlideParams> layers(int l) {
+    std::vector<TensorSlideParams> layers(int l) {
         assert(0 < l and l <= 2);
-        Vec<TensorSlideParams> param_vec;
+        std::vector<TensorSlideParams> param_vec;
         for (int i = 0; i < dims[l - 1]; i++) {
             auto params = layer0();
             params.tup_len = tup_lens[l];

@@ -25,7 +25,7 @@ struct KmerModule : public BasicModules {
 
 struct TestModule1 {
     Vec2D<int> seqs;
-    Vec<std::string> seq_names;
+    std::vector<std::string> seq_names;
     string test_id;
     Vec2D<int> kmer_seqs;
     Vec2D<int> wmh_sketch;
@@ -84,7 +84,7 @@ struct TestModule1 {
             std::getline(infile, line);
         }
         string name = line;
-        Vec<seq_type> seq;
+        std::vector<seq_type> seq;
         while (std::getline(infile, line)) {
             if (line[0] == '>') {
                 seq_vec.push_back(seq);
@@ -169,7 +169,7 @@ struct TestModule1 {
                 //                dists[6][i][j] = l1_dist(ten_new_sketch[i], ten_new_sketch[j]);
             }
         }
-        Vec<string> method_names
+        std::vector<string> method_names
                 = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide" };
         for (int m = 0; m < 8; m++) {
             fo.open(out_path + "/dists_" + method_names[m] + ".txt");

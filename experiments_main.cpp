@@ -156,7 +156,7 @@ using namespace ts;
 template <class char_type, class kmer_type, class embed_type>
 struct SeqGenModule {
     Vec2D<char_type> seqs;
-    Vec<std::string> seq_names;
+    std::vector<std::string> seq_names;
     std::string test_id;
     Vec2D<kmer_type> kmer_seqs;
     Vec2D<kmer_type> mh_sketch;
@@ -242,7 +242,7 @@ struct SeqGenModule {
     }
 
     void save_output() {
-        Vec<std::string> method_names
+        std::vector<std::string> method_names
                 = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide" };
         std::ofstream fo;
 

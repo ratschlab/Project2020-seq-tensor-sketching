@@ -29,7 +29,7 @@ void rand_init(uint32_t sketch_size, Vec2D<set_type> *hashes, Vec2D<bool> *signs
 
 TEST(Tensor2, Empty) {
     Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length);
-    Vec<double> sketch = under_test.compute(std::vector<uint8_t>());
+    std::vector<double> sketch = under_test.compute(std::vector<uint8_t>());
     ASSERT_EQ(sketch.size(), sketch_dim);
     ASSERT_THAT(sketch, ElementsAre(0, 0));
 }
@@ -38,7 +38,7 @@ TEST(Tensor2, Empty) {
 TEST(Tensor2, OneChar) {
     Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length);
     for (uint8_t c = 0; c < alphabet_size; ++c) {
-        Vec<double> sketch = under_test.compute({ c });
+        std::vector<double> sketch = under_test.compute({ c });
         ASSERT_THAT(sketch, ElementsAre(0, 0));
     }
 }
@@ -55,7 +55,7 @@ TEST(Tensor, OneCharTuple1) {
     under_test.set_hashes_for_testing(hashes, signs);
 
     for (uint8_t c = 0; c < alphabet_size; ++c) {
-        Vec<double> sketch = under_test.compute({ c });
+        std::vector<double> sketch = under_test.compute({ c });
         for (uint32_t i = 0; i < sketch_dim; ++i) {
             int8_t sign = signs[0][c] ? 1 : -1;
             ASSERT_EQ(sketch[i] * sign, hashes[0][c] % sketch_dim == i) << "Char: " << (int)c;
@@ -73,7 +73,7 @@ TEST(Tensor, FullStringDistinctChars) {
             Tensor<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len);
             std::vector<uint8_t> sequence(tuple_len);
             std::iota(sequence.begin(), sequence.end(), 0U);
-            Vec<double> sketch = under_test.compute(sequence);
+            std::vector<double> sketch = under_test.compute(sequence);
             ASSERT_EQ(sketch.size(), sketch_dimension);
             for (uint32_t i = 0; i < sketch_dimension; ++i) {
                 ASSERT_TRUE(std::abs(sketch[i]) == 0 || std::abs(sketch[i]) == 1);
@@ -98,7 +98,7 @@ TEST(Tensor, FullStringRandomChars) {
             for (uint8_t &c : sequence) {
                 c = rand_char(gen);
             }
-            Vec<double> sketch = under_test.compute(sequence);
+            std::vector<double> sketch = under_test.compute(sequence);
             ASSERT_EQ(sketch.size(), sketch_dimension);
             for (uint32_t i = 0; i < sketch_dimension; ++i) {
                 ASSERT_TRUE(std::abs(sketch[i]) == 0 || std::abs(sketch[i]) == 1);
@@ -122,7 +122,7 @@ TEST(Tensor2, SameChars) {
             Tensor<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len);
             uint8_t sequence_length = tuple_len + rand_seq_len(gen);
             std::vector<uint8_t> sequence(sequence_length, rand_char(gen));
-            Vec<double> sketch = under_test.compute(sequence);
+            std::vector<double> sketch = under_test.compute(sequence);
             ASSERT_EQ(sketch.size(), sketch_dimension);
             for (uint32_t i = 0; i < sketch_dimension; ++i) {
                 ASSERT_TRUE(std::abs(sketch[i]) == 0 || std::abs(sketch[i]) == 1);
@@ -145,7 +145,7 @@ TEST(Tensor2, DistinctCharsTuple1) {
     for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
         Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len);
 
-        Vec<double> sketch = under_test.compute(sequence);
+        std::vector<double> sketch = under_test.compute(sequence);
         ASSERT_EQ(sketch.size(), sketch_dimension);
         for (uint32_t i = 0; i < sketch_dimension; ++i) {
             double factor = sketch[i] / (1. / alphabet_size);
@@ -168,8 +168,8 @@ TEST(Tensor2, DistinctCharsTupleTMinus1) {
         for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
             Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len);
 
-            Vec<double> sketch = under_test.compute(sequence);
-            Vec<double> sketch2 = under_test.compute_old(sequence);
+            std::vector<double> sketch = under_test.compute(sequence);
+            std::vector<double> sketch2 = under_test.compute_old(sequence);
             ASSERT_EQ(sketch.size(), sketch_dimension);
             ASSERT_EQ(sketch2.size(), sketch_dimension);
             for (uint32_t i = 0; i < sketch_dimension; ++i) {

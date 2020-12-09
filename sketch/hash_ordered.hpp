@@ -41,14 +41,14 @@ class OrderedMinHash : public HashBase<T> {
                                         + ". Set --max_length to a higher value.");
         }
         for (size_t pi = 0; pi < this->sketch_dim; pi++) {
-            Vec<size_t> counts(this->set_size, 0);
-            Vec<std::pair<T, T>> ranks;
+            std::vector<size_t> counts(this->set_size, 0);
+            std::vector<std::pair<T, T>> ranks;
             for (auto s : kmers) {
                 ranks.push_back({ this->hashes[pi][s + this->set_size * counts[s]], s });
                 counts[s]++;
             }
             std::sort(ranks.begin(), ranks.end());
-            Vec<T> tup;
+            std::vector<T> tup;
             for (auto pair = ranks.begin(); pair != ranks.end() && pair != ranks.begin() + tup_len;
                  pair++) {
                 tup.push_back(pair->second);
@@ -58,8 +58,8 @@ class OrderedMinHash : public HashBase<T> {
         return sketch;
     }
 
-    Vec<T> compute_flat(const std::vector<T> &kmers) {
-        Vec<T> sketch;
+    std::vector<T> compute_flat(const std::vector<T> &kmers) {
+        std::vector<T> sketch;
         Timer::start("ordered_minhash_flat");
         Vec2D<T> sketch2D = compute(kmers);
         for (const auto &tuple : sketch2D) {
@@ -86,7 +86,7 @@ class OrderedMinHash : public HashBase<T> {
     template <typename C>
     Vec2D<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
         Timer::start("compute_sequence");
-        Vec<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
+        std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
         Vec2D<T> sketch = compute(kmers);
         Timer::stop();
         return sketch;

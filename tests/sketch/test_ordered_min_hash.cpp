@@ -48,7 +48,7 @@ TEST(OrderedMinHash, Permute) {
 }
 
 Vec2D<uint8_t> hash_init(uint32_t set_size, uint32_t sketch_dim, uint32_t max_sequence_len) {
-    Vec2D<uint8_t> hashes(sketch_dim, Vec<uint8_t>(set_size * max_sequence_len, 0));
+    Vec2D<uint8_t> hashes(sketch_dim, std::vector<uint8_t>(set_size * max_sequence_len, 0));
     for (size_t m = 0; m < sketch_dim; m++) {
         std::iota(hashes[m].begin(), hashes[m].end(), 0);
     }

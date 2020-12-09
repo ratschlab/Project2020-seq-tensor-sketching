@@ -22,7 +22,7 @@ class HashBase {
     void rand_init(size_t hash_size) {
         std::random_device rd;
         auto eng = std::mt19937(rd());
-        hashes = Vec2D<T>(sketch_dim, Vec<T>(hash_size, T(0)));
+        hashes = Vec2D<T>(sketch_dim, std::vector<T>(hash_size, T(0)));
         for (size_t m = 0; m < sketch_dim; m++) {
             std::iota(hashes[m].begin(), hashes[m].end(), T(0));
             std::shuffle(hashes[m].begin(), hashes[m].end(), eng);

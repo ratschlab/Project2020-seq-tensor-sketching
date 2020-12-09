@@ -11,10 +11,10 @@
 //
 //
 //    template<class seq_type, class embed_type>
-//    void tensor_sketch_slide2(const Vec<Seq<seq_type>> &seq2D, Vec2D<embed_type> &embedding, const
+//    void tensor_sketch_slide2(const std::vector<Seq<seq_type>> &seq2D, Vec2D<embed_type> &embedding, const
 //    TensorSlideParams &params) {
 //        assert(seq2D.size() == params.embed_dim);
-//        embedding = Vec2D<embed_type>(params.embed_dim, Vec<embed_type>());
+//        embedding = Vec2D<embed_type>(params.embed_dim, std::vector<embed_type>());
 //        for (int m = 0; m < params.embed_dim; m++) {
 //            const auto &seq = seq2D[m];
 //            auto cnt = new3D<float>(params.tup_len, params.tup_len, params.num_phases, 0);

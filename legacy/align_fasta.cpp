@@ -57,7 +57,7 @@ struct HGModule {
     }
 
     template <typename seq_type>
-    string read_next_seq(Vec<seq_type> &seq, Vec<bool> mask) {
+    string read_next_seq(std::vector<seq_type> &seq, std::vector<bool> mask) {
         seq.clear();
         string line;
         while (std::getline(infile, line)) {
@@ -75,8 +75,8 @@ struct HGModule {
 
     void compute_sketches() {
         Vec2D<int> slide_sketch;
-        Vec<int> seq, kmer_seq;
-        Vec<bool> mask;
+        std::vector<int> seq, kmer_seq;
+        std::vector<bool> mask;
         string name = read_first(), next_name;
         while (not name.empty()) {
             next_name = read_next_seq(seq, mask);

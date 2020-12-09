@@ -41,10 +41,10 @@ class Tensor {
         rand_init();
     }
 
-    Vec<sketch_type> compute(const std::vector<set_type> &sequence) {
+    std::vector<sketch_type> compute(const std::vector<set_type> &sequence) {
         Timer::start("tensor_sketch");
 
-        Vec<sketch_type> sketch(sketch_count, 0);
+        std::vector<sketch_type> sketch(sketch_count, 0);
         for (size_t m = 0; m < sketch_count; m++) {
             auto cnt = new2D<double>(tup_len + 1, embedded_dim, sketch_type(0));
             cnt[0][0] = 1; // base case
@@ -91,7 +91,7 @@ class Tensor {
                 s[m][p] = (p % 2 == 0) ? 1 : -1; // use oddity of p to assign (-1) or (1)
             }
         }
-        bins = Vec<double>(num_bins);
+        bins = std::vector<double>(num_bins);
         for (size_t b = 0; b < num_bins; b++) {
             bins[b] = std::tan(M_PI * ((b + .5) / num_bins - .5));
         }
@@ -118,7 +118,7 @@ class Tensor {
     Vec2D<int8_t> s;
 
     /** Bins the possible values of a sketch into #num_bins integer values */
-    Vec<double> bins;
+    std::vector<double> bins;
 };
 
 } // namespace ts

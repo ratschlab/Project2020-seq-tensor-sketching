@@ -21,7 +21,7 @@ struct KmerModule : public BasicModule {
 template <class seq_type, class embed_type>
 struct SeqGenModule {
     Vec2D<seq_type> seqs;
-    Vec<std::string> seq_names;
+    std::vector<std::string> seq_names;
     string test_id;
     Vec2D<seq_type> kmer_seqs;
     Vec2D<embed_type> mh_sketch;
@@ -78,7 +78,7 @@ struct SeqGenModule {
             std::getline(infile, line);
         }
         string name = line;
-        Vec<seq_type> seq;
+        std::vector<seq_type> seq;
         while (std::getline(infile, line)) {
             if (line[0] == '>') {
                 seq_vec.push_back(seq);
@@ -156,7 +156,7 @@ struct SeqGenModule {
     }
 
     void save_output() {
-        Vec<string> method_names
+        std::vector<string> method_names
                 = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide" };
         std::ofstream fo;
 

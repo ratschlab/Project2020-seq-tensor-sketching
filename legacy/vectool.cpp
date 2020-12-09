@@ -36,7 +36,7 @@ int main() {
 
     std::default_random_engine eng;
     std::uniform_int_distribution<int> unif(0, 10);
-    MultiVec<int64_t, size_t> T({ 3, 2, 2 }, 0); // tensor with types for index and value
+    Multistd::vector<int64_t, size_t> T({ 3, 2, 2 }, 0); // tensor with types for index and value
     for (auto it = T.begin(); it != T.end(); it++) { // an iterator over all elements
         *it = unif(eng);
     }

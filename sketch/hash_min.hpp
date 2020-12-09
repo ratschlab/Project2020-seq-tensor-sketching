@@ -36,9 +36,9 @@ class MinHash : public HashBase<T> {
      * @param kmers kmers extracted from a sequence
      * @return the min-hash sketch of #kmers
      */
-    Vec<T> compute(const std::vector<T> &kmers) {
+    std::vector<T> compute(const std::vector<T> &kmers) {
         Timer::start("minhash");
-        Vec<T> sketch(this->sketch_dim);
+        std::vector<T> sketch(this->sketch_dim);
         if (kmers.empty()) {
             Timer::stop();
             return sketch;
@@ -46,7 +46,7 @@ class MinHash : public HashBase<T> {
         for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char = T(0);
             size_t min_rank = this->set_size + 1;
-            Vec<T> h = this->hashes[si];
+            std::vector<T> h = this->hashes[si];
             for (auto s : kmers) {
                 if (h[s] < min_rank) {
                     min_rank = h[s];
@@ -69,10 +69,10 @@ class MinHash : public HashBase<T> {
      * @tparam C the type of characters in the sequence
      */
     template <typename C>
-    Vec<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
+    std::vector<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
         Timer::start("compute_sequence");
-        Vec<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
-        Vec<T> sketch = compute(kmers);
+        std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
+        std::vector<T> sketch = compute(kmers);
         Timer::stop();
         return sketch;
     }

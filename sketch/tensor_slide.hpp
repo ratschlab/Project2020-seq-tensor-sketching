@@ -26,7 +26,7 @@ class TensorSlide : public Tensor<set_type> {
      * A sketch is computed every #stride characters on substrings of length #window.
      * @return seq.size()/stride sketches of size #sketch_size
      */
-    Vec2D<double> compute(const Vec<set_type> &seq) {
+    Vec2D<double> compute(const std::vector<set_type> &seq) {
         Vec2D<double> sketches;
         if (seq.size() < this->subsequence_len) {
             return new2D<double>(seq.size() / this->stride, this->sketch_size, double(0));
@@ -107,7 +107,7 @@ class TensorSlide : public Tensor<set_type> {
             }
 
             if ((i + 1) % stride == 0) {
-                Vec<double> em(this->sketch_size);
+                std::vector<double> em(this->sketch_size);
                 for (size_t m = 0; m < this->sketch_size; m++) {
                     double prod = 0;
                     for (size_t r = 0; r < this->num_phases; r++) {

@@ -15,11 +15,11 @@ namespace ts { // ts = Tensor Sketch
  * @tparam seq_type type used for storing a character of the fasta file, typically uint8_t
  */
 template <typename seq_type>
-std::tuple<std::string, Vec2D<seq_type>, Vec<std::string>>
+std::tuple<std::string, Vec2D<seq_type>, std::vector<std::string>>
 read_fasta(const std::string &file_name, const std::string &format_input) {
     std::string test_id;
     Vec2D<seq_type> seqs;
-    Vec<std::string> seq_names;
+    std::vector<std::string> seq_names;
     std::ifstream infile(file_name);
     assert(infile.is_open() && ("Could not open " + file_name).c_str());
 
@@ -33,7 +33,7 @@ read_fasta(const std::string &file_name, const std::string &format_input) {
         std::getline(infile, line);
     }
     std::string name = line;
-    Vec<seq_type> seq;
+    std::vector<seq_type> seq;
     while (std::getline(infile, line)) {
         if (line[0] == '>') {
             seqs.push_back(seq);

@@ -10,7 +10,7 @@
 namespace ts { // ts = Tensor Sketch
 
 template <typename T>
-bool in_range(const Vec<T> &vec, T min = 0, T max = std::numeric_limits<T>::max()) {
+bool in_range(const std::vector<T> &vec, T min = 0, T max = std::numeric_limits<T>::max()) {
     for (auto &v : vec)
         if (v < min or v > max)
             return false;
@@ -32,10 +32,10 @@ bool in_range3(const Vec3D<T> &vec, T min = 0, T max = std::numeric_limits<T>::m
     return true;
 }
 template <typename T>
-Vec<T> circ_conv(const Vec<T> &a, const Vec<T> &b) {
+std::vector<T> circ_conv(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.sie());
     const int N = a.size();
-    Vec<T> res(N, 0);
+    std::vector<T> res(N, 0);
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             res[(i + j) % N] += a[i] * b[j];
@@ -44,8 +44,8 @@ Vec<T> circ_conv(const Vec<T> &a, const Vec<T> &b) {
     return res;
 }
 template <typename T>
-Vec<T> circ_shift(const Vec<T> &a, int sh) {
-    Vec<T> b(a.size());
+std::vector<T> circ_shift(const std::vector<T> &a, int sh) {
+    std::vector<T> b(a.size());
     for (int i = 0; i < a.size(); i++) {
         b[i] = a[(i + sh) % a.size()];
     }
@@ -54,12 +54,12 @@ Vec<T> circ_shift(const Vec<T> &a, int sh) {
 
 
 template <typename T>
-Vec<T> trans_conv(const Vec<T> &a, const Vec<T> &b, const Vec<int> &inv_ind) {
+std::vector<T> trans_conv(const std::vector<T> &a, const std::vector<T> &b, const std::vector<int> &inv_ind) {
     assert(a.size() == b.size());
     assert(inv_ind.size() == b.size());
     assert(in_range<int>(inv_ind, 0, a.size() - 1));
     const int N = a.size();
-    Vec<T> res(N, 0);
+    std::vector<T> res(N, 0);
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             res[(i + j) % N] += a[i] * b[j];
@@ -201,7 +201,7 @@ Vec3D<embed_type> tensor_disc_slide2(const Vec2D<seq_type> &seq, const TensorSli
                 }
             }
             if ((i + 1) % params.stride == 0 or i == (seq.size() - 1)) {
-                Vec<embed_type> top_cnt = cnt[0][params.tup_len - 1];
+                std::vector<embed_type> top_cnt = cnt[0][params.tup_len - 1];
                 embed_type norm = l1(top_cnt);
                 for (auto &c : top_cnt) {
                     c = norm == 0 ? 0 : (c / norm);
@@ -215,7 +215,7 @@ Vec3D<embed_type> tensor_disc_slide2(const Vec2D<seq_type> &seq, const TensorSli
 }
 template <class seq_type, class embed_type>
 Vec3D<embed_type> tensor_disc_slide3(const Vec3D<seq_type> &seq,
-                                     const Vec<TensorSlideParams> &params) {
+                                     const std::vector<TensorSlideParams> &params) {
     assert(seq.size() == params.size());
     Vec3D<embed_type> embedding3 = Vec3D<embed_type>();
     for (int m = 0; m < seq.size(); m++) {
@@ -227,8 +227,8 @@ Vec3D<embed_type> tensor_disc_slide3(const Vec3D<seq_type> &seq,
 }
 
 template <typename T>
-Vec<T> squeeze_tensor(const Vec3D<T> &a3) {
-    Vec<T> out;
+std::vector<T> squeeze_tensor(const Vec3D<T> &a3) {
+    std::vector<T> out;
     for (const auto &a2 : a3)
         for (const auto &a1 : a2) {
             for (auto v : a1) {

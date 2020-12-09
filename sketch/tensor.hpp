@@ -31,9 +31,9 @@ class Tensor {
      * @param seq the sequence to be sketched
      * @return an array of size #sketch_size containing the sequence's sketch
      */
-    Vec<double> compute(const std::vector<seq_type> &seq) {
+    std::vector<double> compute(const std::vector<seq_type> &seq) {
         if (seq.empty()) {
-            return Vec<double>(sketch_size);
+            return std::vector<double>(sketch_size);
         }
 
         // T1 is T(x,p,+1), T2 is T(x,p,-1) in the paper
@@ -60,15 +60,15 @@ class Tensor {
             std::swap(T1, T1n);
             std::swap(T2, T2n);
         }
-        Vec<double> sketch(sketch_size, 0);
+        std::vector<double> sketch(sketch_size, 0);
         for (uint32_t m = 0; m < sketch_size; m++) {
             sketch[m] = T1[subsequence_len][m] - T2[subsequence_len][m];
         }
         return sketch;
     }
 
-    Vec<double> compute_old(const std::vector<seq_type> &seq) {
-        Vec<double> sketch;
+    std::vector<double> compute_old(const std::vector<seq_type> &seq) {
+        std::vector<double> sketch;
         auto M = new2D<double>(subsequence_len + 1, sketch_size, 0);
         M[0][0] = 1;
         for (int i = 0; i < (int)seq.size(); i++) {
@@ -78,7 +78,7 @@ class Tensor {
                 M[t + 1] = shift_sum(M[t + 1], M[t], r, z);
             }
         }
-        sketch = Vec<double>(sketch_size, 0);
+        sketch = std::vector<double>(sketch_size, 0);
         for (int m = 0; m < sketch_size; m++) {
             sketch[m] = M[subsequence_len][m];
         }
@@ -92,10 +92,10 @@ class Tensor {
 
 
   protected:
-    Vec<double> shift_sum(const Vec<double> &a, const Vec<double> &b, seq_type shift, double z) {
+    std::vector<double> shift_sum(const std::vector<double> &a, const std::vector<double> &b, seq_type shift, double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
-        Vec<double> result(a.size());
+        std::vector<double> result(a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
             result[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
             assert(result[i] <= 1 + 1e-5 && result[i] >= -1 - 1e-5);

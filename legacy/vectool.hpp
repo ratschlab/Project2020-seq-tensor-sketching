@@ -18,52 +18,52 @@ namespace ts { // ts = Tensor Sketch
 using namespace BasicTypes;
 
 template <class T>
-bool is_ascending(const Vec<T> &v) {
+bool is_ascending(const std::vector<T> &v) {
     auto next = std::adjacent_find(v.begin(), v.end(), std::__1::less_equal<T>());
     return (next == v.end());
 }
 
 template <class T>
-Vec<T> &operator-=(Vec<T> &a, const Vec<T> &b) {
+std::vector<T> &operator-=(std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     std::transform(a.begin(), a.end(), b.begin(), a.begin(), std::minus<T>());
     return a;
 }
 
 template <class T>
-Vec<T> &operator+=(Vec<T> &a, const Vec<T> &b) {
+std::vector<T> &operator+=(std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     std::transform(a.begin(), a.end(), b.begin(), a.begin(), std::plus<T>());
     return a;
 }
 
 template <class T>
-Vec<T> &operator*=(Vec<T> &a, const Vec<T> &b) {
+std::vector<T> &operator*=(std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     std::transform(a.begin(), a.end(), b.begin(), a.begin(), std::multiplies<T>());
     return a;
 }
 
 template <class T>
-Vec<T> operator-(const Vec<T> &a, const Vec<T> &b) {
+std::vector<T> operator-(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
-    Vec<T> res(a);
+    std::vector<T> res(a);
     std::transform(a.begin(), a.end(), b.begin(), res.begin(), std::minus<T>());
     return res;
 }
 
 template <class T>
-Vec<T> operator+(const Vec<T> &a, const Vec<T> &b) {
+std::vector<T> operator+(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
-    Vec<T> res(a);
+    std::vector<T> res(a);
     std::transform(a.begin(), a.end(), b.begin(), res.begin(), std::plus<T>());
     return res;
 }
 
 template <class T>
-Vec<T> operator*(const Vec<T> &a, const Vec<T> &b) {
+std::vector<T> operator*(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
-    Vec<T> res(a);
+    std::vector<T> res(a);
     std::transform(a.begin(), a.end(), b.begin(), res.begin(), std::multiplies<T>());
     return res;
 }
@@ -77,12 +77,12 @@ Vec<T> operator*(const Vec<T> &a, const Vec<T> &b) {
 template <class value_type, class size_type = std::size_t>
 struct MultiView {
     template <class T>
-    using Vec = BasicTypes::Vec<T>;
+    using Vec = BasicTypes::std::vector<T>;
     template <class T>
     using is_u_integral = typename std::__1::enable_if<std::is_unsigned<T>::value>::type;
 
-    using Dims = Vec<size_type>;
-    using Data = Vec<value_type>;
+    using Dims = std::vector<size_type>;
+    using Data = std::vector<value_type>;
     using BinOp = std::__1::binary_function<value_type, value_type, value_type>;
 
     size_type ind;
@@ -107,8 +107,8 @@ struct MultiView {
         : ind(ind), dims(dims), data(data), num_dim(num_dim) {}
 
     // indexing
-    inline Vec<size_type> ind2sub(size_type ind) {
-        Vec<size_type> sub;
+    inline std::vector<size_type> ind2sub(size_type ind) {
+        std::vector<size_type> sub;
         for (int d = 0; d < dims.size(); d++) {
             sub[d] = ind % dims[d];
             ind = ind / dims[d];
@@ -211,26 +211,26 @@ struct MultiView {
 template <class value_type, class size_type = std::size_t>
 struct MultiVec : public MultiView<value_type, size_type> {
     template <class T>
-    using Vec = BasicTypes::Vec<T>;
+    using Vec = BasicTypes::std::vector<T>;
     using View = MultiView<value_type, size_type>;
-    Vec<value_type> inner_data;
-    Vec<size_type> inner_dims;
+    std::vector<value_type> inner_data;
+    std::vector<size_type> inner_dims;
 
     MultiVec() : View(inner_dims, inner_data) {}
 
-    void init(const Vec<size_type> &dims, value_type val = 0) {
+    void init(const std::vector<size_type> &dims, value_type val = 0) {
         inner_dims = dims;
         View::init();
         View::alloc(val);
     }
-    MultiVec(const Vec<size_type> &dims, value_type val = 0) : View(inner_dims, inner_data) {
+    MultiVec(const std::vector<size_type> &dims, value_type val = 0) : View(inner_dims, inner_data) {
         inner_dims = dims;
         View::init();
         View::alloc(val);
     }
     MultiVec(const View &mv) : View(mv.ind, mv.num_dim, inner_dims, inner_data) {
-        inner_data = Vec<value_type>(mv.begin(), mv.end());
-        inner_dims = Vec<size_type>(mv.dims.begin(), mv.dims.begin() + mv.num_dim);
+        inner_data = std::vector<value_type>(mv.begin(), mv.end());
+        inner_dims = std::vector<size_type>(mv.dims.begin(), mv.dims.begin() + mv.num_dim);
     }
     MultiVec(const MultiVec &mv) : View(mv.ind, mv.num_dim, inner_dims, inner_data) {
         inner_data = mv.inner_data;
@@ -239,8 +239,8 @@ struct MultiVec : public MultiView<value_type, size_type> {
     }
     MultiVec(size_type ind,
              size_type num_dim,
-             const Vec<size_type> &dims,
-             const Vec<value_type> &data)
+             const std::vector<size_type> &dims,
+             const std::vector<value_type> &data)
         : View(ind, num_dim, inner_dims, inner_data) {
         inner_data = data;
         inner_dims = dims;

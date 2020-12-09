@@ -108,7 +108,7 @@ using namespace ts;
 template <typename seq_type, class kmer_type, class embed_type>
 class SketchHelper {
   public:
-    SketchHelper(const std::function<Vec<embed_type>(const std::vector<kmer_type> &)> &sketcher,
+    SketchHelper(const std::function<std::vector<embed_type>(const std::vector<kmer_type> &)> &sketcher,
                  const std::function<Vec2D<double>(const std::vector<uint64_t> &)> &slide_sketcher)
         : sketcher(sketcher), slide_sketcher(slide_sketcher) {}
 
@@ -116,14 +116,14 @@ class SketchHelper {
         size_t num_seqs = seqs.size();
         slide_sketch = new3D<embed_type>(seqs.size(), FLAGS_embed_dim, 0);
         for (size_t si = 0; si < num_seqs; si++) {
-            Vec<kmer_type> kmers
+            std::vector<kmer_type> kmers
                     = seq2kmer<seq_type, kmer_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
 
             for (int i = FLAGS_offset; i < sketch_end(FLAGS_offset, kmers.size());
                  i += FLAGS_stride) {
                 auto end = std::min(kmers.begin() + i + FLAGS_win_len, kmers.end());
-                Vec<kmer_type> kmer_slice(kmers.begin() + i, end);
-                Vec<embed_type> embed_slice = sketcher(kmer_slice);
+                std::vector<kmer_type> kmer_slice(kmers.begin() + i, end);
+                std::vector<embed_type> embed_slice = sketcher(kmer_slice);
                 for (int m = 0; m < FLAGS_embed_dim; m++) {
                     slide_sketch[si][m].push_back(embed_slice[m]);
                 }
@@ -135,7 +135,7 @@ class SketchHelper {
         slide_sketch = new3D<double>(seqs.size(), FLAGS_embed_dim, 0);
 
         for (size_t si = 0; si < seqs.size(); si++) {
-            Vec<uint64_t> kmers
+            std::vector<uint64_t> kmers
                     = seq2kmer<uint8_t, uint64_t>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
             slide_sketch[si] = slide_sketcher(kmers);
         }
@@ -171,11 +171,11 @@ class SketchHelper {
 
   private:
     Vec2D<seq_type> seqs;
-    Vec<std::string> seq_names;
+    std::vector<std::string> seq_names;
     Vec3D<embed_type> slide_sketch;
     std::string test_id;
 
-    std::function<Vec<embed_type>(const std::vector<kmer_type> &)> sketcher;
+    std::function<std::vector<embed_type>(const std::vector<kmer_type> &)> sketcher;
     std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher;
 };
 
@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
     uint64_t kmer_word_size = int_pow<uint64_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
 
     if (FLAGS_sketch_method.ends_with("MH")) {
-        std::function<Vec<uint64_t>(const std::vector<uint64_t> &)> sketcher;
+        std::function<std::vector<uint64_t>(const std::vector<uint64_t> &)> sketcher;
         MinHash<uint64_t> min_hash;
         WeightedMinHash<uint64_t> wmin_hash;
         OrderedMinHash<uint64_t> omin_hash;
@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
         Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tup_len);
         TensorSlide<uint64_t> tensor_slide(kmer_word_size, FLAGS_embed_dim, FLAGS_tup_len,
                                            FLAGS_win_len, FLAGS_stride);
-        std::function<Vec<double>(const std::vector<uint64_t> &)> sketcher
+        std::function<std::vector<double>(const std::vector<uint64_t> &)> sketcher
                 = [&](const std::vector<uint64_t> &seq) { return tensor_sketch.compute(seq); };
         std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher
                 = [&](const std::vector<uint64_t> &seq) { return tensor_slide.compute(seq); };

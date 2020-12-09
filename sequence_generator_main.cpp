@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
     adjust_short_names();
 
     ts::Vec2D<int> seqs;
-    ts::Vec<std::string> seq_names;
+    std::vector<std::string> seq_names;
     std::string test_id;
 
     ts::SeqGen seq_gen(FLAGS_alphabet_size,

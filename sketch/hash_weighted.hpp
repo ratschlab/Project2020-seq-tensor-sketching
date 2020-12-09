@@ -37,14 +37,14 @@ class WeightedMinHash : public HashBase<T> {
     WeightedMinHash(T set_size, size_t sketch_dim, size_t max_len)
         : HashBase<T>(set_size, sketch_dim, max_len * set_size), max_len(max_len) {}
 
-    Vec<T> compute(const std::vector<T> &kmers) {
+    std::vector<T> compute(const std::vector<T> &kmers) {
         if (kmers.size() > max_len) {
             throw std::invalid_argument("Sequence too long. Maximum sequence length is "
                                         + std::to_string(max_len)
                                         + ". Set --max_length to a higher value.");
         }
         Timer::start("weighted_minhash");
-        Vec<T> sketch = Vec<T>(this->sketch_dim);
+        std::vector<T> sketch = std::vector<T>(this->sketch_dim);
         if (kmers.empty()) {
             Timer::stop();
             return sketch;
@@ -52,7 +52,7 @@ class WeightedMinHash : public HashBase<T> {
         for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char = T(0);
             size_t min_rank = this->hashes[0].size() + 1;
-            Vec<size_t> cnts(this->set_size, 0);
+            std::vector<size_t> cnts(this->set_size, 0);
             for (const auto s : kmers) {
                 auto r = this->hashes[si][s + cnts[s] * this->set_size];
                 cnts[s]++;
@@ -78,10 +78,10 @@ class WeightedMinHash : public HashBase<T> {
      * @tparam C the type of characters in #sequence
      */
     template <typename C>
-    Vec<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
+    std::vector<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
         Timer::start("compute_sequence");
-        Vec<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
-        Vec<T> sketch = compute(kmers);
+        std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
+        std::vector<T> sketch = compute(kmers);
         Timer::stop();
         return sketch;
     }

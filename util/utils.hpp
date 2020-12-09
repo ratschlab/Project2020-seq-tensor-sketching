@@ -19,16 +19,13 @@ using Index = std::size_t;
 using Size_t = std::size_t;
 
 template <class T>
-using Vec = std::vector<T>;
+using Vec2D = std::vector<std::vector<T>>;
 
 template <class T>
-using Vec2D = Vec<Vec<T>>;
+using Vec3D = std::vector<Vec2D<T>>;
 
 template <class T>
-using Vec3D = Vec<Vec2D<T>>;
-
-template <class T>
-using Vec4D = Vec<Vec3D<T>>;
+using Vec4D = std::vector<Vec3D<T>>;
 
 /**
  * Extracts k-mers from a sequence. The k-mer is treated as a number in base alphabet_size and then
@@ -42,13 +39,13 @@ using Vec4D = Vec<Vec3D<T>>;
  * @return the extracted kmers, as integers converted from base #alphabet_size
  */
 template <class chr, class kmer>
-Vec<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size) {
+std::vector<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size) {
     if (seq.size() < (size_t)kmer_size) {
-        return Vec<kmer>();
+        return std::vector<kmer>();
     }
     Timer::start("seq2kmer");
 
-    Vec<kmer> result(seq.size() - kmer_size + 1, 0);
+    std::vector<kmer> result(seq.size() - kmer_size + 1, 0);
 
     kmer c = 1;
     for (uint8_t i = 0; i < kmer_size; i++) {
@@ -71,7 +68,7 @@ inline int sketch_end(int offset, int len) {
 }
 
 template <class T>
-T l1_dist(const Vec<T> &a, const Vec<T> &b) {
+T l1_dist(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     T res = 0;
     for (size_t i = 0; i < a.size(); i++)
@@ -107,7 +104,7 @@ T l1_dist2D_mean(const Vec2D<T> &a, const Vec2D<T> &b) {
 }
 
 template <class T>
-T l2_sq(const Vec<T> &vec) {
+T l2_sq(const std::vector<T> &vec) {
     T sum = 0;
     for (auto v : vec)
         sum += v * v;
@@ -115,7 +112,7 @@ T l2_sq(const Vec<T> &vec) {
 }
 
 template <class T>
-T l2_sq_dist(const Vec<T> &a, const Vec<T> &b) {
+T l2_sq_dist(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     T sum = 0;
     for (int i = 0; i < a.size(); i++) {
@@ -150,7 +147,7 @@ T l2_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
 
 
 template <class T>
-T ip_sim(const Vec<T> &a, const Vec<T> &b) {
+T ip_sim(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     T sum = 0;
     for (int i = 0; i < a.size(); i++) {
@@ -160,20 +157,20 @@ T ip_sim(const Vec<T> &a, const Vec<T> &b) {
 }
 
 template <class T>
-T cosine_sim(const Vec<T> &a, const Vec<T> &b) {
+T cosine_sim(const std::vector<T> &a, const std::vector<T> &b) {
     T val = ip_sim(a, b);
     val = val * val / l2_sq(a) / l2_sq(b);
     return val;
 }
 
 template <class T>
-T median(Vec<T> v) {
+T median(std::vector<T> v) {
     std::nth_element(v.begin(), v.begin() + v.size() / 2, v.end());
     return v[v.size()];
 }
 
 template <class T>
-T median_dist(const Vec<T> &a, const Vec<T> &b) {
+T median_dist(const std::vector<T> &a, const std::vector<T> &b) {
     auto res = a - b;
     std::transform(res.begin(), res.end(), res.begin(), [](const T a) { return (a > 0) ? a : -a; });
     std::sort(res.begin(), res.end());
@@ -182,7 +179,7 @@ T median_dist(const Vec<T> &a, const Vec<T> &b) {
 }
 
 template <class T>
-T hamming_dist(const Vec<T> &a, const Vec<T> &b) {
+T hamming_dist(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     T diff = 0;
     for (size_t i = 0; i < a.size(); i++) {
@@ -210,7 +207,7 @@ int lcs(const std::vector<seq_type> &s1, const std::vector<seq_type> &s2) {
     size_t m = s1.size();
     size_t n = s2.size();
     //        int L[m + 1][n + 1];
-    Vec2D<int> L(m + 1, Vec<int>(n + 1, 0));
+    Vec2D<int> L(m + 1, std::vector<int>(n + 1, 0));
     for (size_t i = 0; i <= m; i++) {
         for (size_t j = 0; j <= n; j++) {
             if (i == 0 || j == 0) {

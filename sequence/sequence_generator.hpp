@@ -35,8 +35,8 @@ class SeqGen {
      * @param seqs
      */
     template <class T>
-    void genseqs_linear(Vec<std::vector<T>> &seqs) {
-        seqs = Vec2D<T>(num_seqs, Vec<T>());
+    void genseqs_linear(std::vector<std::vector<T>> &seqs) {
+        seqs = Vec2D<T>(num_seqs, std::vector<T>());
         gen_seq(seqs[0]);
         for (uint32_t si = 1; si < num_seqs; si++) {
             point_mutate(seqs[si - 1], seqs[si]);
@@ -46,15 +46,15 @@ class SeqGen {
         }
     }
     template <class T>
-    void genseqs_pairs(Vec<std::vector<T>> &seqs) {
-        seqs = Vec2D<T>(num_seqs, Vec<T>());
+    void genseqs_pairs(std::vector<std::vector<T>> &seqs) {
+        seqs = Vec2D<T>(num_seqs, std::vector<T>());
         assert(num_seqs % 2 == 0);
         for (size_t si = 0; si < seqs.size(); si++) {
             gen_seq(seqs[si]);
         }
         for (uint32_t si = 0; si < num_seqs; si += 2) {
             int lcs = si * seq_len / num_seqs;
-            Vec<int> perm(seq_len), perm2(seq_len);
+            std::vector<int> perm(seq_len), perm2(seq_len);
             std::iota(perm.begin(), perm.end(), 0);
             std::shuffle(perm.begin(), perm.end(), gen);
             std::iota(perm2.begin(), perm2.end(), 0);
@@ -70,13 +70,13 @@ class SeqGen {
 
 
     template <class T>
-    void genseqs_tree(Vec<std::vector<T>> &seqs, int sequence_seeds) {
+    void genseqs_tree(std::vector<std::vector<T>> &seqs, int sequence_seeds) {
         // TODO get this to get input from command line
-        seqs = Vec2D<T>(sequence_seeds, Vec<T>());
+        seqs = Vec2D<T>(sequence_seeds, std::vector<T>());
         for (int i = 0; i < sequence_seeds; i++) {
             gen_seq(seqs[i]);
         }
-        Vec<std::vector<T>> children;
+        std::vector<std::vector<T>> children;
         while (seqs.size() < num_seqs) {
             for (auto &seq : seqs) {
                 std::vector<T> ch1, ch2;
@@ -98,12 +98,12 @@ class SeqGen {
 
 
     template <class T>
-    void genseqs_tree2(Vec<std::vector<T>> &seqs) {
+    void genseqs_tree2(std::vector<std::vector<T>> &seqs) {
         // TODO get this to get input from command line
-        seqs = Vec2D<T>(1, Vec<T>());
+        seqs = Vec2D<T>(1, std::vector<T>());
         gen_seq(seqs[0]);
 
-        Vec<std::vector<T>> children;
+        std::vector<std::vector<T>> children;
         while (seqs.size() < num_seqs) {
             for (auto &seq : seqs) {
                 std::vector<T> child(seq);
@@ -128,7 +128,7 @@ class SeqGen {
         std::uniform_int_distribution<T> unif(0, alphabet_size - 1),
                 blocks(min_num_blocks, max_num_blocks);
         int num_blocks = blocks(gen);
-        Vec<Index> perm(num_blocks);
+        std::vector<Index> perm(num_blocks);
         std::iota(perm.begin(), perm.end(), 0);
         std::shuffle(perm.begin(), perm.end(), gen);
         while (seq.size() % num_blocks != 0) { // make length divisible by num_blocks
