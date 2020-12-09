@@ -25,7 +25,7 @@ DEFINE_uint32(K, 3, "Short hand for --kmer_size");
 DEFINE_int32(alphabet_size, 5, "Size of the alphabet for generated sequences");
 DEFINE_int32(A, 4, "Short hand for --alphabet_size");
 
-DEFINE_string(output, "./data/sketches/", "Output directory for sketches");
+DEFINE_string(output_dir, "/tmp/", "Output directory for sketches");
 DEFINE_string(o, "./seqs.fa", "Short hand for --output");
 
 DEFINE_string(input,
@@ -90,7 +90,7 @@ void adjust_short_names() {
         FLAGS_num_bins = FLAGS_n;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("o").is_default) {
-        FLAGS_output = FLAGS_o;
+        FLAGS_output_dir = FLAGS_o;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("W").is_default) {
         FLAGS_win_len = FLAGS_W;
@@ -146,7 +146,7 @@ class SketchHelper {
     }
 
     void save_output() {
-        std::ofstream fo(std::filesystem::path(FLAGS_output) / (FLAGS_sketch_method + ".txt"));
+        std::ofstream fo(std::filesystem::path(FLAGS_output_dir) / (FLAGS_sketch_method + ".txt"));
         if (!fo.is_open()) {
             std::cerr << "output file not opened\n";
         }

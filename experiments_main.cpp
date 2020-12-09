@@ -44,7 +44,7 @@ DEFINE_double(R, 0.02, "Short hand for --block_mutation_rate");
 DEFINE_uint32(sequence_seeds, 1, "Number of initial random sequences");
 DEFINE_uint32(s, 1, "Short hand for --sequence_seeds");
 
-DEFINE_string(output, "./seqs.fa", "File name where the generated sequence should be written");
+DEFINE_string(output_dir, "/tmp/", "File name where the generated sequence should be written");
 DEFINE_string(o, "./seqs.fa", "Short hand for --output");
 
 DEFINE_int32(embed_dim, 128, "Embedding dimension, used for all sketching methods");
@@ -69,7 +69,11 @@ DEFINE_int32(n, 255, "Short hand for --num_bins");
 DEFINE_int32(win_len, 32, "Window length: the size of sliding window in Tensor Slide Sketch");
 DEFINE_int32(W, 32, "Short hand for --win_len");
 
-DEFINE_int32(max_len, 32, "The maximum accepted sequence length for Ordered and Weighted min-hash");
+DEFINE_int32(
+        max_len,
+        300,
+        "The maximum accepted sequence length for Ordered and Weighted min-hash. Must be larger "
+        "than seq_len + delta, where delta is the number of random insertions");
 
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
 DEFINE_int32(S, 8, "Short hand for --stride");
@@ -116,7 +120,7 @@ void adjust_short_names() {
         FLAGS_sequence_seeds = FLAGS_s;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("o").is_default) {
-        FLAGS_output = FLAGS_o;
+        FLAGS_output_dir = FLAGS_o;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("F").is_default) {
         FLAGS_fix_len = FLAGS_F;
@@ -137,7 +141,7 @@ void adjust_short_names() {
         FLAGS_num_bins = FLAGS_n;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("o").is_default) {
-        FLAGS_output = FLAGS_o;
+        FLAGS_output_dir = FLAGS_o;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("W").is_default) {
         FLAGS_win_len = FLAGS_W;
@@ -166,7 +170,9 @@ struct SeqGenModule {
     Vec3D<embed_type> slide_sketch;
     Vec3D<embed_type> dists;
 
-    std::string output;
+    std::filesystem::path output_dir;
+
+    SeqGenModule(const std::string &out_dir) : output_dir(out_dir) {}
 
     void generate_sequences() {
         ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len, FLAGS_max_num_blocks,
@@ -174,11 +180,11 @@ struct SeqGenModule {
                            (float)FLAGS_mutation_rate, (float)FLAGS_block_mutation_rate);
 
         if (FLAGS_mutation_pattern == "pairs") {
-            seq_gen.genseqs_pairs(seqs);
+            seqs = seq_gen.genseqs_pairs<char_type>();
         } else if (FLAGS_mutation_pattern == "linear") {
-            seq_gen.genseqs_linear(seqs);
+            seqs = seq_gen.genseqs_linear<char_type>();
         } else if (FLAGS_mutation_pattern == "tree") {
-            seq_gen.genseqs_tree(seqs, FLAGS_sequence_seeds);
+            seqs = seq_gen.genseqs_tree<char_type>(FLAGS_sequence_seeds);
         }
     }
 
@@ -246,25 +252,25 @@ struct SeqGenModule {
                 = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide" };
         std::ofstream fo;
 
-        fs::remove_all(fs::path(output));
-        fs::create_directories(fs::path(output + "/dists"));
-        fs::create_directories(fs::path(output + "/sketches"));
+        fs::remove_all(fs::path(output_dir));
+        fs::create_directories(fs::path(output_dir / "dists"));
+        fs::create_directories(fs::path(output_dir / "sketches"));
 
-        fo.open(output + "conf.csv");
+        fo.open(output_dir / "conf.csv");
         assert(fo.is_open());
         fo << flag_values();
         fo.close();
 
-        fo.open(output + "timing.csv");
+        fo.open(output_dir / "timing.csv");
         assert(fo.is_open());
         fo << Timer::summary();
         fo.close();
 
-        write_fasta(output + "seqs.fa", seqs);
+        write_fasta(output_dir / "seqs.fa", seqs);
 
         size_t num_seqs = seqs.size();
         for (int m = 0; m < 6; m++) {
-            fo.open(output + "dists/" + method_names[m] + ".txt");
+            fo.open(output_dir / "dists" / (method_names[m] + ".txt"));
             assert(fo.is_open());
             if (FLAGS_mutation_pattern == "pairs") {
                 for (size_t i = 0; i < num_seqs; i += 2) {
@@ -281,7 +287,7 @@ struct SeqGenModule {
             fo.close();
         }
 
-        fo.open(output + "sketches/mh.txt");
+        fo.open(output_dir / "sketches/mh.txt");
         assert(fo.is_open());
         for (size_t si = 0; si < num_seqs; si++) {
             fo << ">> seq " << si << "\n";
@@ -292,7 +298,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output + "sketches/wmh.txt");
+        fo.open(output_dir / "sketches/wmh.txt");
         assert(fo.is_open());
         for (size_t si = 0; si < num_seqs; si++) {
             fo << ">> seq " << si << "\n";
@@ -303,7 +309,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output + "sketches/omh.txt");
+        fo.open(output_dir / "sketches/omh.txt");
         assert(fo.is_open());
         for (size_t si = 0; si < num_seqs; si++) {
             fo << ">> seq " << si << "\n";
@@ -314,7 +320,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output + "sketches/ten.txt");
+        fo.open(output_dir / "sketches/ten.txt");
         assert(fo.is_open());
         for (size_t si = 0; si < seqs.size(); si++) {
             fo << ">> seq " << si << "\n";
@@ -325,7 +331,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output + "sketches/ten_slide.txt");
+        fo.open(output_dir / "sketches/ten_slide.txt");
         for (size_t si = 0; si < seqs.size(); si++) {
             auto &sk = slide_sketch[si];
             for (size_t dim = 0; dim < sk.size(); dim++) {
@@ -343,7 +349,7 @@ struct SeqGenModule {
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-    SeqGenModule<uint8_t, uint64_t, double> experiment;
+    SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_output_dir);
     experiment.generate_sequences();
     experiment.compute_sketches();
     experiment.compute_pairwise_dists();

@@ -39,9 +39,9 @@ class WeightedMinHash : public HashBase<T> {
 
     std::vector<T> compute(const std::vector<T> &kmers) {
         if (kmers.size() > max_len) {
-            throw std::invalid_argument("Sequence too long. Maximum sequence length is "
-                                        + std::to_string(max_len)
-                                        + ". Set --max_length to a higher value.");
+            throw std::invalid_argument("Sequence too long: " + std::to_string(kmers.size())
+                                        + ". Maximum sequence length is " + std::to_string(max_len)
+                                        + ". Set --max_len to a higher value.");
         }
         Timer::start("weighted_minhash");
         std::vector<T> sketch = std::vector<T>(this->sketch_dim);

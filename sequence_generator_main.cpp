@@ -33,7 +33,7 @@ DEFINE_double(R, 0.02, "Short hand for --block_mutation_rate");
 DEFINE_uint32(sequence_seeds, 1, "Number of initial random sequences");
 DEFINE_uint32(s, 1, "Short hand for --sequence_seeds");
 
-DEFINE_string(output, "./seqs.fa", "File name where the generated sequence should be written");
+DEFINE_string(output_dir, "/tmp/", "File name where the generated sequence should be written");
 DEFINE_string(o, "./seqs.fa", "Short hand for --output");
 
 static bool ValidateMutationPattern(const char *flagname, const std::string &value) {
@@ -72,7 +72,7 @@ void adjust_short_names() {
         FLAGS_sequence_seeds = FLAGS_s;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("o").is_default) {
-        FLAGS_output = FLAGS_o;
+        FLAGS_output_dir = FLAGS_o;
     }
 }
 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     adjust_short_names();
 
-    ts::Vec2D<int> seqs;
+    ts::Vec2D<uint8_t> seqs;
     std::vector<std::string> seq_names;
     std::string test_id;
 
@@ -94,11 +94,11 @@ int main(int argc, char *argv[]) {
                        (float)FLAGS_block_mutation_rate);
 
     if (FLAGS_mutation_pattern == "linear") {
-        seq_gen.genseqs_linear(seqs);
+        seqs = seq_gen.genseqs_linear<uint8_t>();
     } else if (FLAGS_mutation_pattern == "tree") {
-        seq_gen.genseqs_tree(seqs, FLAGS_sequence_seeds);
+        seqs = seq_gen.genseqs_tree<uint8_t>(FLAGS_sequence_seeds);
     } else {
         assert(false);
     }
-    ts::write_fasta(FLAGS_output, seqs);
+    ts::write_fasta(std::filesystem::path(FLAGS_output_dir)/"seqs.fa", seqs);
 }

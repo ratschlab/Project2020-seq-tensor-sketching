@@ -36,9 +36,9 @@ class OrderedMinHash : public HashBase<T> {
             throw std::invalid_argument("Sequence must be longer than tuple length");
         }
         if (kmers.size() > max_len) {
-            throw std::invalid_argument("Sequence too long. Maximum sequence length is "
-                                        + std::to_string(max_len)
-                                        + ". Set --max_length to a higher value.");
+            throw std::invalid_argument("Sequence too long: " + std::to_string(kmers.size())
+                                        + ". Maximum sequence length is " + std::to_string(max_len)
+                                        + ". Set --max_len to a higher value.");
         }
         for (size_t pi = 0; pi < this->sketch_dim; pi++) {
             std::vector<size_t> counts(this->set_size, 0);

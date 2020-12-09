@@ -31,12 +31,11 @@ class SeqGen {
 
     /**
      * Generate sequences in a linear fashion, ie s1->s2, s2->s3, ...
-     * @tparam T
-     * @param seqs
+     * @tparam T sequence type
      */
     template <class T>
-    void genseqs_linear(std::vector<std::vector<T>> &seqs) {
-        seqs = Vec2D<T>(num_seqs, std::vector<T>());
+    Vec2D<T> genseqs_linear() {
+        Vec2D<T> seqs(num_seqs);
         gen_seq(seqs[0]);
         for (uint32_t si = 1; si < num_seqs; si++) {
             point_mutate(seqs[si - 1], seqs[si]);
@@ -44,10 +43,11 @@ class SeqGen {
             if (fix_len)
                 make_fix_len(seqs[si]);
         }
+        return seqs;
     }
     template <class T>
-    void genseqs_pairs(std::vector<std::vector<T>> &seqs) {
-        seqs = Vec2D<T>(num_seqs, std::vector<T>());
+    Vec2D<T> genseqs_pairs() {
+        Vec2D<T> seqs(num_seqs);
         assert(num_seqs % 2 == 0);
         for (size_t si = 0; si < seqs.size(); si++) {
             gen_seq(seqs[si]);
@@ -66,13 +66,13 @@ class SeqGen {
                 seqs[si][perm[i]] = seqs[si + 1][perm2[i]];
             }
         }
+        return seqs;
     }
 
 
     template <class T>
-    void genseqs_tree(std::vector<std::vector<T>> &seqs, int sequence_seeds) {
-        // TODO get this to get input from command line
-        seqs = Vec2D<T>(sequence_seeds, std::vector<T>());
+    Vec2D<T> genseqs_tree(int sequence_seeds) {
+        Vec2D<T> seqs(sequence_seeds);
         for (int i = 0; i < sequence_seeds; i++) {
             gen_seq(seqs[i]);
         }
@@ -94,13 +94,14 @@ class SeqGen {
         for (auto &seq : seqs)
             if (fix_len)
                 make_fix_len(seq);
+        return seqs;
     }
 
 
     template <class T>
-    void genseqs_tree2(std::vector<std::vector<T>> &seqs) {
+    Vec2D<T> genseqs_tree2() {
         // TODO get this to get input from command line
-        seqs = Vec2D<T>(1, std::vector<T>());
+        Vec2D<T> seqs = Vec2D<T>(1);
         gen_seq(seqs[0]);
 
         std::vector<std::vector<T>> children;
