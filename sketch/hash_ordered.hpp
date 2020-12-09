@@ -44,7 +44,7 @@ class OrderedMinHash : public HashBase<T> {
             std::vector<size_t> counts(this->set_size, 0);
             std::vector<std::pair<T, T>> ranks;
             for (auto s : kmers) {
-                ranks.push_back({ this->hashes[pi][s + this->set_size * counts[s]], s });
+                ranks.push_back({ this->hash(pi, s + this->set_size * counts[s]), s });
                 counts[s]++;
             }
             std::sort(ranks.begin(), ranks.end());

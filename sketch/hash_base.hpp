@@ -4,6 +4,8 @@
 #include "util/utils.hpp"
 
 #include <random>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace ts {
 template <typename T>
@@ -12,27 +14,48 @@ class HashBase {
     HashBase() {}
 
     HashBase(T set_size, size_t sketch_dim, size_t hash_size)
-        : set_size(set_size), sketch_dim(sketch_dim) {
-        rand_init(hash_size);
+        : set_size(set_size),
+          sketch_dim(sketch_dim),
+          hash_size(hash_size),
+          hashes(std::vector<std::unordered_map<T, T>>(sketch_dim)),
+          values(std::vector<std::unordered_set<T>>(sketch_dim)) {
+        std::random_device rd;
+        rng = std::mt19937(rd());
+        rand = std::uniform_int_distribution<T>(0, hash_size - 1);
     }
 
-    void set_hashes_for_testing(const Vec2D<T> &hashes) { this->hashes = hashes; }
+    void set_hashes_for_testing(const std::vector<std::unordered_map<T, T>> &h) { hashes = h; }
 
   protected:
-    void rand_init(size_t hash_size) {
-        std::random_device rd;
-        auto eng = std::mt19937(rd());
-        hashes = Vec2D<T>(sketch_dim, std::vector<T>(hash_size, T(0)));
-        for (size_t m = 0; m < sketch_dim; m++) {
-            std::iota(hashes[m].begin(), hashes[m].end(), T(0));
-            std::shuffle(hashes[m].begin(), hashes[m].end(), eng);
+    T set_size;
+    size_t sketch_dim;
+    size_t hash_size;
+
+    /**
+     * Returns the hash value for the index-th hash function.
+     * Since the Hashes are generated on demand.
+     */
+    T hash(size_t index, size_t value) {
+        if (hashes[index].contains(value)) {
+            return hashes[index][value];
+        }
+        while (true) {
+            T next_value = rand(rng);
+            if (!values[index].contains(next_value)) {
+                hashes[index][value] = next_value;
+                values[index].insert(next_value);
+                return next_value;
+            }
         }
     }
 
-    T set_size;
-    size_t sketch_dim;
+  private:
     /** Contains the sketch_dim permutations (hashes) that are used to compute the min-hash */
-    Vec2D<T> hashes;
+    std::vector<std::unordered_map<T, T>> hashes;
+    /** Contains the values used so far for each on-demand permutation */
+    std::vector<std::unordered_set<T>> values;
+    std::uniform_int_distribution<T> rand;
+    std::mt19937 rng;
 };
 
 } // namespace ts

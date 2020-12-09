@@ -51,10 +51,10 @@ class WeightedMinHash : public HashBase<T> {
         }
         for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char = T(0);
-            size_t min_rank = this->hashes[0].size() + 1;
+            size_t min_rank = this->hash_size;
             std::vector<size_t> cnts(this->set_size, 0);
             for (const auto s : kmers) {
-                auto r = this->hashes[si][s + cnts[s] * this->set_size];
+                auto r = this->hash(si, s + cnts[s] * this->set_size);
                 cnts[s]++;
                 if (r < min_rank) {
                     min_rank = r;

@@ -46,10 +46,10 @@ class MinHash : public HashBase<T> {
         for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char = T(0);
             size_t min_rank = this->set_size + 1;
-            std::vector<T> h = this->hashes[si];
             for (auto s : kmers) {
-                if (h[s] < min_rank) {
-                    min_rank = h[s];
+                T hash = this->hash(si, s);
+                if (hash < min_rank) {
+                    min_rank = hash;
                     min_char = s;
                 }
             }

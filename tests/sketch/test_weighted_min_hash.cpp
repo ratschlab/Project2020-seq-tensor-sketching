@@ -34,10 +34,13 @@ TEST(WeightedMinHash, Permute) {
     ASSERT_THAT(sketch1, ElementsAreArray(sketch2));
 }
 
-Vec2D<uint8_t> hash_init(uint32_t set_size, uint32_t sketch_dim, uint32_t max_len) {
-    Vec2D<uint8_t> hashes(sketch_dim, std::vector<uint8_t>(set_size * max_len, 0));
-    for (size_t m = 0; m < sketch_dim; m++) {
-        std::iota(hashes[m].begin(), hashes[m].end(), 0);
+std::vector<std::unordered_map<uint8_t, uint8_t>>
+hash_init(uint32_t set_sz, uint32_t sketch_size, uint32_t max_seq_len) {
+    std::vector<std::unordered_map<uint8_t, uint8_t>> hashes(sketch_size);
+    for (size_t m = 0; m < sketch_size; m++) {
+        for (uint32_t v = 0; v < set_sz * max_seq_len; ++v) {
+            hashes[m][v] = v;
+        }
     }
     return hashes;
 }
