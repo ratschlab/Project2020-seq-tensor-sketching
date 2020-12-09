@@ -1,0 +1,7 @@
+--output_dir=/tmp/ts/
+--kmer_size=8
+--tuple_len=8
+--stride=16
+--num_seqs=10
+--seq_len=32
+--max_len=36

@@ -352,9 +352,12 @@ int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_output_dir);
+    std::cout << "Generating sequences..." << std::endl;
     experiment.generate_sequences();
+    std::cout << "Computing sketches..." << std::endl;
     experiment.compute_sketches();
     experiment.compute_pairwise_dists();
+    std::cout << "Writing output to " << FLAGS_output_dir << std::endl;
     experiment.save_output();
     return 0;
 }
