@@ -55,7 +55,9 @@ DEFINE_bool(tuple_on_kmer,
             "Apply tuple-based methods (OMH, TensorSketch, and TenSlide), on kmer sequence");
 DEFINE_bool(tk, false, "Short hand for --tuple_on_kmer");
 
-DEFINE_int32(tuple_len, 2, "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
+DEFINE_int32(tuple_len,
+             2,
+             "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
 DEFINE_int32(T, 2, "Short hand for --tuple_len");
 
 DEFINE_int32(num_phases,
@@ -193,12 +195,12 @@ struct SeqGenModule {
         MinHash<kmer_type> min_hash(set_size, FLAGS_embed_dim);
         WeightedMinHash<kmer_type> wmin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len);
         // TODO(dd) - this is fishy - there is no reason to compute omh on characters
-        kmer_type omh_set_size = FLAGS_tuple_on_kmer ? set_size : FLAGS_alphabet_size;
-        OrderedMinHash<kmer_type> omin_hash(omh_set_size, FLAGS_embed_dim, FLAGS_max_len,
+        // kmer_type omh_set_size = FLAGS_tuple_on_kmer ? set_size : FLAGS_alphabet_size;
+        OrderedMinHash<kmer_type> omin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len,
                                             FLAGS_tuple_len);
-        Tensor<char_type> tensor_sketch(set_size, FLAGS_embed_dim, FLAGS_tuple_len);
-        embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
-        TensorSlide<char_type> tensor_slide(set_size, slide_sketch_dim, FLAGS_tuple_len,
+        Tensor<char_type> tensor_sketch(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_len);
+        // embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
+        TensorSlide<char_type> tensor_slide(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_len,
                                             FLAGS_win_len, FLAGS_stride);
 
         size_t num_seqs = seqs.size();
