@@ -2,6 +2,7 @@
 
 #include "util/multivec.hpp"
 
+#include <cassert>
 #include <random>
 
 namespace ts { // ts = Tensor Sketch
