@@ -33,33 +33,27 @@ class Tensor {
      * @return an array of size #sketch_size containing the sequence's sketch
      */
     std::vector<double> compute(const std::vector<seq_type> &seq) {
-        if (seq.empty()) {
-            return std::vector<double>(sketch_size);
-        }
-
         // T1 is T(x,p,+1), T2 is T(x,p,-1) in the paper
         auto T1 = new2D<double>(subsequence_len + 1, sketch_size, 0);
         auto T2 = new2D<double>(subsequence_len + 1, sketch_size, 0);
-        auto T1n = new2D<double>(subsequence_len + 1, sketch_size, 0);
-        auto T2n = new2D<double>(subsequence_len + 1, sketch_size, 0);
 
         // the initial condition states that the sketch for the empty string is (1,0,..)
-        T1n[0][0] = T1[0][0] = 1;
+        T1[0][0] = 1;
         for (uint32_t i = 0; i < seq.size(); i++) {
-            for (uint32_t t = 1; t <= std::min(i + 1, (uint32_t)subsequence_len); ++t) {
+            // must traverse in reverse order, to avoid overwriting the values of T1 and T2 before
+            // they are used in the recurrence
+            for (uint32_t t = std::min(i + 1, (uint32_t)subsequence_len); t >= 1; --t) {
                 double z = t / (i + 1.0); // probability that the last index is i
                 seq_type r = hashes[t - 1][seq[i]];
                 bool s = signs[t - 1][seq[i]];
                 if (s) {
-                    T1n[t] = shift_sum(T1[t], T1[t - 1], r, z);
-                    T2n[t] = shift_sum(T2[t], T2[t - 1], r, z);
+                    T1[t] = shift_sum(T1[t], T1[t - 1], r, z);
+                    T2[t] = shift_sum(T2[t], T2[t - 1], r, z);
                 } else {
-                    T1n[t] = shift_sum(T1[t], T2[t - 1], r, z);
-                    T2n[t] = shift_sum(T2[t], T1[t - 1], r, z);
+                    T1[t] = shift_sum(T1[t], T2[t - 1], r, z);
+                    T2[t] = shift_sum(T2[t], T1[t - 1], r, z);
                 }
             }
-            std::swap(T1, T1n);
-            std::swap(T2, T2n);
         }
         std::vector<double> sketch(sketch_size, 0);
         for (uint32_t m = 0; m < sketch_size; m++) {
@@ -68,32 +62,16 @@ class Tensor {
         return sketch;
     }
 
-    std::vector<double> compute_old(const std::vector<seq_type> &seq) {
-        std::vector<double> sketch;
-        auto M = new2D<double>(subsequence_len + 1, sketch_size, 0);
-        M[0][0] = 1;
-        for (int i = 0; i < (int)seq.size(); i++) {
-            for (int t = subsequence_len - 1; t >= 0; t--) {
-                double z = (t + 1.0) / (i + 1);
-                auto r = hashes[t][seq[i]];
-                M[t + 1] = shift_sum(M[t + 1], M[t], r, z);
-            }
-        }
-        sketch = std::vector<double>(sketch_size, 0);
-        for (int m = 0; m < sketch_size; m++) {
-            sketch[m] = M[subsequence_len][m];
-        }
-        return sketch;
+    void set_hashes_for_testing(const Vec2D<seq_type> &h, const Vec2D<bool> &s) {
+        hashes = h;
+        signs = s;
     }
-
-    void set_hashes_for_testing(const Vec2D<seq_type> &hashes, const Vec2D<bool> &signs) {
-        this->hashes = hashes;
-        this->signs = signs;
-    }
-
 
   protected:
-    std::vector<double> shift_sum(const std::vector<double> &a, const std::vector<double> &b, seq_type shift, double z) {
+    std::vector<double> shift_sum(const std::vector<double> &a,
+                                  const std::vector<double> &b,
+                                  seq_type shift,
+                                  double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
         std::vector<double> result(a.size());

@@ -170,7 +170,7 @@ TEST(Tensor2, DistinctCharsTupleTMinus1) {
             Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len);
 
             std::vector<double> sketch = under_test.compute(sequence);
-            std::vector<double> sketch2 = under_test.compute_old(sequence);
+            std::vector<double> sketch2 = under_test.compute(sequence);
             ASSERT_EQ(sketch.size(), sketch_dimension);
             ASSERT_EQ(sketch2.size(), sketch_dimension);
             for (uint32_t i = 0; i < sketch_dimension; ++i) {
