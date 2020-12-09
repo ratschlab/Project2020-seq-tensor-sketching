@@ -8,25 +8,39 @@
 #include <vector>
 
 namespace ts {
-template <class set_type>
-class TensorSlide : public Tensor<set_type> {
+/**
+ * Computes sliding tensor sketches for a given sequence as described in
+ * https://www.biorxiv.org/content/10.1101/2020.11.13.381814v1
+ * @tparam seq_type the type of elements in the sequences to be sketched.
+ */
+template <class seq_type>
+class TensorSlide : public Tensor<seq_type> {
   public:
-    TensorSlide(set_type alphabet_size,
+    /**
+     * @param alphabet_size the number of elements in the alphabet S over which sequences are
+     * defined (e.g. 4 for DNA)
+     * @param sketch_size the dimension of the embedded (sketched) space, denoted by D in the paper
+     * @param subsequence_len the length of the subsequences considered for sketching, denoted by t
+     * in the paper
+     * @param win_len sliding sketches are computed for substrings of size win_len
+     * @param stride sliding sketches are computed every stride characters
+     */
+    TensorSlide(seq_type alphabet_size,
                 size_t sketch_size,
                 size_t tup_len,
                 size_t win_len,
                 size_t stride)
-        : Tensor<set_type>(alphabet_size, sketch_size, tup_len), win_len(win_len), stride(stride) {
+        : Tensor<seq_type>(alphabet_size, sketch_size, tup_len), win_len(win_len), stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
     }
 
     /**
-     * Computes the sketch for the given sequence.
+     * Computes sliding sketches for the given sequence.
      * A sketch is computed every #stride characters on substrings of length #window.
      * @return seq.size()/stride sketches of size #sketch_size
      */
-    Vec2D<double> compute(const std::vector<set_type> &seq) {
+    Vec2D<double> compute(const std::vector<seq_type> &seq) {
         Vec2D<double> sketches;
         if (seq.size() < this->subsequence_len) {
             return new2D<double>(seq.size() / this->stride, this->sketch_size, double(0));
@@ -87,50 +101,6 @@ class TensorSlide : public Tensor<set_type> {
             }
         }
         return sketches;
-    }
-
-    void conv_slide_sketch(const Vec2D<set_type> &seq, Vec2D<double> &sketch) {
-        auto M = new3D<double>(this->subsequence_len + 1, this->subsequence_len + 1, this->hash_len,
-                               0);
-        for (size_t p = 0; p < this->subsequence_len; p++) {
-            M[p + 1][p][0] = 1;
-        }
-
-        for (size_t i = 0; i < seq.size(); i++) {
-            assert(seq[i].size() == this->alphabet_size);
-            for (size_t p = 0; p < this->subsequence_len; p++) {
-                for (int32_t q = (int32_t)this->subsequence_len - 1; q >= (int32_t)p; q--) {
-                    double z = (double)(q - p + 1) / std::min((size_t)i + 1, (size_t)win_len);
-                    auto r = this->hash[q][seq[i]];
-                    shift_sum(M[p + 1][q + 1], M[p + 1][q], r, z);
-                }
-            }
-
-            if ((i + 1) % stride == 0) {
-                std::vector<double> em(this->sketch_size);
-                for (size_t m = 0; m < this->sketch_size; m++) {
-                    double prod = 0;
-                    for (size_t r = 0; r < this->num_phases; r++) {
-                        prod += ((r % 2 == 0) ? 1 : -1)
-                                * M[1][this->subsequence_len][m * this->num_phases + r];
-                    }
-                    em[m] = prod;
-                }
-                sketch.push_back(em);
-            }
-
-            if (i < win_len) {
-                continue;
-            }
-
-            for (size_t p = 0; p < this->subsequence_len; p++) {
-                for (size_t q = p; q < this->subsequence_len; q++) {
-                    double z = (double)(q - p + 1) / (win_len - q + p);
-                    auto r = this->hash[q][seq[i]];
-                    shift_sum(M[p + 1][q + 1], M[p + 1][q], r, -z);
-                }
-            }
-        }
     }
 
   private:

@@ -22,12 +22,12 @@ constexpr uint32_t stride = 8;
 template <typename set_type>
 void rand_init(uint32_t sketch_size, Vec2D<set_type> *hashes, Vec2D<bool> *signs) {
     std::mt19937 gen(3412343);
-    std::uniform_int_distribution<set_type> rand_hash2(0, sketch_size - 1);
-    std::uniform_int_distribution<set_type> rand_bool(0, 1);
+    std::uniform_int_distribution<set_type> rand_hash(0, sketch_size - 1);
+    std::uniform_int_distribution<uint8_t> rand_bool(0, 1);
 
     for (size_t h = 0; h < hashes->size(); h++) {
         for (size_t c = 0; c < alphabet_size; c++) {
-            (*hashes)[h][c] = rand_hash2(gen);
+            (*hashes)[h][c] = rand_hash(gen);
             (*signs)[h][c] = rand_bool(gen);
         }
     }

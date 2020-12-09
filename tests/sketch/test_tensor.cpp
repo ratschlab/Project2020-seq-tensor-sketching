@@ -28,7 +28,7 @@ void rand_init(uint32_t sketch_size, Vec2D<set_type> *hashes, Vec2D<bool> *signs
     }
 }
 
-TEST(Tensor2, Empty) {
+TEST(Tensor, Empty) {
     Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length);
     std::vector<double> sketch = under_test.compute(std::vector<uint8_t>());
     ASSERT_EQ(sketch.size(), sketch_dim);
@@ -36,7 +36,7 @@ TEST(Tensor2, Empty) {
 }
 
 /** The sequence has one char, which is shorter than the tuple length, so the sketch will be 0 */
-TEST(Tensor2, OneChar) {
+TEST(Tensor, OneChar) {
     Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length);
     for (uint8_t c = 0; c < alphabet_size; ++c) {
         std::vector<double> sketch = under_test.compute({ c });
@@ -114,8 +114,8 @@ TEST(Tensor, FullStringRandomChars) {
  * If a sequence contains identical characters, its sketch will be +/-1 in one position and 0 in all
  * others, because all subsequences of length t are identical.
  */
-TEST(Tensor2, SameChars) {
-    std::mt19937 gen(321567);
+TEST(Tensor, SameChars) {
+    std::mt19937 gen(342111);
     std::uniform_int_distribution<uint8_t> rand_char(0, alphabet_size - 1);
     std::uniform_int_distribution<uint8_t> rand_seq_len(0, 100);
     for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
@@ -138,7 +138,7 @@ TEST(Tensor2, SameChars) {
  * If a sequence contains distinct characters, the the tensor sketch for t=1 will contain multiples
  * of (1/alphabet_size), because T(a)=1/alphabet_size for all characters a.
  */
-TEST(Tensor2, DistinctCharsTuple1) {
+TEST(Tensor, DistinctCharsTuple1) {
     std::mt19937 gen(321567);
     constexpr uint8_t tuple_len = 1;
     std::vector<uint8_t> sequence(alphabet_size);
@@ -160,7 +160,7 @@ TEST(Tensor2, DistinctCharsTuple1) {
  * t=seq_len-1 will contain multiples of (1/t), because T(a)=1/t for all the seq_len subsequences of
  * length seq_len-1
  */
-TEST(Tensor2, DistinctCharsTupleTMinus1) {
+TEST(Tensor, DistinctCharsTupleTMinus1) {
     std::mt19937 gen(321567);
     for (uint32_t tuple_len = 1; tuple_len < 10; ++tuple_len) {
         const uint8_t alphabet_size = tuple_len + 1;
