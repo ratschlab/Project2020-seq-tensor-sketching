@@ -15,12 +15,12 @@ typedef ::testing::Types<uint64_t, uint32_t> KmerTypes;
 TYPED_TEST_SUITE(Seq2Kmer, KmerTypes);
 
 TYPED_TEST(Seq2Kmer, Empty) {
-    Vec<int> kmers = seq2kmer<int, int>(Seq<int>(), 31, 4);
+    Vec<int> kmers = seq2kmer<int, int>(std::vector<int>(), 31, 4);
     ASSERT_EQ(0, kmers.size());
 }
 
 TYPED_TEST(Seq2Kmer, Sequence) {
-    Seq<uint8_t> sequence = { 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3 };
+    std::vector<uint8_t> sequence = { 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3 };
     Vec<TypeParam> expected_kmers = { 0, 0, 16, 20, 21, 21, 37, 41, 42, 42, 58, 62, 63, 63 };
     Vec<TypeParam> kmers = seq2kmer<uint8_t, TypeParam>(sequence, 3, 4);
 

@@ -35,7 +35,7 @@ class SeqGen {
      * @param seqs
      */
     template <class T>
-    void genseqs_linear(Vec<Seq<T>> &seqs) {
+    void genseqs_linear(Vec<std::vector<T>> &seqs) {
         seqs = Vec2D<T>(num_seqs, Vec<T>());
         gen_seq(seqs[0]);
         for (uint32_t si = 1; si < num_seqs; si++) {
@@ -46,7 +46,7 @@ class SeqGen {
         }
     }
     template <class T>
-    void genseqs_pairs(Vec<Seq<T>> &seqs) {
+    void genseqs_pairs(Vec<std::vector<T>> &seqs) {
         seqs = Vec2D<T>(num_seqs, Vec<T>());
         assert(num_seqs % 2 == 0);
         for (size_t si = 0; si < seqs.size(); si++) {
@@ -70,16 +70,16 @@ class SeqGen {
 
 
     template <class T>
-    void genseqs_tree(Vec<Seq<T>> &seqs, int sequence_seeds) {
+    void genseqs_tree(Vec<std::vector<T>> &seqs, int sequence_seeds) {
         // TODO get this to get input from command line
         seqs = Vec2D<T>(sequence_seeds, Vec<T>());
         for (int i = 0; i < sequence_seeds; i++) {
             gen_seq(seqs[i]);
         }
-        Vec<Seq<T>> children;
+        Vec<std::vector<T>> children;
         while (seqs.size() < num_seqs) {
             for (auto &seq : seqs) {
-                Seq<T> ch1, ch2;
+                std::vector<T> ch1, ch2;
                 point_mutate(seq, ch1);
                 block_permute(ch1);
                 point_mutate(seq, ch2);
@@ -98,15 +98,15 @@ class SeqGen {
 
 
     template <class T>
-    void genseqs_tree2(Vec<Seq<T>> &seqs) {
+    void genseqs_tree2(Vec<std::vector<T>> &seqs) {
         // TODO get this to get input from command line
         seqs = Vec2D<T>(1, Vec<T>());
         gen_seq(seqs[0]);
 
-        Vec<Seq<T>> children;
+        Vec<std::vector<T>> children;
         while (seqs.size() < num_seqs) {
             for (auto &seq : seqs) {
-                Seq<T> child(seq);
+                std::vector<T> child(seq);
                 children.push_back(seq);
                 children.push_back(child);
             }
@@ -120,7 +120,7 @@ class SeqGen {
 
   private:
     template <class T>
-    void block_permute(Seq<T> &seq) {
+    void block_permute(std::vector<T> &seq) {
         std::uniform_real_distribution<double> mute(0, 1);
         if (mute(gen) > block_mutate_rate) {
             return;
@@ -134,7 +134,7 @@ class SeqGen {
         while (seq.size() % num_blocks != 0) { // make length divisible by num_blocks
             seq.push_back(unif(gen));
         }
-        Seq<T> res(seq.size());
+        std::vector<T> res(seq.size());
         Index block_size = seq.size() / num_blocks;
         for (size_t i = 0; i < block_size; i++) {
             for (int pi = 0; pi < num_blocks; pi++) {
@@ -147,7 +147,7 @@ class SeqGen {
     }
 
     template <class T>
-    void gen_seq(Seq<T> &seq) {
+    void gen_seq(std::vector<T> &seq) {
         seq.clear();
         std::uniform_int_distribution<T> unif(0, alphabet_size - 1);
         for (uint32_t i = 0; i < seq_len; i++) {
@@ -156,7 +156,7 @@ class SeqGen {
     }
 
     template <class T>
-    void point_mutate(const Seq<T> &ref, Seq<T> &seq) {
+    void point_mutate(const std::vector<T> &ref, std::vector<T> &seq) {
         float rate = mutation_rate;
         std::discrete_distribution<int> mut { 1 - rate, rate / 3, rate / 3, rate / 3 };
         std::uniform_int_distribution<T> unif(0, alphabet_size - 2);
@@ -186,7 +186,7 @@ class SeqGen {
     }
 
     template <class T>
-    void random_edit(const Seq<T> &ref) {
+    void random_edit(const std::vector<T> &ref) {
         std::discrete_distribution<int> mut { 1.0 / 3, 1.0 / 3, 1.0 };
         std::uniform_int_distribution<T> rchar(0, alphabet_size - 1);
         std::uniform_int_distribution<size_t> rpos_inc(
@@ -218,11 +218,11 @@ class SeqGen {
     }
 
     template <class T>
-    void make_fix_len(Seq<T> &seq) {
+    void make_fix_len(std::vector<T> &seq) {
         std::uniform_int_distribution<T> unif(0, alphabet_size - 1),
                 blocks(min_num_blocks, max_num_blocks);
         if (seq.size() > seq_len) {
-            seq = Seq<T>(seq.begin(), seq.end());
+            seq = std::vector<T>(seq.begin(), seq.end());
         } else if (seq.size() < seq_len) {
             while (seq.size() < seq_len) {
                 seq.push_back(unif(gen));

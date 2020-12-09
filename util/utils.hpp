@@ -30,9 +30,6 @@ using Vec3D = Vec<Vec2D<T>>;
 template <class T>
 using Vec4D = Vec<Vec3D<T>>;
 
-template <class T>
-using Seq = std::vector<T>;
-
 /**
  * Extracts k-mers from a sequence. The k-mer is treated as a number in base alphabet_size and then
  * converted to decimal, i.e. the sequence s1...sk is converted to s1*S^(k-1) + s2*S^(k-2) + ... +
@@ -45,7 +42,7 @@ using Seq = std::vector<T>;
  * @return the extracted kmers, as integers converted from base #alphabet_size
  */
 template <class chr, class kmer>
-Vec<kmer> seq2kmer(const Seq<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size) {
+Vec<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size) {
     if (seq.size() < (size_t)kmer_size) {
         return Vec<kmer>();
     }
@@ -69,22 +66,8 @@ Vec<kmer> seq2kmer(const Seq<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size
     return result;
 }
 
-template <typename T>
-inline int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
-}
-
 inline int sketch_end(int offset, int len) {
     return len - offset;
-}
-
-inline bool sketch_now(int i, int len, int stride, int off) {
-    return (i >= off) and ((i - off) % stride == 0) and (i < sketch_end(off, len));
-}
-
-template <class T>
-T l1(const Vec<T> &vec) {
-    return std::accumulate(vec.begin(), vec.end(), T(0));
 }
 
 template <class T>
@@ -223,7 +206,7 @@ T hamming_dist2D(const Vec2D<T> &a, const Vec2D<T> &b) {
 }
 
 template <class seq_type>
-int lcs(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
+int lcs(const std::vector<seq_type> &s1, const std::vector<seq_type> &s2) {
     size_t m = s1.size();
     size_t n = s2.size();
     //        int L[m + 1][n + 1];
@@ -243,12 +226,12 @@ int lcs(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
 }
 
 template <class seq_type>
-size_t lcs_distance(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
+size_t lcs_distance(const std::vector<seq_type> &s1, const std::vector<seq_type> &s2) {
     return s1.size() + s2.size() - 2 * lcs(s1, s2);
 }
 
 template <class seq_type>
-size_t edit_distance(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
+size_t edit_distance(const std::vector<seq_type> &s1, const std::vector<seq_type> &s2) {
     Timer::start("edit_distance");
     const size_t m(s1.size());
     const size_t n(s2.size());
@@ -258,7 +241,7 @@ size_t edit_distance(const Seq<seq_type> &s1, const Seq<seq_type> &s2) {
     if (n == 0)
         return m;
 
-    auto costs = Seq<size_t>(n + 1);
+    auto costs = std::vector<size_t>(n + 1);
 
     for (size_t k = 0; k <= n; k++)
         costs[k] = k;

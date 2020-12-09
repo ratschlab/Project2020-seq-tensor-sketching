@@ -108,8 +108,8 @@ using namespace ts;
 template <typename seq_type, class kmer_type, class embed_type>
 class SketchHelper {
   public:
-    SketchHelper(const std::function<Vec<embed_type>(const Seq<kmer_type> &)> &sketcher,
-                 const std::function<Vec2D<double>(const Seq<uint64_t> &)> &slide_sketcher)
+    SketchHelper(const std::function<Vec<embed_type>(const std::vector<kmer_type> &)> &sketcher,
+                 const std::function<Vec2D<double>(const std::vector<uint64_t> &)> &slide_sketcher)
         : sketcher(sketcher), slide_sketcher(slide_sketcher) {}
 
     void compute_sketches() {
@@ -175,8 +175,8 @@ class SketchHelper {
     Vec3D<embed_type> slide_sketch;
     std::string test_id;
 
-    std::function<Vec<embed_type>(const Seq<kmer_type> &)> sketcher;
-    std::function<Vec2D<double>(const Seq<uint64_t> &)> slide_sketcher;
+    std::function<Vec<embed_type>(const std::vector<kmer_type> &)> sketcher;
+    std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher;
 };
 
 int main(int argc, char *argv[]) {
@@ -192,7 +192,7 @@ int main(int argc, char *argv[]) {
     uint64_t kmer_word_size = int_pow<uint64_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
 
     if (FLAGS_sketch_method.ends_with("MH")) {
-        std::function<Vec<uint64_t>(const Seq<uint64_t> &)> sketcher;
+        std::function<Vec<uint64_t>(const std::vector<uint64_t> &)> sketcher;
         MinHash<uint64_t> min_hash;
         WeightedMinHash<uint64_t> wmin_hash;
         OrderedMinHash<uint64_t> omin_hash;
@@ -209,8 +209,8 @@ int main(int argc, char *argv[]) {
             sketcher
                     = [&](const std::vector<uint64_t> &seq) { return omin_hash.compute_flat(seq); };
         }
-        std::function<Vec2D<double>(const Seq<uint64_t> &)> slide_sketcher
-                = [&](const Seq<uint64_t> &) { return new2D<double>(0, 0); };
+        std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher
+                = [&](const std::vector<uint64_t> &) { return new2D<double>(0, 0); };
         SketchHelper<uint8_t, uint64_t, uint64_t> sketch_helper(sketcher, slide_sketcher);
         sketch_helper.read_input();
         sketch_helper.compute_sketches();
@@ -219,10 +219,10 @@ int main(int argc, char *argv[]) {
         Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tup_len);
         TensorSlide<uint64_t> tensor_slide(kmer_word_size, FLAGS_embed_dim, FLAGS_tup_len,
                                            FLAGS_win_len, FLAGS_stride);
-        std::function<Vec<double>(const Seq<uint64_t> &)> sketcher
+        std::function<Vec<double>(const std::vector<uint64_t> &)> sketcher
                 = [&](const std::vector<uint64_t> &seq) { return tensor_sketch.compute(seq); };
-        std::function<Vec2D<double>(const Seq<uint64_t> &)> slide_sketcher
-                = [&](const Seq<uint64_t> &seq) { return tensor_slide.compute(seq); };
+        std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher
+                = [&](const std::vector<uint64_t> &seq) { return tensor_slide.compute(seq); };
         SketchHelper<uint8_t, uint64_t, double> sketch_helper(sketcher, slide_sketcher);
         sketch_helper.read_input();
         FLAGS_sketch_method == "TenSlide" ? sketch_helper.compute_slide()
