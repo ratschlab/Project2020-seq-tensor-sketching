@@ -4,6 +4,7 @@
 
 #include <gflags/gflags.h>
 
+#include <filesystem>
 #include <memory>
 
 DEFINE_int32(alphabet_size, 4, "Size of the alphabet for generated sequences");
