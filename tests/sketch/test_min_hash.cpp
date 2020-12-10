@@ -42,8 +42,7 @@ TEST(MinHash, PermuteAndRepeat) {
     ASSERT_THAT(sketch1, ElementsAreArray(sketch2));
 }
 
-std::vector<std::unordered_map<uint8_t, uint8_t>>
-hash_init(uint32_t set_sz, uint32_t sketch_size) {
+std::vector<std::unordered_map<uint8_t, uint8_t>> hash_init(uint32_t set_sz, uint32_t sketch_size) {
     std::vector<std::unordered_map<uint8_t, uint8_t>> hashes(sketch_size);
     for (size_t m = 0; m < sketch_size; m++) {
         for (uint32_t v = 0; v < set_sz; ++v) {
@@ -57,7 +56,7 @@ TEST(MinHash, PresetHash) {
     MinHash<uint8_t> under_test(4 * 4, 3);
     under_test.set_hashes_for_testing(hash_init(4 * 4, 3));
     for (uint32_t i = 0; i < 4 * 4; ++i) {
-        std::vector<uint8_t> sequence(4*4-i);
+        std::vector<uint8_t> sequence(4 * 4 - i);
         std::iota(sequence.begin(), sequence.end(), i);
         std::vector<uint8_t> sketch = under_test.compute(sequence);
         ASSERT_THAT(sketch, ElementsAreArray({ i, i, i }));
