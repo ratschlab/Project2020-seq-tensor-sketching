@@ -9,4 +9,6 @@
 # how many times a kmer may repeat itself in a sequence; in theory this is --seq_len, but in practice the
 # value is waaaaay smaller; for larger k-mer sizes it's probably 2-3
 --max_len=36
+# size of the embedded space, i.e. number of hash functions used
+--embed_dim=16
 

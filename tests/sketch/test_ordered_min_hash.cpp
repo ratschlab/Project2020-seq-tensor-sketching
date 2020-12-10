@@ -84,10 +84,12 @@ TEST(OrderedMinHash, PresetHashRepeat) {
     }
 }
 
+#ifndef NDEBUG
 TEST(OrderedMinhash, SequenceTooLong) {
     OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length);
     std::vector<uint8_t> sequence(max_sequence_len + 1);
     ASSERT_THROW(under_test.compute(sequence), std::invalid_argument);
 }
+#endif
 
 } // namespace

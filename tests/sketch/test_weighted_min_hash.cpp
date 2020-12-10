@@ -69,11 +69,13 @@ TEST(WeightedMinHash, PresetHashRepeat) {
     }
 }
 
+#ifndef NDEBUG
 TEST(WeightedMinhash, SequenceTooLong) {
     constexpr uint32_t set_size = 4 * 4; // corresponds to k-mers of length 2 over the DNA alphabet
     WeightedMinHash<uint8_t> under_test(set_size, 3, 100);
     std::vector<uint8_t> sequence(100 + 1);
     ASSERT_THROW(under_test.compute(sequence), std::invalid_argument);
 }
+#endif
 
 } // namespace
