@@ -194,8 +194,6 @@ struct SeqGenModule {
         embed_type set_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
         MinHash<kmer_type> min_hash(set_size, FLAGS_embed_dim);
         WeightedMinHash<kmer_type> wmin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len);
-        // TODO(dd) - this is fishy - there is no reason to compute omh on characters
-        // kmer_type omh_set_size = FLAGS_tuple_on_kmer ? set_size : FLAGS_alphabet_size;
         OrderedMinHash<kmer_type> omin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len,
                                             FLAGS_tuple_len);
         Tensor<char_type> tensor_sketch(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_len);

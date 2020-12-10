@@ -38,11 +38,6 @@ class WeightedMinHash : public HashBase<T> {
         : HashBase<T>(set_size, sketch_dim, max_len * set_size), max_len(max_len) {}
 
     std::vector<T> compute(const std::vector<T> &kmers) {
-        if (kmers.size() > max_len) {
-            throw std::invalid_argument("Sequence too long: " + std::to_string(kmers.size())
-                                        + ". Maximum sequence length is " + std::to_string(max_len)
-                                        + ". Set --max_len to a higher value.");
-        }
         Timer::start("weighted_minhash");
         std::vector<T> sketch = std::vector<T>(this->sketch_dim);
         if (kmers.empty()) {
@@ -56,6 +51,14 @@ class WeightedMinHash : public HashBase<T> {
             for (const auto s : kmers) {
                 auto r = this->hash(si, s + cnts[s] * this->set_size);
                 cnts[s]++;
+#ifndef NDEBUG
+                if (cnts[s] > max_len) {
+                    throw std::invalid_argument("Kmer  " + std::to_string(s) + " repeats more than "
+                                                + std::to_string(max_len)
+                                                + " times. Set --max_len to a higher value.");
+                }
+#endif
+
                 if (r < min_rank) {
                     min_rank = r;
                     min_char = s;
