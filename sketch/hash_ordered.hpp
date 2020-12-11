@@ -33,7 +33,7 @@ class OrderedMinHash : public HashBase<T> {
     Vec2D<T> compute(const std::vector<T> &kmers) {
         Vec2D<T> sketch;
         if (kmers.size() < tup_len) {
-            throw std::invalid_argument("Sequence must be longer than tuple length");
+            throw std::invalid_argument("Sequence of kmers must be longer than tuple length");
         }
         for (size_t pi = 0; pi < this->sketch_dim; pi++) {
             std::unordered_map<size_t, uint8_t> counts;

@@ -28,28 +28,30 @@ std::vector<double> rankify(std::vector<T> &v) {
 /* Compute the Pearson correlation coefficient of a and b */
 template <typename T>
 double pearson(std::vector<T> &a, std::vector<T> &b) {
+    assert(a.size() == b.size());
     T sum_a = 0, sum_b = 0, sum_ab = 0;
     T square_sum_a = 0, square_sum_b = 0;
 
     for (size_t i = 0; i < a.size(); i++) {
-        // sum of elements of array X.
         sum_a = sum_a + a[i];
-
-        // sum of elements of array Y.
         sum_b = sum_b + b[i];
-
-        // sum of X[i] * Y[i].
         sum_ab = sum_ab + a[i] * b[i];
-
-        // sum of square of array elements.
         square_sum_a = square_sum_a + a[i] * a[i];
         square_sum_b = square_sum_b + b[i] * b[i];
     }
 
-    // use formula for calculating correlation coefficient.
-    return (a.size() * sum_ab - sum_a * sum_b)
-            / std::sqrt((a.size() * square_sum_a - sum_a * sum_a)
-                        * (a.size() * square_sum_b - sum_b * sum_b));
+    // compute variances
+    T var_a = a.size() * square_sum_a - sum_a * sum_a;
+    T var_b = a.size() * square_sum_b - sum_a * sum_b;
+    // treat degenerate cases
+    if (var_a == 0 && var_b == 0) {
+        return 1;
+    }
+    if (var_a == 0 || var_b == 0) {
+        return 0;
+    }
+
+    return (a.size() * sum_ab - sum_a * sum_b) / std::sqrt(var_a * var_b);
 }
 
 template <typename T>

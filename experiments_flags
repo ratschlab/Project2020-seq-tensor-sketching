@@ -1,14 +1,17 @@
 --output_dir=/tmp/ts/
 # number of sequences to generate and compute sketches for
---num_seqs=200
+--num_seqs=50
 # tuple_len and kmer_size are sort of the same thing, maybe unify the 2?
---kmer_size=16
---tuple_len=16
+--kmer_size=4
+--tuple_len=4
 --stride=16
---seq_len=1024
+--win_len=16
+--seq_len=200
 # how many times a kmer may repeat itself in a sequence; in theory this is --seq_len, but in practice the
 # value is waaaaay smaller; for larger k-mer sizes it's probably 2-3
 --max_len=36
 # size of the embedded space, i.e. number of hash functions used
---embed_dim=16
+--embed_dim=128
+--mutation_rate=0.1
+--block_mutation_rate=0.0
 

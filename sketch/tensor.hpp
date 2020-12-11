@@ -3,6 +3,7 @@
 #include "util/multivec.hpp"
 
 #include <cassert>
+#include <iostream> //todo: remove
 #include <random>
 
 namespace ts { // ts = Tensor Sketch
@@ -96,7 +97,7 @@ class Tensor {
         std::vector<double> result(a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
             result[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
-            assert(result[i] <= 1 + 1e-5 && result[i] >= -1 - 1e-5);
+            assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
         }
         return result;
     }
