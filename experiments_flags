@@ -2,16 +2,16 @@
 # number of sequences to generate and compute sketches for
 --num_seqs=50
 # tuple_len and kmer_size are sort of the same thing, maybe unify the 2?
---kmer_size=4
---tuple_len=4
+--kmer_size=16
+--tuple_len=3
 --stride=16
---win_len=16
---seq_len=200
+--win_len=32
+--seq_len=400
 # how many times a kmer may repeat itself in a sequence; in theory this is --seq_len, but in practice the
 # value is waaaaay smaller; for larger k-mer sizes it's probably 2-3
 --max_len=36
 # size of the embedded space, i.e. number of hash functions used
 --embed_dim=128
---mutation_rate=0.1
---block_mutation_rate=0.0
+--mutation_rate=0.02
+--block_mutation_rate=0.02
 
