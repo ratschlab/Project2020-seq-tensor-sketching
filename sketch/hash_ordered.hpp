@@ -36,19 +36,19 @@ class OrderedMinHash : public HashBase<T> {
             throw std::invalid_argument("Sequence must be longer than tuple length");
         }
         for (size_t pi = 0; pi < this->sketch_dim; pi++) {
-            std::vector<size_t> counts(this->set_size, 0);
+            std::unordered_map<size_t, uint8_t> counts;
             std::vector<std::pair<T, T>> ranks;
             for (auto s : kmers) {
                 ranks.push_back({ this->hash(pi, s + this->set_size * counts[s]), s });
                 counts[s]++;
 #ifndef NDEBUG
+                assert(counts[s] != 0); // no overflow
                 if (counts[s] > max_len) {
                     throw std::invalid_argument("Kmer  " + std::to_string(s) + " repeats more than "
-                                                        + std::to_string(max_len)
-                                                        + " times. Set --max_len to a higher value.");
+                                                + std::to_string(max_len)
+                                                + " times. Set --max_len to a higher value.");
                 }
 #endif
-
             }
             std::sort(ranks.begin(), ranks.end());
             std::vector<T> tup;

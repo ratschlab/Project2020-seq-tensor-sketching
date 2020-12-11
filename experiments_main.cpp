@@ -171,7 +171,7 @@ struct SeqGenModule {
     Vec2D<kmer_type> omh_sketch;
     Vec2D<embed_type> ten_sketch;
     Vec3D<embed_type> slide_sketch;
-    Vec3D<embed_type> dists;
+    Vec3D<double> dists;
 
     std::filesystem::path output_dir;
 
@@ -217,7 +217,9 @@ struct SeqGenModule {
             omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
             ten_sketch[si] = tensor_sketch.compute(seqs[si]);
             slide_sketch[si] = tensor_slide.compute(seqs[si]);
+            std::cout << "." << std::flush;
         }
+        std::cout << std::endl;
     }
 
     void compute_pairwise_dists() {
@@ -244,7 +246,37 @@ struct SeqGenModule {
                     dists[4][i][j] = l1_dist(ten_sketch[i], ten_sketch[j]);
                     dists[5][i][j] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
                 }
+                std::cout << "." << std::flush;
             }
+        }
+        std::cout << std::endl;
+    }
+
+    void print_spearman() {
+        if (FLAGS_mutation_pattern != "pairs") {
+            std::vector<double> dists_ed;
+            std::vector<double> dists_mh;
+            std::vector<double> dists_wmh;
+            std::vector<double> dists_omh;
+            std::vector<double> dists_tensor_sketch;
+            std::vector<double> dists_tensor_slide_sketch;
+            for (size_t i = 0; i < seqs.size(); i++) {
+                dists_ed.insert(dists_ed.end(), dists[0][i].begin(), dists[0][i].end());
+                dists_mh.insert(dists_mh.end(), dists[1][i].begin(), dists[1][i].end());
+                dists_wmh.insert(dists_wmh.end(), dists[2][i].begin(), dists[2][i].end());
+                dists_omh.insert(dists_omh.end(), dists[3][i].begin(), dists[3][i].end());
+                dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin(),
+                                           dists[4][i].end());
+                dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(),
+                                                 dists[5][i].begin(), dists[5][i].end());
+            }
+            std::cout << "Spearman correlation MH: " << spearman(dists_ed, dists_mh) << std::endl;
+            std::cout << "Spearman correlation WMH: " << spearman(dists_ed, dists_wmh) << std::endl;
+            std::cout << "Spearman correlation OMH: " << spearman(dists_ed, dists_omh) << std::endl;
+            std::cout << "Spearman correlation TensorSketch: "
+                      << spearman(dists_ed, dists_tensor_sketch) << std::endl;
+            std::cout << "Spearman correlation TensorSlide: "
+                      << spearman(dists_ed, dists_tensor_slide_sketch) << std::endl;
         }
     }
 
@@ -347,16 +379,19 @@ struct SeqGenModule {
     }
 };
 
+
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_output_dir);
     std::cout << "Generating sequences..." << std::endl;
     experiment.generate_sequences();
-    std::cout << "Computing sketches..." << std::endl;
+    std::cout << "Computing sketches";
     experiment.compute_sketches();
+    std::cout << "Computing distances";
     experiment.compute_pairwise_dists();
     std::cout << "Writing output to " << FLAGS_output_dir << std::endl;
     experiment.save_output();
+    experiment.print_spearman();
     return 0;
 }

@@ -256,7 +256,7 @@ size_t edit_distance(const std::vector<seq_type> &s1, const std::vector<seq_type
 
 template <class T, class = is_u_integral<T>>
 T int_pow(T x, T pow) {
-    int result = 1;
+    T result = 1;
     for (;;) {
         if (pow & 1)
             result *= x;
