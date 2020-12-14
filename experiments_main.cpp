@@ -16,61 +16,39 @@
 
 
 DEFINE_uint32(kmer_size, 1, "The sketching method to use: MH, WMH, OMH, TenSketch or TenSlide");
-DEFINE_uint32(K, 3, "Short hand for --kmer_size");
+DEFINE_uint32(k, 3, "Short hand for --kmer_size");
 
-DEFINE_int32(alphabet_size, 4, "Size of the alphabet for generated sequences");
-DEFINE_int32(A, 4, "Short hand for --alphabet_size");
+DEFINE_string(alphabet,
+              "dna4",
+              "The alphabet over which sequences are defined (dna4, dna5, protein)");
 
-DEFINE_bool(fix_len, false, "Force generated sequence length to be equal");
-DEFINE_bool(F, false, "Short hand for --fix_len");
+DEFINE_bool(fix_len, false, "Force generated sequences length to be equal");
 
 DEFINE_int32(max_num_blocks, 4, "Maximum number of blocks for block permutation");
-DEFINE_int32(B, 4, "Short hand for --max_num_blocks");
 
 DEFINE_int32(min_num_blocks, 2, "Minimum number of blocks for block permutation");
-DEFINE_int32(b, 4, "Short hand for --min_num_blocks");
 
 DEFINE_uint32(num_seqs, 200, "Number of sequences to be generated");
-DEFINE_uint32(N, 200, "Short hand for --num_seqs");
 
 DEFINE_uint32(seq_len, 256, "The length of sequence to be generated");
-DEFINE_uint32(L, 256, "Short hand for --seq_len");
 
 DEFINE_double(mutation_rate, 0.015, "Rate of point mutation rate for sequence generation");
-DEFINE_double(r, 0.015, "Short hand for --mutation_rate");
 
 DEFINE_double(block_mutation_rate, 0.02, "The probability of having a block permutation");
-DEFINE_double(R, 0.02, "Short hand for --block_mutation_rate");
 
 DEFINE_uint32(sequence_seeds, 1, "Number of initial random sequences");
-DEFINE_uint32(s, 1, "Short hand for --sequence_seeds");
 
-DEFINE_string(output_dir, "/tmp/", "File name where the generated sequence should be written");
-DEFINE_string(o, "./seqs.fa", "Short hand for --output");
+DEFINE_string(o, "/tmp", "Directory where the generated sequence should be written");
 
-DEFINE_int32(embed_dim, 128, "Embedding dimension, used for all sketching methods");
-DEFINE_int32(M, 128, "Short hand for --embed_dim");
+DEFINE_int32(embed_dim, 16, "Embedding dimension, used for all sketching methods");
 
-DEFINE_bool(tuple_on_kmer,
-            false,
-            "Apply tuple-based methods (OMH, TensorSketch, and TenSlide), on kmer sequence");
-DEFINE_bool(tk, false, "Short hand for --tuple_on_kmer");
-
-DEFINE_int32(tuple_len,
-             2,
+DEFINE_int32(tuple_length,
+             3,
              "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
-DEFINE_int32(T, 2, "Short hand for --tuple_len");
+DEFINE_int32(t, 3, "Short hand for --tuple_length");
 
-DEFINE_int32(num_phases,
-             2,
-             "Number of phases to be used for modular arithmetic in tensor sketching");
-DEFINE_int32(P, 2, "Short hand for --num_phases");
-
-DEFINE_int32(num_bins, 255, "Number of bins for discretization after tensor sketching");
-DEFINE_int32(n, 255, "Short hand for --num_bins");
-
-DEFINE_int32(win_len, 32, "Window length: the size of sliding window in Tensor Slide Sketch");
-DEFINE_int32(W, 32, "Short hand for --win_len");
+DEFINE_int32(window_size, 32, "Window length: the size of sliding window in Tensor Slide Sketch");
+DEFINE_int32(w, 32, "Short hand for --window_size");
 
 DEFINE_int32(
         max_len,
@@ -79,11 +57,7 @@ DEFINE_int32(
         "than seq_len + delta, where delta is the number of random insertions");
 
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
-DEFINE_int32(S, 8, "Short hand for --stride");
-
-DEFINE_int32(offset, 0, "Initial index to start the sliding window");
-DEFINE_int32(O, 0, "Short hand for --offset");
-
+DEFINE_int32(s, 8, "Short hand for --stride");
 
 static bool ValidateMutationPattern(const char *flagname, const std::string &value) {
     if (value == "linear" || value == "tree" || value == "pairs")
@@ -95,65 +69,19 @@ DEFINE_string(mutation_pattern, "linear", "the mutational pattern, can be 'linea
 DEFINE_validator(mutation_pattern, &ValidateMutationPattern);
 
 void adjust_short_names() {
-    if (!gflags::GetCommandLineFlagInfoOrDie("A").is_default) {
-        FLAGS_alphabet_size = FLAGS_A;
-    }
     if (!gflags::GetCommandLineFlagInfoOrDie("K").is_default) {
-        FLAGS_kmer_size = FLAGS_K;
+        FLAGS_kmer_size = FLAGS_k;
     }
-    if (!gflags::GetCommandLineFlagInfoOrDie("B").is_default) {
-        FLAGS_max_num_blocks = FLAGS_B;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("b").is_default) {
-        FLAGS_min_num_blocks = FLAGS_b;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("N").is_default) {
-        FLAGS_num_seqs = FLAGS_N;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("L").is_default) {
-        FLAGS_seq_len = FLAGS_L;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("r").is_default) {
-        FLAGS_mutation_rate = FLAGS_r;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("R").is_default) {
-        FLAGS_block_mutation_rate = FLAGS_R;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("s").is_default) {
-        FLAGS_sequence_seeds = FLAGS_s;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("o").is_default) {
-        FLAGS_output_dir = FLAGS_o;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("F").is_default) {
-        FLAGS_fix_len = FLAGS_F;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("tk").is_default) {
-        FLAGS_tuple_on_kmer = FLAGS_tk;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("M").is_default) {
-        FLAGS_embed_dim = FLAGS_M;
-    }
+
     if (!gflags::GetCommandLineFlagInfoOrDie("T").is_default) {
-        FLAGS_tuple_len = FLAGS_T;
+        FLAGS_tuple_length = FLAGS_t;
     }
-    if (!gflags::GetCommandLineFlagInfoOrDie("P").is_default) {
-        FLAGS_num_phases = FLAGS_P;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("n").is_default) {
-        FLAGS_num_bins = FLAGS_n;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("o").is_default) {
-        FLAGS_output_dir = FLAGS_o;
-    }
+
     if (!gflags::GetCommandLineFlagInfoOrDie("W").is_default) {
-        FLAGS_win_len = FLAGS_W;
+        FLAGS_window_size = FLAGS_w;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("S").is_default) {
-        FLAGS_stride = FLAGS_S;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("O").is_default) {
-        FLAGS_offset = FLAGS_O;
+        FLAGS_stride = FLAGS_w;
     }
 }
 
@@ -178,9 +106,9 @@ struct SeqGenModule {
     SeqGenModule(const std::string &out_dir) : output_dir(out_dir) {}
 
     void generate_sequences() {
-        ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len, FLAGS_max_num_blocks,
-                           FLAGS_min_num_blocks, FLAGS_num_seqs, FLAGS_seq_len,
-                           (float)FLAGS_mutation_rate, (float)FLAGS_block_mutation_rate);
+        ts::SeqGen seq_gen(alphabet_size, FLAGS_fix_len, FLAGS_max_num_blocks, FLAGS_min_num_blocks,
+                           FLAGS_num_seqs, FLAGS_seq_len, (float)FLAGS_mutation_rate,
+                           (float)FLAGS_block_mutation_rate);
 
         if (FLAGS_mutation_pattern == "pairs") {
             seqs = seq_gen.genseqs_pairs<char_type>();
@@ -192,15 +120,15 @@ struct SeqGenModule {
     }
 
     void compute_sketches() {
-        embed_type set_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
+        embed_type set_size = int_pow<size_t>(alphabet_size, FLAGS_kmer_size);
         MinHash<kmer_type> min_hash(set_size, FLAGS_embed_dim);
         WeightedMinHash<kmer_type> wmin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len);
         OrderedMinHash<kmer_type> omin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len,
-                                            FLAGS_tuple_len);
-        Tensor<char_type> tensor_sketch(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_len);
+                                            FLAGS_tuple_length);
+        Tensor<char_type> tensor_sketch(alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
         // embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
-        TensorSlide<char_type> tensor_slide(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_len,
-                                            FLAGS_win_len, FLAGS_stride);
+        TensorSlide<char_type> tensor_slide(alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length,
+                                            FLAGS_window_size, FLAGS_stride);
 
         size_t num_seqs = seqs.size();
         kmer_seqs.resize(num_seqs);
@@ -210,8 +138,8 @@ struct SeqGenModule {
         ten_sketch.resize(num_seqs);
         slide_sketch.resize(num_seqs);
         for (size_t si = 0; si < num_seqs; si++) {
-            kmer_seqs[si] = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size,
-                                                           FLAGS_alphabet_size);
+            kmer_seqs[si]
+                    = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size, alphabet_size);
             mh_sketch[si] = min_hash.compute(kmer_seqs[si]);
             wmh_sketch[si] = wmin_hash.compute(kmer_seqs[si]);
             omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
@@ -285,7 +213,6 @@ struct SeqGenModule {
                 = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide" };
         std::ofstream fo;
 
-        fs::remove_all(fs::path(output_dir));
         fs::create_directories(fs::path(output_dir / "dists"));
         fs::create_directories(fs::path(output_dir / "sketches"));
 
@@ -383,14 +310,16 @@ struct SeqGenModule {
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-    SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_output_dir);
+    init_alphabet(FLAGS_alphabet);
+
+    SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_o);
     std::cout << "Generating sequences..." << std::endl;
     experiment.generate_sequences();
     std::cout << "Computing sketches";
     experiment.compute_sketches();
     std::cout << "Computing distances";
     experiment.compute_pairwise_dists();
-    std::cout << "Writing output to " << FLAGS_output_dir << std::endl;
+    std::cout << "Writing output to " << FLAGS_o << std::endl;
     experiment.save_output();
     experiment.print_spearman();
     return 0;

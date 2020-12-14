@@ -13,6 +13,10 @@
 #include <memory>
 #include <sstream>
 
+DEFINE_string(alphabet,
+              "dna4",
+              "The alphabet over which sequences are defined (dna4, dna5, protein)");
+
 DEFINE_string(sketch_method,
               "TensorSlide",
               "The sketching method to use: MH, WMH, OMH, TensorSketch or TensorSlide");
@@ -21,20 +25,18 @@ DEFINE_string(m, "TensorSlide", "Short hand for --sketch_method");
 DEFINE_uint32(kmer_length, 1, "The kmer length for: MH, WMH, OMH");
 DEFINE_uint32(k, 3, "Short hand for --kmer_size");
 
-// TODO: this should be determined by sequence/alphabets.hpp
-DEFINE_int32(alphabet_size, 4, "Size of the alphabet for generated sequences");
-DEFINE_int32(A, 4, "Short hand for --alphabet_size");
-
 DEFINE_string(o, "", "Output file, containing the sketches for each sequence");
 
 DEFINE_string(i, "", "Input file, containing the sequences to be sketched in .fa format");
 
-DEFINE_string(format_input, "fasta", "Input format: 'fasta', 'csv'");
-DEFINE_string(f, "fasta", "Short hand for --format_input");
+DEFINE_string(input_format, "fasta", "Input format: 'fasta', 'csv'");
+DEFINE_string(f, "fasta", "Short hand for --input_format");
 
 DEFINE_int32(embed_dim, 4, "Embedding dimension, used for all sketching methods");
 
-DEFINE_int32(tuple_length, 3, "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
+DEFINE_int32(tuple_length,
+             3,
+             "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
 DEFINE_int32(t, 3, "Short hand for --tuple_length");
 
 DEFINE_int32(window_size, 32, "Window length: the size of sliding window in Tensor Slide Sketch");
@@ -63,9 +65,6 @@ static bool ValidateOutput(const char *, const std::string &value) {
 DEFINE_validator(o, &ValidateOutput);
 
 void adjust_short_names() {
-    if (!gflags::GetCommandLineFlagInfoOrDie("A").is_default) {
-        FLAGS_alphabet_size = FLAGS_A;
-    }
     if (!gflags::GetCommandLineFlagInfoOrDie("m").is_default) {
         FLAGS_sketch_method = FLAGS_m;
     }
@@ -73,7 +72,7 @@ void adjust_short_names() {
         FLAGS_kmer_length = FLAGS_k;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("f").is_default) {
-        FLAGS_format_input = FLAGS_f;
+        FLAGS_input_format = FLAGS_f;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("w").is_default) {
         FLAGS_window_size = FLAGS_w;
@@ -98,7 +97,7 @@ class SketchHelper {
         sketches = new3D<embed_type>(seqs.size(), FLAGS_embed_dim, 0);
         for (size_t si = 0; si < num_seqs; si++) {
             std::vector<kmer_type> kmers
-                    = seq2kmer<seq_type, kmer_type>(seqs[si], FLAGS_kmer_length, FLAGS_alphabet_size);
+                    = seq2kmer<seq_type, kmer_type>(seqs[si], FLAGS_kmer_length, alphabet_size);
 
             for (size_t i = 0; i < kmers.size(); i += FLAGS_stride) {
                 auto end = std::min(kmers.begin() + i + FLAGS_window_size, kmers.end());
@@ -116,13 +115,13 @@ class SketchHelper {
 
         for (size_t si = 0; si < seqs.size(); si++) {
             std::vector<uint64_t> kmers
-                    = seq2kmer<uint8_t, uint64_t>(seqs[si], FLAGS_kmer_length, FLAGS_alphabet_size);
+                    = seq2kmer<uint8_t, uint64_t>(seqs[si], FLAGS_kmer_length, alphabet_size);
             sketches[si] = slide_sketcher(kmers);
         }
     }
 
     void read_input() {
-        std::tie(seqs, seq_names) = read_fasta<seq_type>(FLAGS_i, FLAGS_format_input);
+        std::tie(seqs, seq_names) = read_fasta<seq_type>(FLAGS_i, FLAGS_input_format);
     }
 
     void save_output() {
@@ -165,15 +164,14 @@ int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     adjust_short_names();
 
-    init_alphabet("DNA");
+    init_alphabet(FLAGS_alphabet);
 
-    if (std::pow(FLAGS_alphabet_size, FLAGS_kmer_length)
-        > (double)std::numeric_limits<uint64_t>::max()) {
+    if (std::pow(alphabet_size, FLAGS_kmer_length) > (double)std::numeric_limits<uint64_t>::max()) {
         std::cerr << "Kmer size is too large to fit in 64 bits " << std::endl;
         std::exit(1);
     }
 
-    uint64_t kmer_word_size = int_pow<uint64_t>(FLAGS_alphabet_size, FLAGS_kmer_length);
+    uint64_t kmer_word_size = int_pow<uint64_t>(alphabet_size, FLAGS_kmer_length);
 
     if (FLAGS_sketch_method.ends_with("MH")) {
         std::function<std::vector<uint64_t>(const std::vector<uint64_t> &)> sketcher;

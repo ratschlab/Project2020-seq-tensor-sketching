@@ -23,16 +23,31 @@ class log2 {
 constexpr uint8_t alphabet_size_dna = 5;
 constexpr char alphabet_dna[] = "ACGTN";
 constexpr uint8_t bits_per_char_dna = 3;
-constexpr uint8_t char2int_tab_dna[128]
-        = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5, 2, 5, 5, 5, 3, 5, 5, 5, 5, 5, 5,
-            0, 5, 5, 5, 5, 5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5, 2, 5, 5, 5, 3,
-            5, 5, 5, 5, 5, 5, 0, 5, 5, 5, 5, 5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 };
+constexpr uint8_t char2int_tab_dna[128] // A=1,C=2,G=3,T=4,N=0,invalid=5
+        = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, //  0=25
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 26-50
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5, 2, 5, 5, 5, 3, 5, 5, 5, 5, 5, 5, // 51-75
+            0, 5, 5, 5, 5, 5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 1, 5, 2, 5, 5, 5, 3, // 76-100
+            5, 5, 5, 5, 5, 5, 0, 5, 5, 5, 5, 5, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }; // 100-127
 
 inline uint32_t char2int_dna(uint8_t c) {
     return char2int_tab_dna[c];
 }
+
+constexpr uint8_t alphabet_size_dna4 = 5;
+constexpr char alphabet_dna4[] = "ACGTN";
+constexpr uint8_t bits_per_char_dna4 = 2;
+constexpr uint8_t char2int_tab_dna4[128] // A=1,C=2,G=3,T=4,N=0,invalid=5
+        = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, //  0=25
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 26-50
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 5, 1, 5, 5, 5, 2, 5, 5, 5, 5, 5, 5, // 51-75
+            5, 5, 5, 5, 5, 5, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 5, 1, 5, 5, 5, 2, // 76-100
+            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }; // 100-127
+
+inline uint32_t char2int_dna4(uint8_t c) {
+    return char2int_tab_dna4[c];
+}
+
 
 constexpr char alphabet_protein[] = "ABCDEFGHIJKLMNOPQRSTUVWYZX";
 constexpr uint8_t alphabet_size_protein = sizeof(alphabet_protein) - 1;
@@ -49,13 +64,15 @@ inline uint32_t char2int_protein(uint8_t c) {
     return char2int_tab_protein[c];
 }
 
-enum class AlphabetType { DNA, Protein };
+enum class AlphabetType { DNA4, DNA5, Protein };
 
 AlphabetType from_string(std::string str) {
     std::transform(str.begin(), str.end(), str.begin(),
-                   [](unsigned char c){ return std::tolower(c); });
-    if (str == "dna") {
-        return AlphabetType::DNA;
+                   [](unsigned char c) { return std::tolower(c); });
+    if (str == "dna4") {
+        return AlphabetType::DNA4;
+    } else if (str == "dna5") {
+        return AlphabetType::DNA5;
     } else if (str == "protein") {
         return AlphabetType::Protein;
     } else {
@@ -70,11 +87,17 @@ uint8_t bits_per_char;
 
 void init_alphabet(const std::string &alphabet_str) {
     switch (from_string(alphabet_str)) {
-        case AlphabetType::DNA:
+        case AlphabetType::DNA5:
             char2int = char2int_dna;
             alphabet = alphabet_dna;
             alphabet_size = alphabet_size_dna;
             bits_per_char = bits_per_char_dna;
+            return;
+        case AlphabetType::DNA4:
+            char2int = char2int_dna4;
+            alphabet = alphabet_dna4;
+            alphabet_size = alphabet_size_dna4;
+            bits_per_char = bits_per_char_dna4;
             return;
         case AlphabetType::Protein:
             char2int = char2int_protein;
