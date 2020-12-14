@@ -49,10 +49,6 @@ std::vector<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8
     return result;
 }
 
-inline int sketch_end(int offset, int len) {
-    return len - offset;
-}
-
 template <class T>
 T l1_dist(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
