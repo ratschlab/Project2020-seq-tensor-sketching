@@ -35,6 +35,7 @@ DEFINE_string(f, "fasta", "Short hand for --format_input");
 DEFINE_int32(embed_dim, 4, "Embedding dimension, used for all sketching methods");
 
 DEFINE_int32(tuple_length, 3, "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
+DEFINE_int32(t, 3, "Short hand for --tuple_length");
 
 DEFINE_int32(window_size, 32, "Window length: the size of sliding window in Tensor Slide Sketch");
 DEFINE_int32(w, 32, "Short hand for --window_size");

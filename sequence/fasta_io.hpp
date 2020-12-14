@@ -3,6 +3,7 @@
 #include "sequence/alphabets.hpp"
 #include "util/utils.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
