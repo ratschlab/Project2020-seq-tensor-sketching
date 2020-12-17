@@ -28,9 +28,9 @@ DEFINE_int32(max_num_blocks, 4, "Maximum number of blocks for block permutation"
 
 DEFINE_int32(min_num_blocks, 2, "Minimum number of blocks for block permutation");
 
-DEFINE_uint32(num_seqs, 200, "Number of sequences to be generated");
+DEFINE_uint32(num_seqs, 50, "Number of sequences to be generated");
 
-DEFINE_uint32(seq_len, 256, "The length of sequence to be generated");
+DEFINE_uint32(seq_len, 1024, "The length of sequence to be generated");
 
 DEFINE_double(mutation_rate, 0.015, "Rate of point mutation rate for sequence generation");
 
@@ -38,7 +38,7 @@ DEFINE_double(block_mutation_rate, 0.02, "The probability of having a block perm
 
 DEFINE_uint32(sequence_seeds, 1, "Number of initial random sequences");
 
-DEFINE_string(o, "/tmp", "Directory where the generated sequence should be written");
+DEFINE_string(o, "/tmp/out", "Directory where the generated sequence should be written");
 
 DEFINE_int32(embed_dim, 16, "Embedding dimension, used for all sketching methods");
 
@@ -52,12 +52,12 @@ DEFINE_int32(w, 32, "Short hand for --window_size");
 
 DEFINE_int32(
         max_len,
-        300,
+        36,
         "The maximum accepted sequence length for Ordered and Weighted min-hash. Must be larger "
         "than seq_len + delta, where delta is the number of random insertions");
 
-DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
-DEFINE_int32(s, 8, "Short hand for --stride");
+DEFINE_int32(stride, 16, "Stride for sliding window: shift step for sliding window");
+DEFINE_int32(s, 16, "Short hand for --stride");
 
 static bool ValidateMutationPattern(const char *flagname, const std::string &value) {
     if (value == "linear" || value == "tree" || value == "uniform")
@@ -66,7 +66,7 @@ static bool ValidateMutationPattern(const char *flagname, const std::string &val
     return false;
 }
 DEFINE_string(mutation_pattern,
-              "linear",
+              "uniform",
               "the mutational pattern, can be 'linear', 'uniform' or 'tree'");
 DEFINE_validator(mutation_pattern, &ValidateMutationPattern);
 
@@ -182,129 +182,28 @@ struct SeqGenModule {
         std::cout << std::endl;
     }
 
-    void print_spearman() {
-        if (FLAGS_mutation_pattern != "pairs") {
-            std::vector<double> dists_ed;
-            std::vector<double> dists_mh;
-            std::vector<double> dists_wmh;
-            std::vector<double> dists_omh;
-            std::vector<double> dists_tensor_sketch;
-            std::vector<double> dists_tensor_slide_sketch;
-            for (size_t i = 0; i < seqs.size(); i++) {
-                dists_ed.insert(dists_ed.end(), dists[0][i].begin(), dists[0][i].end());
-                dists_mh.insert(dists_mh.end(), dists[1][i].begin(), dists[1][i].end());
-                dists_wmh.insert(dists_wmh.end(), dists[2][i].begin(), dists[2][i].end());
-                dists_omh.insert(dists_omh.end(), dists[3][i].begin(), dists[3][i].end());
-                dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin(),
-                                           dists[4][i].end());
-                dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(),
-                                                 dists[5][i].begin(), dists[5][i].end());
-            }
-            std::cout << "Spearman correlation MH: " << spearman(dists_ed, dists_mh) << std::endl;
-            std::cout << "Spearman correlation WMH: " << spearman(dists_ed, dists_wmh) << std::endl;
-            std::cout << "Spearman correlation OMH: " << spearman(dists_ed, dists_omh) << std::endl;
-            std::cout << "Spearman correlation TensorSketch: "
-                      << spearman(dists_ed, dists_tensor_sketch) << std::endl;
-            std::cout << "Spearman correlation TensorSlide: "
-                      << spearman(dists_ed, dists_tensor_slide_sketch) << std::endl;
+    void print_spearman(const std::string &output) {
+        std::vector<double> dists_ed;
+        std::vector<double> dists_mh;
+        std::vector<double> dists_wmh;
+        std::vector<double> dists_omh;
+        std::vector<double> dists_tensor_sketch;
+        std::vector<double> dists_tensor_slide_sketch;
+        for (size_t i = 0; i < seqs.size(); i++) {
+            dists_ed.insert(dists_ed.end(), dists[0][i].begin(), dists[0][i].end());
+            dists_mh.insert(dists_mh.end(), dists[1][i].begin(), dists[1][i].end());
+            dists_wmh.insert(dists_wmh.end(), dists[2][i].begin(), dists[2][i].end());
+            dists_omh.insert(dists_omh.end(), dists[3][i].begin(), dists[3][i].end());
+            dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin(),
+                                       dists[4][i].end());
+            dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(), dists[5][i].begin(),
+                                             dists[5][i].end());
         }
-    }
-
-    void save_output() {
-        std::vector<std::string> method_names
-                = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide" };
-        std::ofstream fo;
-
-        fs::create_directories(fs::path(output_dir / "dists"));
-        fs::create_directories(fs::path(output_dir / "sketches"));
-
-        fo.open(output_dir / "conf.csv");
-        assert(fo.is_open());
-        fo << flag_values();
-        fo.close();
-
-        fo.open(output_dir / "timing.csv");
-        assert(fo.is_open());
-        fo << Timer::summary();
-        fo.close();
-
-        write_fasta(output_dir / "seqs.fa", seqs);
-
-        size_t num_seqs = seqs.size();
-        for (int m = 0; m < 6; m++) {
-            fo.open(output_dir / "dists" / (method_names[m] + ".txt"));
-            assert(fo.is_open());
-            if (FLAGS_mutation_pattern == "pairs") {
-                for (size_t i = 0; i < num_seqs; i += 2) {
-                    size_t j = i + 1;
-                    fo << i << ", " << j << ", " << dists[m][i][0] << "\n";
-                }
-            } else {
-                for (size_t i = 0; i < num_seqs; i++) {
-                    for (size_t j = i + 1; j < seqs.size(); j++) {
-                        fo << i << ", " << j << ", " << dists[m][i][j] << "\n";
-                    }
-                }
-            }
-            fo.close();
-        }
-
-        fo.open(output_dir / "sketches/mh.txt");
-        assert(fo.is_open());
-        for (size_t si = 0; si < num_seqs; si++) {
-            fo << ">> seq " << si << "\n";
-            for (const auto &e : mh_sketch[si]) {
-                fo << e << ", ";
-            }
-            fo << "\n";
-        }
-        fo.close();
-
-        fo.open(output_dir / "sketches/wmh.txt");
-        assert(fo.is_open());
-        for (size_t si = 0; si < num_seqs; si++) {
-            fo << ">> seq " << si << "\n";
-            for (const auto &e : wmh_sketch[si]) {
-                fo << e << ", ";
-            }
-            fo << "\n";
-        }
-        fo.close();
-
-        fo.open(output_dir / "sketches/omh.txt");
-        assert(fo.is_open());
-        for (size_t si = 0; si < num_seqs; si++) {
-            fo << ">> seq " << si << "\n";
-            for (const auto &e : omh_sketch[si]) {
-                fo << e << ", ";
-            }
-            fo << "\n";
-        }
-        fo.close();
-
-        fo.open(output_dir / "sketches/ten.txt");
-        assert(fo.is_open());
-        for (size_t si = 0; si < seqs.size(); si++) {
-            fo << ">> seq " << si << "\n";
-            for (const auto &e : ten_sketch[si]) {
-                fo << e << ", ";
-            }
-            fo << "\n";
-        }
-        fo.close();
-
-        fo.open(output_dir / "sketches/ten_slide.txt");
-        for (size_t si = 0; si < seqs.size(); si++) {
-            auto &sk = slide_sketch[si];
-            for (size_t dim = 0; dim < sk.size(); dim++) {
-                fo << ">> seq: " << si << ", dim: " << dim << "\n";
-                for (auto &item : sk[dim])
-                    fo << item << ", ";
-                fo << "\n";
-            }
-            fo << "\n";
-        }
-        fo.close();
+        std::ofstream f(output, std::ios::app);
+        f << FLAGS_mutation_rate << "\t" << FLAGS_block_mutation_rate << "\t" << FLAGS_kmer_size << "\t";
+        f << spearman(dists_ed, dists_mh) << "\t" << spearman(dists_ed, dists_wmh) << "\t"
+          << spearman(dists_ed, dists_omh) << "\t" << spearman(dists_ed, dists_tensor_sketch)
+          << "\t" << spearman(dists_ed, dists_tensor_slide_sketch) << std::endl;
     }
 };
 
@@ -314,15 +213,39 @@ int main(int argc, char *argv[]) {
 
     init_alphabet(FLAGS_alphabet);
 
-    SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_o);
-    std::cout << "Generating sequences..." << std::endl;
-    experiment.generate_sequences();
-    std::cout << "Computing sketches";
-    experiment.compute_sketches();
-    std::cout << "Computing distances";
-    experiment.compute_pairwise_dists();
-    std::cout << "Writing output to " << FLAGS_o << std::endl;
-    experiment.save_output();
-    experiment.print_spearman();
+    std::filesystem::remove(FLAGS_o);
+
+    std::ofstream f(FLAGS_o);
+    f << "M\tBM\tK\tMH\tWMH\tOMH\tTS\tTSS" << std::endl;
+    f.close();
+
+
+    for (double mutation_prob : { 0.0, 0.02, 0.1 }) {
+        FLAGS_mutation_rate = mutation_prob;
+        for (double block_mutation_prob : { 0.0, 0.02, 0.1 }) {
+            if (mutation_prob == 0 && block_mutation_prob == 0) {
+                continue;
+            }
+            FLAGS_block_mutation_rate = block_mutation_prob;
+            for (uint32_t kmer_length : { 4, 8, 16 }) {
+                std::cout << "Mutation prob: " << mutation_prob
+                          << " Block mutation prob: " << block_mutation_prob
+                          << " Kmer size: " << kmer_length << std::endl;
+                for (uint32_t repeat = 0; repeat < 3; ++ repeat) {
+                    FLAGS_kmer_size = kmer_length;
+                    FLAGS_tuple_length = kmer_length;
+
+                    SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_o);
+                    std::cout << "Generating sequences..." << std::endl;
+                    experiment.generate_sequences();
+                    std::cout << "Computing sketches";
+                    experiment.compute_sketches();
+                    std::cout << "Computing distances";
+                    experiment.compute_pairwise_dists();
+                    experiment.print_spearman(FLAGS_o);
+                }
+            }
+        }
+    }
     return 0;
 }

@@ -22,6 +22,9 @@ target_link_libraries(sequence gflags)
 add_executable(exp_pairwise experiments_main.cpp)
 target_link_libraries(exp_pairwise sequence util)
 
+add_executable(grid_search grid_search_main.cpp)
+target_link_libraries(grid_search sequence util)
+
 add_executable(sketch sketch_main.cpp)
 target_link_libraries(sketch sequence util)
 

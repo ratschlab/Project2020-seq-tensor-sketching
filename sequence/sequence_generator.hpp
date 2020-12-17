@@ -45,38 +45,32 @@ class SeqGen {
         }
         return seqs;
     }
-    template <class T>
-    Vec2D<T> genseqs_pairs() {
-        Vec2D<T> seqs(num_seqs);
-        assert(num_seqs % 2 == 0);
-        for (size_t si = 0; si < seqs.size(); si++) {
-            gen_seq(seqs[si]);
-        }
-        for (uint32_t si = 0; si < num_seqs; si += 2) {
-            int lcs = si * seq_len / num_seqs;
-            std::vector<int> perm(seq_len), perm2(seq_len);
-            std::iota(perm.begin(), perm.end(), 0);
-            std::shuffle(perm.begin(), perm.end(), gen);
-            std::iota(perm2.begin(), perm2.end(), 0);
-            std::shuffle(perm2.begin(), perm2.end(), gen);
 
-            std::sort(perm.begin(), perm.begin() + lcs);
-            std::sort(perm2.begin(), perm2.begin() + lcs);
-            for (int i = 0; i < lcs; i++) {
-                seqs[si][perm[i]] = seqs[si + 1][perm2[i]];
-            }
+    /**
+     * Generate sequences such that every pair of sequences have approximately the same edit
+     * distance.
+     */
+    template <class T>
+    Vec2D<T> genseqs_uniform() {
+        Vec2D<T> seqs(num_seqs);
+        std::vector<T> base;
+        gen_seq(base);
+        for (uint32_t si = 0; si < num_seqs; si++) {
+            point_mutate(base, seqs[si]);
+            block_permute(seqs[si]);
+            if (fix_len)
+                make_fix_len(seqs[si]);
         }
         return seqs;
     }
 
-
     template <class T>
-    Vec2D<T> genseqs_tree(int sequence_seeds) {
+    Vec2D<T> genseqs_tree(uint32_t sequence_seeds) {
         Vec2D<T> seqs(sequence_seeds);
-        for (int i = 0; i < sequence_seeds; i++) {
+        for (uint32_t i = 0; i < sequence_seeds; i++) {
             gen_seq(seqs[i]);
         }
-        std::vector<std::vector<T>> children;
+        Vec2D<T> children;
         while (seqs.size() < num_seqs) {
             for (auto &seq : seqs) {
                 std::vector<T> ch1, ch2;
@@ -95,28 +89,6 @@ class SeqGen {
             if (fix_len)
                 make_fix_len(seq);
         return seqs;
-    }
-
-
-    template <class T>
-    Vec2D<T> genseqs_tree2() {
-        // TODO get this to get input from command line
-        Vec2D<T> seqs = Vec2D<T>(1);
-        gen_seq(seqs[0]);
-
-        std::vector<std::vector<T>> children;
-        while (seqs.size() < num_seqs) {
-            for (auto &seq : seqs) {
-                std::vector<T> child(seq);
-                children.push_back(seq);
-                children.push_back(child);
-            }
-            std::swap(seqs, children);
-        }
-        seqs.resize(num_seqs);
-        for (auto &seq : seqs)
-            if (fix_len)
-                make_fix_len(seq);
     }
 
   private:
@@ -149,7 +121,7 @@ class SeqGen {
 
     template <class T>
     void gen_seq(std::vector<T> &seq) {
-        seq.clear();
+        seq.resize(0);
         std::uniform_int_distribution<T> unif(0, alphabet_size - 1);
         for (uint32_t i = 0; i < seq_len; i++) {
             seq.push_back(unif(gen));
@@ -160,7 +132,8 @@ class SeqGen {
     void point_mutate(const std::vector<T> &ref, std::vector<T> &seq) {
         float rate = mutation_rate;
         std::discrete_distribution<int> mut { 1 - rate, rate / 3, rate / 3, rate / 3 };
-        std::uniform_int_distribution<T> unif(0, alphabet_size - 2);
+        std::uniform_int_distribution<T> unif_sub(1, alphabet_size - 1);
+        std::uniform_int_distribution<T> unif_insert(0, alphabet_size - 1);
         // TODO: add alignment
         for (size_t i = 0; i < ref.size(); i++) {
             switch (mut(gen)) {
@@ -169,7 +142,7 @@ class SeqGen {
                     break;
                 }
                 case 1: { // insert
-                    seq.push_back(unif(gen));
+                    seq.push_back(unif_insert(gen));
                     i--; // init_tensor_slide_params negate the increment
                     break;
                 }
@@ -177,9 +150,7 @@ class SeqGen {
                     break;
                 }
                 case 3: { // substitute
-                    auto c = unif(gen);
-                    c = (c >= ref[i]) ? c + 1 : c; // increment if not changed
-                    seq.push_back(c);
+                    seq.push_back( (unif_sub(gen) + ref[i]) % alphabet_size);
                     break;
                 }
             }
