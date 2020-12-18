@@ -190,13 +190,13 @@ struct SeqGenModule {
         std::vector<double> dists_tensor_sketch;
         std::vector<double> dists_tensor_slide_sketch;
         for (size_t i = 0; i < seqs.size(); i++) {
-            dists_ed.insert(dists_ed.end(), dists[0][i].begin(), dists[0][i].end());
-            dists_mh.insert(dists_mh.end(), dists[1][i].begin(), dists[1][i].end());
-            dists_wmh.insert(dists_wmh.end(), dists[2][i].begin(), dists[2][i].end());
-            dists_omh.insert(dists_omh.end(), dists[3][i].begin(), dists[3][i].end());
-            dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin(),
+            dists_ed.insert(dists_ed.end(), dists[0][i].begin()+i+1, dists[0][i].end());
+            dists_mh.insert(dists_mh.end(), dists[1][i].begin()+i+1, dists[1][i].end());
+            dists_wmh.insert(dists_wmh.end(), dists[2][i].begin()+i+1, dists[2][i].end());
+            dists_omh.insert(dists_omh.end(), dists[3][i].begin()+i+1, dists[3][i].end());
+            dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin()+i+1,
                                        dists[4][i].end());
-            dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(), dists[5][i].begin(),
+            dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(), dists[5][i].begin()+i+1,
                                              dists[5][i].end());
         }
         std::ofstream f(output, std::ios::app);
@@ -220,14 +220,16 @@ int main(int argc, char *argv[]) {
     f.close();
 
 
+#pragma omp parallel for default(shared) schedule(dynamic)
     for (double mutation_prob : { 0.0, 0.02, 0.1 }) {
         FLAGS_mutation_rate = mutation_prob;
-        for (double block_mutation_prob : { 0.0, 0.02, 0.1 }) {
+        for (double block_mutation_prob : { 0.0, }) {
             if (mutation_prob == 0 && block_mutation_prob == 0) {
                 continue;
             }
             FLAGS_block_mutation_rate = block_mutation_prob;
-            for (uint32_t kmer_length : { 4, 8, 16 }) {
+#pragma omp parallel for default(shared) schedule(dynamic)
+            for (uint32_t kmer_length : { 1, 4, 8, 16 }) {
                 std::cout << "Mutation prob: " << mutation_prob
                           << " Block mutation prob: " << block_mutation_prob
                           << " Kmer size: " << kmer_length << std::endl;

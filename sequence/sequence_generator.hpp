@@ -87,7 +87,7 @@ class SeqGen {
         Vec2D<T> seqs(num_seqs);
         std::vector<T> base;
         gen_seq(base);
-#pragma omp parallel for default(shared)
+//#pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < num_seqs; si++) {
             point_mutate(base, seqs[si]);
             block_permute(seqs[si]);

@@ -159,10 +159,10 @@ struct SeqGenModule {
     void compute_pairwise_dists() {
         int num_seqs = seqs.size();
         if (FLAGS_mutation_pattern == "pairs") {
-            dists = new3D<double>(6, num_seqs, 1, -1);
+            dists = new3D<double>(8, num_seqs, 1, -1);
             start_progress_bar(seqs.size()/2);
 #pragma omp parallel for default(shared) schedule(dynamic)
-            for (size_t i = 0; i < seqs.size() - 1; i += 2) {
+            for (size_t i = 0; i < seqs.size(); i += 2) {
                 int j = i + 1;
                 dists[0][i][0] = edit_distance(seqs[i], seqs[j]);
                 dists[1][i][0] = hamming_dist(mh_sketch[i], mh_sketch[j]);
@@ -173,7 +173,7 @@ struct SeqGenModule {
                 iterate_progress_bar();
             }
         } else {
-            dists = new3D<double>(6, num_seqs, num_seqs, 0);
+            dists = new3D<double>(8, num_seqs, num_seqs, 0);
             start_progress_bar(seqs.size());
 #pragma omp parallel for default(shared) schedule(dynamic)
             for (size_t i = 0; i < seqs.size(); i++) {
@@ -199,7 +199,7 @@ struct SeqGenModule {
         std::vector<double> dists_tensor_sketch;
         std::vector<double> dists_tensor_slide_sketch;
         if (FLAGS_mutation_pattern != "pairs") {
-            for (size_t i = 0; i < seqs.size() - 1; i++) {
+            for (size_t i = 0; i < seqs.size(); i++) {
                 dists_ed.insert(dists_ed.end(), dists[0][i].begin()+i+1, dists[0][i].end());
                 dists_mh.insert(dists_mh.end(), dists[1][i].begin()+i+1, dists[1][i].end());
                 dists_wmh.insert(dists_wmh.end(), dists[2][i].begin()+i+1, dists[2][i].end());
@@ -210,7 +210,7 @@ struct SeqGenModule {
                                                  dists[5][i].begin()+i+1, dists[5][i].end());
             }
         } else {
-            for (size_t i = 0; i < seqs.size() - 1; i+=2) {
+            for (size_t i = 0; i < seqs.size(); i+=2) {
                 dists_ed.push_back(dists[0][i][0]);
                 dists_mh.push_back(dists[1][i][0]);
                 dists_wmh.push_back(dists[2][i][0]);
