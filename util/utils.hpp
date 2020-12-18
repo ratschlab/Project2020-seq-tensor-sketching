@@ -109,7 +109,7 @@ T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
     T val = 0;
     for (size_t i = 0; i < len; i++) {
         for (size_t j = 0; j < a[i].size() and j < b[i].size(); j++) {
-            val += (a[i][j] - b[i][j]) * ((a[i][j] - b[i][j] > 0) ? 1 : -1);
+            val += std::abs(a[i][j] - b[i][j]);
         }
     }
     return val;

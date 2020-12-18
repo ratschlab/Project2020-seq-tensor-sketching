@@ -24,7 +24,7 @@ jobs:
 
     - name: checkout submodules
       run: git submodule update --init --recursive
-
+      
     - name: create build dir
       run: mkdir ${{runner.workspace}}/build
 
@@ -62,6 +62,9 @@ jobs:
 
     - name: checkout submodules
       run: git submodule update --init --recursive
+
+    - name: install dependencies
+      run: brew install libomp
 
     - name: create build dir
       run: mkdir ${{runner.workspace}}/build
