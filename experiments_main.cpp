@@ -142,6 +142,7 @@ struct SeqGenModule {
         omh_sketch.resize(num_seqs);
         ten_sketch.resize(num_seqs);
         slide_sketch.resize(num_seqs);
+        start_progress_bar(seqs.size());
         for (size_t si = 0; si < num_seqs; si++) {
             kmer_seqs[si]
                     = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size, alphabet_size);
@@ -150,7 +151,7 @@ struct SeqGenModule {
             omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
             ten_sketch[si] = tensor_sketch.compute(seqs[si]);
             slide_sketch[si] = tensor_slide.compute(seqs[si]);
-            print_progress(si, num_seqs);
+            iterate_progress_bar();
         }
         std::cout << std::endl;
     }
@@ -159,6 +160,7 @@ struct SeqGenModule {
         int num_seqs = seqs.size();
         if (FLAGS_mutation_pattern == "pairs") {
             dists = new3D<double>(8, num_seqs, 1, -1);
+            start_progress_bar(seqs.size()/2);
 #pragma omp parallel for default(shared) schedule(dynamic)
             for (size_t i = 0; i < seqs.size(); i += 2) {
                 int j = i + 1;
@@ -168,10 +170,11 @@ struct SeqGenModule {
                 dists[3][i][0] = hamming_dist(omh_sketch[i], omh_sketch[j]);
                 dists[4][i][0] = l1_dist(ten_sketch[i], ten_sketch[j]);
                 dists[5][i][0] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
-                print_progress(i, seqs.size());
+                iterate_progress_bar();
             }
         } else {
             dists = new3D<double>(8, num_seqs, num_seqs, 0);
+            start_progress_bar(seqs.size());
 #pragma omp parallel for default(shared) schedule(dynamic)
             for (size_t i = 0; i < seqs.size(); i++) {
                 for (size_t j = i + 1; j < seqs.size(); j++) {
@@ -182,7 +185,7 @@ struct SeqGenModule {
                     dists[4][i][j] = l1_dist(ten_sketch[i], ten_sketch[j]);
                     dists[5][i][j] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
                 }
-                print_progress(i, seqs.size());
+                iterate_progress_bar();
             }
         }
         std::cout << std::endl;
@@ -207,19 +210,19 @@ struct SeqGenModule {
                                                  dists[5][i].begin()+i+1, dists[5][i].end());
             }
         } else {
-            dists_ed.resize(seqs.size());
-            dists_mh.resize(seqs.size());
-            dists_wmh.resize(seqs.size());
-            dists_omh.resize(seqs.size());
-            dists_tensor_sketch.resize(seqs.size());
-            dists_tensor_slide_sketch.resize(seqs.size());
-            for (size_t i = 0; i < seqs.size(); i++) {
-                dists_ed[i] = (dists[0][i][0]);
-                dists_mh[i] = (dists[1][i][0]);
-                dists_wmh[i] = (dists[2][i][0]);
-                dists_omh[i] = (dists[3][i][0]);
-                dists_tensor_sketch[i] = (dists[4][i][0]);
-                dists_tensor_slide_sketch[i] = (dists[5][i][0]);
+//            dists_ed.resize(seqs.size());
+//            dists_mh.resize(seqs.size());
+//            dists_wmh.resize(seqs.size());
+//            dists_omh.resize(seqs.size());
+//            dists_tensor_sketch.resize(seqs.size());
+//            dists_tensor_slide_sketch.resize(seqs.size());
+            for (size_t i = 0; i < seqs.size(); i+=2) {
+                dists_ed.push_back(dists[0][i][0]);
+                dists_mh.push_back(dists[1][i][0]);
+                dists_wmh.push_back(dists[2][i][0]);
+                dists_omh.push_back(dists[3][i][0]);
+                dists_tensor_sketch.push_back(dists[4][i][0]);
+                dists_tensor_slide_sketch.push_back(dists[5][i][0]);
             }
         }
         std::cout << "Spearman correlation MH: " << spearman(dists_ed, dists_mh) << std::endl;

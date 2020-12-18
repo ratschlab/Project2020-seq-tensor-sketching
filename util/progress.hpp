@@ -4,11 +4,42 @@
 #pragma once
 #include <istream>
 
-void print_progress(size_t iter, size_t num, size_t bar = 100) {
-    size_t chunk = (num+bar-1)/bar; // round up num/bar
-    size_t i = iter/chunk, p = (iter-1)/chunk;
-    if (i>p) {
-        std::cout << "#" << std::flush;
-    }
+namespace ts {
+
+size_t global_num;
+size_t global_iter;
+size_t global_bar;
+
+void start_progress_bar(size_t num, size_t bar_len = 100) {
+    if (num < bar_len)
+        bar_len= num;
+    global_num = num;
+    global_iter = 0;
+    global_bar = bar_len;
 }
 
+void iterate_progress_bar() {
+    // create aliases
+    auto &iter = global_iter, num=global_num, bar = global_bar;
+
+    size_t chunk = (num + bar - 1) / bar; // round up num/bar
+    size_t i = iter / chunk, p = (iter-1)/chunk;
+    if (i>p)
+        std::cout << "#" << std::flush;
+#pragma omp atomic
+        global_iter++;
+//        if (i>0) {
+//            for (size_t j=0; j<bar; j++)
+//                std::cout << "\b" << std::flush;
+//        }
+//        for (size_t j=0; j<i; j++)
+//            std::cout << ">" << std::flush;
+//        for (size_t j=0; j<bar-i; j++)
+//            std::cout << "#" << std::flush;
+//        std::cout << std::flush;
+//
+//#pragma omp atomic
+//    global_iter++;
+}
+
+}

@@ -25,12 +25,12 @@ class TensorSlide : public Tensor<seq_type> {
      * @param win_len sliding sketches are computed for substrings of size win_len
      * @param stride sliding sketches are computed every stride characters
      */
-    TensorSlide(seq_type alphabet_size,
+    TensorSlide(seq_type _alphabet_size,
                 size_t sketch_size,
                 size_t tup_len,
                 size_t win_len,
                 size_t stride)
-        : Tensor<seq_type>(alphabet_size, sketch_size, tup_len), win_len(win_len), stride(stride) {
+        : Tensor<seq_type>(_alphabet_size, sketch_size, tup_len), win_len(win_len), stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
     }

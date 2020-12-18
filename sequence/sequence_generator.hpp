@@ -71,8 +71,7 @@ class SeqGen {
 //                std::cout << (char)(s+(int)'A') ;
 //            }
 //            std::cout << "\n" << std::flush;
-//            point_mutate(base, seqs[si]);
-//            block_permute(seqs[si]);
+            block_permute(seqs[si]);
             if (fix_len)
                 make_fix_len(s2);
         }

@@ -36,7 +36,7 @@ class OrderedMinHash : public HashBase<T> {
             throw std::invalid_argument("Sequence of kmers must be longer than tuple length");
         }
         for (size_t pi = 0; pi < this->sketch_dim; pi++) {
-            std::unordered_map<size_t, uint8_t> counts;
+            std::unordered_map<size_t, uint32_t> counts;
             std::vector<std::pair<T, T>> ranks;
             for (auto s : kmers) {
                 ranks.push_back({ this->hash(pi, s + this->set_size * counts[s]), s });
