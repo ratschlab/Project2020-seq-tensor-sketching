@@ -2,7 +2,7 @@
 # number of sequences to generate and compute sketches for
 --num_seqs=50
 # tuple_len and kmer_size are sort of the same thing, maybe unify the 2?
---kmer_size=1
+--kmer_size=3
 --tuple_length=3
 --stride=16
 --window_size=32
