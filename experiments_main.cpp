@@ -9,6 +9,7 @@
 #include "util/spearman.hpp"
 #include "util/timer.hpp"
 #include "util/utils.hpp"
+#include "util/progress.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -149,7 +150,7 @@ struct SeqGenModule {
             omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
             ten_sketch[si] = tensor_sketch.compute(seqs[si]);
             slide_sketch[si] = tensor_slide.compute(seqs[si]);
-            std::cout << "." << std::flush;
+            print_progress(si, num_seqs);
         }
         std::cout << std::endl;
     }
@@ -167,6 +168,7 @@ struct SeqGenModule {
                 dists[3][i][0] = hamming_dist(omh_sketch[i], omh_sketch[j]);
                 dists[4][i][0] = l1_dist(ten_sketch[i], ten_sketch[j]);
                 dists[5][i][0] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
+                print_progress(i, seqs.size());
             }
         } else {
             dists = new3D<double>(8, num_seqs, num_seqs, 0);
@@ -180,7 +182,7 @@ struct SeqGenModule {
                     dists[4][i][j] = l1_dist(ten_sketch[i], ten_sketch[j]);
                     dists[5][i][j] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
                 }
-                std::cout << "." << std::flush;
+                print_progress(i, seqs.size());
             }
         }
         std::cout << std::endl;
@@ -218,17 +220,6 @@ struct SeqGenModule {
                 dists_omh[i] = (dists[3][i][0]);
                 dists_tensor_sketch[i] = (dists[4][i][0]);
                 dists_tensor_slide_sketch[i] = (dists[5][i][0]);
-//                dists_ed.insert(dists_ed.end(), dists[0][i][0], dists[0][i].end());
-//                dists_mh.insert(dists_mh.end(), dists[1][i].begin(), dists[1][i].end());
-//                dists_wmh.insert(dists_wmh.end(), dists[2][i].begin(), dists[2][i].end());
-//                dists_ed.insert(dists_ed.end(), dists[0][i][0], dists[0][i].end());
-//                dists_mh.insert(dists_mh.end(), dists[1][i].begin(), dists[1][i].end());
-//                dists_wmh.insert(dists_wmh.end(), dists[2][i].begin(), dists[2][i].end());
-//                dists_omh.insert(dists_omh.end(), dists[3][i].begin(), dists[3][i].end());
-//                dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin(),
-//                                           dists[4][i].end());
-//                dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(),
-//                                                 dists[5][i].begin(), dists[5][i].end());
             }
         }
         std::cout << "Spearman correlation MH: " << spearman(dists_ed, dists_mh) << std::endl;
@@ -345,11 +336,11 @@ int main(int argc, char *argv[]) {
     init_alphabet(FLAGS_alphabet);
 
     SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_o);
-    std::cout << "Generating sequences..." << std::endl;
+    std::cout << "Generating sequences ..." << std::endl;
     experiment.generate_sequences();
-    std::cout << "Computing sketches";
+    std::cout << "Computing sketches ... " << std::endl;
     experiment.compute_sketches();
-    std::cout << "Computing distances";
+    std::cout << "Computing distances ... " << std::endl;
     experiment.compute_pairwise_dists();
     std::cout << "Writing output to " << FLAGS_o << std::endl;
     experiment.save_output();

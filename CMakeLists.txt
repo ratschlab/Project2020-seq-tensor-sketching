@@ -12,7 +12,7 @@ include_directories(.)
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
 file(GLOB util_files "util/*.cpp")
-add_library(util ${util_files})
+add_library(util ${util_files} util/progress.hpp)
 target_link_libraries(util gflags)
 
 file(GLOB sequence_files "sequence/*.cpp")
