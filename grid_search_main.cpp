@@ -190,17 +190,18 @@ struct SeqGenModule {
         std::vector<double> dists_tensor_sketch;
         std::vector<double> dists_tensor_slide_sketch;
         for (size_t i = 0; i < seqs.size(); i++) {
-            dists_ed.insert(dists_ed.end(), dists[0][i].begin()+i+1, dists[0][i].end());
-            dists_mh.insert(dists_mh.end(), dists[1][i].begin()+i+1, dists[1][i].end());
-            dists_wmh.insert(dists_wmh.end(), dists[2][i].begin()+i+1, dists[2][i].end());
-            dists_omh.insert(dists_omh.end(), dists[3][i].begin()+i+1, dists[3][i].end());
-            dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin()+i+1,
+            dists_ed.insert(dists_ed.end(), dists[0][i].begin() + i + 1, dists[0][i].end());
+            dists_mh.insert(dists_mh.end(), dists[1][i].begin() + i + 1, dists[1][i].end());
+            dists_wmh.insert(dists_wmh.end(), dists[2][i].begin() + i + 1, dists[2][i].end());
+            dists_omh.insert(dists_omh.end(), dists[3][i].begin() + i + 1, dists[3][i].end());
+            dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin() + i + 1,
                                        dists[4][i].end());
-            dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(), dists[5][i].begin()+i+1,
-                                             dists[5][i].end());
+            dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(),
+                                             dists[5][i].begin() + i + 1, dists[5][i].end());
         }
         std::ofstream f(output, std::ios::app);
-        f << FLAGS_mutation_rate << "\t" << FLAGS_block_mutation_rate << "\t" << FLAGS_kmer_size << "\t";
+        f << FLAGS_mutation_rate << "\t" << FLAGS_block_mutation_rate << "\t" << FLAGS_kmer_size
+          << "\t";
         f << spearman(dists_ed, dists_mh) << "\t" << spearman(dists_ed, dists_wmh) << "\t"
           << spearman(dists_ed, dists_omh) << "\t" << spearman(dists_ed, dists_tensor_sketch)
           << "\t" << spearman(dists_ed, dists_tensor_slide_sketch) << std::endl;
@@ -219,21 +220,24 @@ int main(int argc, char *argv[]) {
     f << "M\tBM\tK\tMH\tWMH\tOMH\tTS\tTSS" << std::endl;
     f.close();
 
-
+    std::vector<double> mutation_probs = { 0.0, 0.02, 0.1 };
 #pragma omp parallel for default(shared) schedule(dynamic)
-    for (double mutation_prob : { 0.0, 0.02, 0.1 }) {
+    for (uint32_t mp = 0; mp < mutation_probs.size(); ++mp) {
+        double mutation_prob = mutation_probs[mp];
         FLAGS_mutation_rate = mutation_prob;
-        for (double block_mutation_prob : { 0.0, }) {
+        for (double block_mutation_prob : { 0.0 }) {
             if (mutation_prob == 0 && block_mutation_prob == 0) {
                 continue;
             }
+            std::vector<uint8_t> kmer_lengths = { 1, 4, 8, 16 };
             FLAGS_block_mutation_rate = block_mutation_prob;
 #pragma omp parallel for default(shared) schedule(dynamic)
-            for (uint32_t kmer_length : { 1, 4, 8, 16 }) {
+            for (uint32_t i = 0; i < kmer_lengths.size(); ++i) {
+                uint8_t kmer_length = kmer_lengths[i];
                 std::cout << "Mutation prob: " << mutation_prob
                           << " Block mutation prob: " << block_mutation_prob
                           << " Kmer size: " << kmer_length << std::endl;
-                for (uint32_t repeat = 0; repeat < 3; ++ repeat) {
+                for (uint32_t repeat = 0; repeat < 3; ++repeat) {
                     FLAGS_kmer_size = kmer_length;
                     FLAGS_tuple_length = kmer_length;
 
