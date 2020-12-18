@@ -11,19 +11,20 @@ auto last_time = std::chrono::high_resolution_clock::now();
 std::map<std::string, std::chrono::nanoseconds> durations;
 
 void start(std::string func_name) {
-    assert(last_func.empty());
-    last_time = high_resolution_clock::now();
-    last_func = std::move(func_name);
+//    assert(last_func.empty());
+//    last_time = high_resolution_clock::now();
+//    last_func = std::move(func_name);
+    func_name = "";
 }
 
 void stop() {
-    auto curr_time = high_resolution_clock::now();
-    if (durations.find(last_func) != durations.end()) {
-        durations[last_func] += duration_cast<nanoseconds>(curr_time - last_time);
-    } else {
-        durations[last_func] = duration_cast<nanoseconds>(curr_time - last_time);
-    }
-    last_func = "";
+//    auto curr_time = high_resolution_clock::now();
+//    if (durations.find(last_func) != durations.end()) {
+//        durations[last_func] += duration_cast<nanoseconds>(curr_time - last_time);
+//    } else {
+//        durations[last_func] = duration_cast<nanoseconds>(curr_time - last_time);
+//    }
+//    last_func = "";
 }
 
 std::string summary() {

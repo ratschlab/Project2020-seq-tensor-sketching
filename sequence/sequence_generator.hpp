@@ -46,6 +46,29 @@ class SeqGen {
         return seqs;
     }
 
+    template <class T>
+    Vec2D<T> genseqs_independent_pairs() {
+        assert(num_seqs % 2 == 0);
+        Vec2D<T> seqs(num_seqs);
+//#pragma omp parallel for default(shared)
+        for (uint32_t si = 0; si < num_seqs; si+=2) {
+            auto &s1 = seqs[si];
+            auto &s2 = seqs[si+1];
+            gen_seq(s1);
+            s2 = std::vector<T>(s1);
+            std::uniform_int_distribution<size_t> unif_insert(0, s1.size());
+            size_t edit_num = unif_insert(gen);
+            for (size_t ei=0; ei<edit_num; ei++) {
+                random_edit(s2);
+            }
+//            point_mutate(base, seqs[si]);
+//            block_permute(seqs[si]);
+            if (fix_len)
+                make_fix_len(s2);
+        }
+        return seqs;
+    }
+
     /**
      * Generate sequences such that every pair of sequences have approximately the same edit
      * distance.
@@ -55,6 +78,7 @@ class SeqGen {
         Vec2D<T> seqs(num_seqs);
         std::vector<T> base;
         gen_seq(base);
+#pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < num_seqs; si++) {
             point_mutate(base, seqs[si]);
             block_permute(seqs[si]);
@@ -158,7 +182,7 @@ class SeqGen {
     }
 
     template <class T>
-    void random_edit(const std::vector<T> &ref) {
+    void random_edit(std::vector<T> &ref) {
         std::discrete_distribution<int> mut { 1.0 / 3, 1.0 / 3, 1.0 };
         std::uniform_int_distribution<T> rchar(0, alphabet_size - 1);
         std::uniform_int_distribution<size_t> rpos_inc(

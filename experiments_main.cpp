@@ -60,7 +60,7 @@ DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding windo
 DEFINE_int32(s, 8, "Short hand for --stride");
 
 static bool ValidateMutationPattern(const char *flagname, const std::string &value) {
-    if (value == "linear" || value == "tree" || value == "uniform")
+    if (value == "linear" || value == "tree" || value == "uniform" || value == "pairs")
         return true;
     printf("Invalid value for --%s: %s\n", flagname, value.c_str());
     return false;
@@ -114,6 +114,8 @@ struct SeqGenModule {
 
         if (FLAGS_mutation_pattern == "uniform") {
             seqs = seq_gen.genseqs_uniform<char_type>();
+        } else if (FLAGS_mutation_pattern == "pairs") {
+            seqs = seq_gen.template genseqs_independent_pairs<char_type>();
         } else if (FLAGS_mutation_pattern == "linear") {
             seqs = seq_gen.genseqs_linear<char_type>();
         } else if (FLAGS_mutation_pattern == "tree") {
@@ -156,6 +158,7 @@ struct SeqGenModule {
         int num_seqs = seqs.size();
         if (FLAGS_mutation_pattern == "pairs") {
             dists = new3D<double>(8, num_seqs, 1, -1);
+#pragma omp parallel for default(shared) schedule(dynamic)
             for (size_t i = 0; i < seqs.size(); i += 2) {
                 int j = i + 1;
                 dists[0][i][0] = edit_distance(seqs[i], seqs[j]);
@@ -167,6 +170,7 @@ struct SeqGenModule {
             }
         } else {
             dists = new3D<double>(8, num_seqs, num_seqs, 0);
+#pragma omp parallel for default(shared) schedule(dynamic)
             for (size_t i = 0; i < seqs.size(); i++) {
                 for (size_t j = i + 1; j < seqs.size(); j++) {
                     dists[0][i][j] = edit_distance(seqs[i], seqs[j]);
@@ -183,31 +187,57 @@ struct SeqGenModule {
     }
 
     void print_spearman() {
+        std::vector<double> dists_ed;
+        std::vector<double> dists_mh;
+        std::vector<double> dists_wmh;
+        std::vector<double> dists_omh;
+        std::vector<double> dists_tensor_sketch;
+        std::vector<double> dists_tensor_slide_sketch;
         if (FLAGS_mutation_pattern != "pairs") {
-            std::vector<double> dists_ed;
-            std::vector<double> dists_mh;
-            std::vector<double> dists_wmh;
-            std::vector<double> dists_omh;
-            std::vector<double> dists_tensor_sketch;
-            std::vector<double> dists_tensor_slide_sketch;
             for (size_t i = 0; i < seqs.size(); i++) {
-                dists_ed.insert(dists_ed.end(), dists[0][i].begin(), dists[0][i].end());
-                dists_mh.insert(dists_mh.end(), dists[1][i].begin(), dists[1][i].end());
-                dists_wmh.insert(dists_wmh.end(), dists[2][i].begin(), dists[2][i].end());
-                dists_omh.insert(dists_omh.end(), dists[3][i].begin(), dists[3][i].end());
-                dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin(),
+                dists_ed.insert(dists_ed.end(), dists[0][i].begin()+i+1, dists[0][i].end());
+                dists_mh.insert(dists_mh.end(), dists[1][i].begin()+i+1, dists[1][i].end());
+                dists_wmh.insert(dists_wmh.end(), dists[2][i].begin()+i+1, dists[2][i].end());
+                dists_omh.insert(dists_omh.end(), dists[3][i].begin()+i+1, dists[3][i].end());
+                dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin()+i+1,
                                            dists[4][i].end());
                 dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(),
-                                                 dists[5][i].begin(), dists[5][i].end());
+                                                 dists[5][i].begin()+i+1, dists[5][i].end());
             }
-            std::cout << "Spearman correlation MH: " << spearman(dists_ed, dists_mh) << std::endl;
-            std::cout << "Spearman correlation WMH: " << spearman(dists_ed, dists_wmh) << std::endl;
-            std::cout << "Spearman correlation OMH: " << spearman(dists_ed, dists_omh) << std::endl;
-            std::cout << "Spearman correlation TensorSketch: "
-                      << spearman(dists_ed, dists_tensor_sketch) << std::endl;
-            std::cout << "Spearman correlation TensorSlide: "
-                      << spearman(dists_ed, dists_tensor_slide_sketch) << std::endl;
+        } else {
+            dists_ed.resize(seqs.size());
+            dists_mh.resize(seqs.size());
+            dists_wmh.resize(seqs.size());
+            dists_omh.resize(seqs.size());
+            dists_tensor_sketch.resize(seqs.size());
+            dists_tensor_slide_sketch.resize(seqs.size());
+            for (size_t i = 0; i < seqs.size(); i++) {
+                dists_ed[i] = (dists[0][i][0]);
+                dists_mh[i] = (dists[1][i][0]);
+                dists_wmh[i] = (dists[2][i][0]);
+                dists_omh[i] = (dists[3][i][0]);
+                dists_tensor_sketch[i] = (dists[4][i][0]);
+                dists_tensor_slide_sketch[i] = (dists[5][i][0]);
+//                dists_ed.insert(dists_ed.end(), dists[0][i][0], dists[0][i].end());
+//                dists_mh.insert(dists_mh.end(), dists[1][i].begin(), dists[1][i].end());
+//                dists_wmh.insert(dists_wmh.end(), dists[2][i].begin(), dists[2][i].end());
+//                dists_ed.insert(dists_ed.end(), dists[0][i][0], dists[0][i].end());
+//                dists_mh.insert(dists_mh.end(), dists[1][i].begin(), dists[1][i].end());
+//                dists_wmh.insert(dists_wmh.end(), dists[2][i].begin(), dists[2][i].end());
+//                dists_omh.insert(dists_omh.end(), dists[3][i].begin(), dists[3][i].end());
+//                dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin(),
+//                                           dists[4][i].end());
+//                dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(),
+//                                                 dists[5][i].begin(), dists[5][i].end());
+            }
         }
+        std::cout << "Spearman correlation MH: " << spearman(dists_ed, dists_mh) << std::endl;
+        std::cout << "Spearman correlation WMH: " << spearman(dists_ed, dists_wmh) << std::endl;
+        std::cout << "Spearman correlation OMH: " << spearman(dists_ed, dists_omh) << std::endl;
+        std::cout << "Spearman correlation TensorSketch: "
+                  << spearman(dists_ed, dists_tensor_sketch) << std::endl;
+        std::cout << "Spearman correlation TensorSlide: "
+                  << spearman(dists_ed, dists_tensor_slide_sketch) << std::endl;
     }
 
     void save_output() {

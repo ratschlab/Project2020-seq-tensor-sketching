@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(sequence_sketching)
 set(CMAKE_CXX_STANDARD 20)
+find_package(OpenMP REQUIRED)
 
 include_directories(.)
 
@@ -19,8 +20,8 @@ add_library(sequence ${sequence_files})
 target_link_libraries(sequence gflags)
 
 
-add_executable(exp_pairwise experiments_main.cpp)
-target_link_libraries(exp_pairwise sequence util)
+add_executable(exp_pairwise experiments_main.cpp )
+target_link_libraries(exp_pairwise sequence util OpenMP::OpenMP_CXX)
 
 add_executable(grid_search grid_search_main.cpp)
 target_link_libraries(grid_search sequence util)
