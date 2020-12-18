@@ -1,6 +1,6 @@
 -o=/media/amir/nvm1/tmp/
 # number of sequences to generate and compute sketches for
---num_seqs=100
+--num_seqs=200
 --alphabet_size=4
 # tuple_len and kmer_size are sort of the same thing, maybe unify the 2?
 --kmer_size=6
