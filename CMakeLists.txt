@@ -13,15 +13,15 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
 file(GLOB util_files "util/*.cpp")
 add_library(util ${util_files} util/progress.hpp)
-target_link_libraries(util gflags)
+target_link_libraries(util gflags OpenMP::OpenMP_CXX)
 
 file(GLOB sequence_files "sequence/*.cpp")
 add_library(sequence ${sequence_files})
-target_link_libraries(sequence gflags)
+target_link_libraries(sequence gflags OpenMP::OpenMP_CXX)
 
 
 add_executable(exp_pairwise experiments_main.cpp )
-target_link_libraries(exp_pairwise sequence util OpenMP::OpenMP_CXX)
+target_link_libraries(exp_pairwise sequence util)
 
 add_executable(grid_search grid_search_main.cpp)
 target_link_libraries(grid_search sequence util)

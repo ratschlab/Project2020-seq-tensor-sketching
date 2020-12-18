@@ -61,6 +61,16 @@ class SeqGen {
             for (size_t ei=0; ei<edit_num; ei++) {
                 random_edit(s2);
             }
+//            std::cout << "s1 = ";
+//            for (auto &s : s1) {
+//                std::cout << (char)(s+(int)'A') ;
+//            }
+//
+//            std::cout << "\ns2 = ";
+//            for (auto &s : s2) {
+//                std::cout << (char)(s+(int)'A') ;
+//            }
+//            std::cout << "\n" << std::flush;
 //            point_mutate(base, seqs[si]);
 //            block_permute(seqs[si]);
             if (fix_len)
