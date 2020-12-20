@@ -208,7 +208,8 @@ class SeqGen {
     template <class T>
     void random_edit(std::vector<T> &ref) {
         std::discrete_distribution<int> mut { 1.0 / 3, 1.0 / 3, 1.0/3 };
-        std::uniform_int_distribution<T> rchar(0, alphabet_size - 1);
+        std::uniform_int_distribution<T> ins_char(0, alphabet_size - 1);
+        std::uniform_int_distribution<T> sub_char(0, alphabet_size - 2);
         std::uniform_int_distribution<size_t> rpos_inc(
                 0, seq_len); // inclusinve of seq_len, insertion to the very end
         std::uniform_int_distribution<size_t> rpos_exc(
@@ -216,13 +217,12 @@ class SeqGen {
         switch (mut(gen)) {
             case 0: { // insert
                 size_t pos = rpos_inc(gen);
-                auto c = rchar(gen);
+                auto c = ins_char(gen);
                 ref.push_back(ref[ref.size()-1]);
                 for (size_t cur=ref.size()-1; cur>pos; cur--) {
                     ref[cur] = ref[cur-1];
                 }
                 ref[pos] = c;
-//                ref.insert(ref.begin(), c);
                 break;
             }
             case 1: { // delete
@@ -235,10 +235,10 @@ class SeqGen {
             }
             case 2: { // substitute
                 auto pos = rpos_exc(gen);
-                auto c = rchar(gen);
+                auto c = ins_char(gen);
                 if (c == ref[pos]) {
                     c++;
-                    c = (c % seq_len);
+                    c = (c % alphabet_size);
                 }
                 ref[pos] = c;
                 break;

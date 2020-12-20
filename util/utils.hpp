@@ -25,7 +25,7 @@ namespace ts { // ts = Tensor Sketch
  * @return the extracted kmers, as integers converted from base #alphabet_size
  */
 template <class chr, class kmer>
-std::vector<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size) {
+std::vector<kmer> seq2kmer(const std::vector<chr> &seq, size_t kmer_size, size_t alphabet_size) {
     if (seq.size() < (size_t)kmer_size) {
         Timer::stop();
         return std::vector<kmer>();
@@ -33,19 +33,28 @@ std::vector<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8
     Timer::start("seq2kmer");
 
     std::vector<kmer> result(seq.size() - kmer_size + 1, 0);
-
-    kmer c = 1;
-    for (uint8_t i = 0; i < kmer_size; i++) {
-        result[0] += c * seq[i];
-        c *= alphabet_size;
+    for (size_t i=0; i<result.size(); i++) {
+        size_t c = 1;
+        for (size_t j=0; j<kmer_size; j++) {
+            result[i] += seq[i+j]*c;
+            c *= alphabet_size;
+        }
     }
-    c /= alphabet_size;
+//
+//    kmer c = 1;
+//    for (uint8_t i = 0; i < kmer_size; i++) {
+//        result[0] += c * seq[i];
+//        c *= alphabet_size;
+//    }
+//    c /= alphabet_size;
+//
+//    for (size_t i = 0; i < result.size() - 1; i++) {
+//        kmer base = result[i] - seq[i];
+//        assert(base % alphabet_size == 0);
+//        result[i + 1] = base / alphabet_size + seq[i + kmer_size] * c;
+//    }
 
-    for (size_t i = 0; i < result.size() - 1; i++) {
-        kmer base = result[i] - seq[i];
-        assert(base % alphabet_size == 0);
-        result[i + 1] = base / alphabet_size + seq[i + kmer_size] * c;
-    }
+
     Timer::stop();
     return result;
 }

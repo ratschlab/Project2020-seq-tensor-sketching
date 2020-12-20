@@ -19,9 +19,10 @@
 DEFINE_uint32(kmer_size, 3, "Kmer size for MH, OMH, WMH");
 DEFINE_uint32(k, 3, "Short hand for --kmer_size");
 
-DEFINE_string(alphabet,
-              "dna4",
-              "The alphabet over which sequences are defined (dna4, dna5, protein)");
+//DEFINE_string(alphabet,
+//              "dna4",
+//              "The alphabet over which sequences are defined (dna4, dna5, protein)");
+DEFINE_int32(alphabet_size, 4, "size of alphabet for synthetic sequence generation");
 
 DEFINE_bool(fix_len, false, "Force generated sequences length to be equal");
 
@@ -109,7 +110,7 @@ struct SeqGenModule {
     SeqGenModule(const std::string &out_dir) : output_dir(out_dir) {}
 
     void generate_sequences() {
-        ts::SeqGen seq_gen(alphabet_size, FLAGS_fix_len, FLAGS_max_num_blocks, FLAGS_min_num_blocks,
+        ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len, FLAGS_max_num_blocks, FLAGS_min_num_blocks,
                            FLAGS_num_seqs, FLAGS_seq_len, (float)FLAGS_mutation_rate,
                            (float)FLAGS_block_mutation_rate);
 
@@ -125,14 +126,14 @@ struct SeqGenModule {
     }
 
     void compute_sketches() {
-        embed_type set_size = int_pow<size_t>(alphabet_size, FLAGS_kmer_size);
+        embed_type set_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
         MinHash<kmer_type> min_hash(set_size, FLAGS_embed_dim);
         WeightedMinHash<kmer_type> wmin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len);
         OrderedMinHash<kmer_type> omin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len,
                                             FLAGS_tuple_length);
-        Tensor<char_type> tensor_sketch(alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
+        Tensor<char_type> tensor_sketch(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
         // embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
-        TensorSlide<char_type> tensor_slide(alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length,
+        TensorSlide<char_type> tensor_slide(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length,
                                             FLAGS_window_size, FLAGS_stride);
 
         size_t num_seqs = seqs.size();
@@ -145,7 +146,7 @@ struct SeqGenModule {
         start_progress_bar(seqs.size());
         for (size_t si = 0; si < num_seqs; si++) {
             kmer_seqs[si]
-                    = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size, alphabet_size);
+                    = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
             mh_sketch[si] = min_hash.compute(kmer_seqs[si]);
             wmh_sketch[si] = wmin_hash.compute(kmer_seqs[si]);
             omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
@@ -329,8 +330,6 @@ struct SeqGenModule {
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-
-    init_alphabet(FLAGS_alphabet);
 
     SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_o);
     std::cout << "Generating sequences ..." << std::endl;
