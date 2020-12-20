@@ -116,8 +116,7 @@ struct SeqGenModule {
         if (FLAGS_mutation_pattern == "uniform") {
             seqs = seq_gen.genseqs_uniform<char_type>();
         } else if (FLAGS_mutation_pattern == "pairs") {
-            seqs = seq_gen.template genseqs_independent_pairs<char_type>();
-//            seqs = seq_gen.template genseqs_pairs<char_type>();
+            seqs = seq_gen.genseqs_independent_pairs<char_type>();
         } else if (FLAGS_mutation_pattern == "linear") {
             seqs = seq_gen.genseqs_linear<char_type>();
         } else if (FLAGS_mutation_pattern == "tree") {

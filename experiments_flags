@@ -4,7 +4,7 @@
 --alphabet_size=4
 # tuple_len and kmer_size are sort of the same thing, maybe unify the 2?
 --kmer_size=3
---tuple_length=4
+--tuple_length=3
 --stride=32
 --window_size=128
 --seq_len=1024
