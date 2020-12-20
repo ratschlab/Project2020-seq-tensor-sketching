@@ -40,20 +40,6 @@ std::vector<kmer> seq2kmer(const std::vector<chr> &seq, size_t kmer_size, size_t
             c *= alphabet_size;
         }
     }
-//
-//    kmer c = 1;
-//    for (uint8_t i = 0; i < kmer_size; i++) {
-//        result[0] += c * seq[i];
-//        c *= alphabet_size;
-//    }
-//    c /= alphabet_size;
-//
-//    for (size_t i = 0; i < result.size() - 1; i++) {
-//        kmer base = result[i] - seq[i];
-//        assert(base % alphabet_size == 0);
-//        result[i + 1] = base / alphabet_size + seq[i + kmer_size] * c;
-//    }
-
 
     Timer::stop();
     return result;
