@@ -46,6 +46,31 @@ class SeqGen {
         return seqs;
     }
 
+    template<class T>
+    Vec2D<T> genseqs_pairs() {
+        Vec2D<T> seqs;
+        seqs = Vec2D<T>(num_seqs, std::vector<T>());
+        assert(num_seqs % 2 == 0);
+        for (size_t si = 0; si < seqs.size(); si++) {
+            gen_seq(seqs[si]);
+        }
+        for (size_t si = 0; si < num_seqs; si += 2) {
+            int lcs = si * seq_len / num_seqs;
+            std::vector<int> perm(seq_len), perm2(seq_len);
+            std::iota(perm.begin(), perm.end(), 0);
+            std::shuffle(perm.begin(), perm.end(), gen);
+            std::iota(perm2.begin(), perm2.end(), 0);
+            std::shuffle(perm2.begin(), perm2.end(), gen);
+
+            std::sort(perm.begin(), perm.begin() + lcs);
+            std::sort(perm2.begin(), perm2.begin() + lcs);
+            for (int i = 0; i < lcs; i++) {
+                seqs[si][perm[i]] = seqs[si + 1][perm2[i]];
+            }
+        }
+        return seqs;
+    }
+
     template <class T>
     Vec2D<T> genseqs_independent_pairs() {
         assert(num_seqs % 2 == 0);
@@ -61,17 +86,7 @@ class SeqGen {
             for (size_t ei=0; ei<edit_num; ei++) {
                 random_edit(s2);
             }
-//            std::cout << "s1 = ";
-//            for (auto &s : s1) {
-//                std::cout << (char)(s+(int)'A') ;
-//            }
-//
-//            std::cout << "\ns2 = ";
-//            for (auto &s : s2) {
-//                std::cout << (char)(s+(int)'A') ;
-//            }
-//            std::cout << "\n" << std::flush;
-            block_permute(seqs[si]);
+//            block_permute(seqs[si]);
             if (fix_len)
                 make_fix_len(s2);
         }
@@ -192,7 +207,7 @@ class SeqGen {
 
     template <class T>
     void random_edit(std::vector<T> &ref) {
-        std::discrete_distribution<int> mut { 1.0 / 3, 1.0 / 3, 1.0 };
+        std::discrete_distribution<int> mut { 1.0 / 3, 1.0 / 3, 1.0/3 };
         std::uniform_int_distribution<T> rchar(0, alphabet_size - 1);
         std::uniform_int_distribution<size_t> rpos_inc(
                 0, seq_len); // inclusinve of seq_len, insertion to the very end
@@ -200,13 +215,22 @@ class SeqGen {
                 0, seq_len - 1); // inclusinve of seq_len, insertion to the very end
         switch (mut(gen)) {
             case 0: { // insert
-                rpos_inc(gen);
+                size_t pos = rpos_inc(gen);
                 auto c = rchar(gen);
-                ref.insert(ref.begin(), c);
+                ref.push_back(ref[ref.size()-1]);
+                for (size_t cur=ref.size()-1; cur>pos; cur--) {
+                    ref[cur] = ref[cur-1];
+                }
+                ref[pos] = c;
+//                ref.insert(ref.begin(), c);
                 break;
             }
             case 1: { // delete
-                rpos_exc(gen);
+                size_t pos = rpos_exc(gen);
+                for (size_t cur=pos; cur<ref.size()-1; cur++) {
+                    ref[cur] = ref[cur+1];
+                }
+                ref.resize(ref.size()-1);
                 break;
             }
             case 2: { // substitute
