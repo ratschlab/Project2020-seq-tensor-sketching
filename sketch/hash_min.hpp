@@ -43,6 +43,7 @@ class MinHash : public HashBase<T> {
             Timer::stop();
             return sketch;
         }
+
         for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char = T(0);
             size_t min_rank = this->hash_size + 1;

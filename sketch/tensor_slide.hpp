@@ -30,12 +30,15 @@ class TensorSlide : public Tensor<seq_type> {
                 size_t tup_len,
                 size_t win_len,
                 size_t stride,
-                size_t seq_len)
+                size_t seq_len = -1)
         : Tensor<seq_type>(alphabet_size, sketch_size, tup_len), win_len(win_len), stride(stride) {
-//        : Tensor<seq_type>(alphabet_size, (sketch_size*stride+seq_len-1 )/seq_len, tup_len), win_len(win_len), stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
-        seq_len--;
+        // if seq_len not given, set it to stride
+        if (seq_len<0) {
+            seq_len = stride;
+        }
+        sketch_size = (sketch_size*stride + seq_len-1)/seq_len;
     }
 
     /**
@@ -44,6 +47,7 @@ class TensorSlide : public Tensor<seq_type> {
      * @return seq.size()/stride sketches of size #sketch_size
      */
     Vec2D<double> compute(const std::vector<seq_type> &seq) {
+        Timer::start("tensor_slide_sketch");
         Vec2D<double> sketches;
         if (seq.size() < this->subsequence_len) {
             return new2D<double>(seq.size() / this->stride, this->sketch_size, double(0));
@@ -80,7 +84,7 @@ class TensorSlide : public Tensor<seq_type> {
             }
 
             if (i >= win_len) { // only start deleting from front after reaching #win_len
-                uint32_t ws = i - win_len; // the element to be removed from the sketch
+                size_t ws = i - win_len; // the element to be removed from the sketch
                 for (size_t diff = 0; diff < tup_len; ++diff) {
                     for (size_t p = 1; p <= tup_len - diff; p++) {
                         auto r = hashes[p - 1][seq[ws]];
@@ -99,10 +103,9 @@ class TensorSlide : public Tensor<seq_type> {
                 }
             }
 
-            sketches.push_back(diff(T1[1].back(), T2[1].back()));
-//            if ((i + 1) % stride == 0) { // save a sketch every stride times
-//                sketches.push_back(diff(T1[1].back(), T2[1].back()));
-//            }
+            if ((i + 1) % stride == 0) { // save a sketch every stride times
+                sketches.push_back(diff(T1[1].back(), T2[1].back()));
+            }
         }
 
         for (auto &vec: sketches) {
@@ -110,6 +113,9 @@ class TensorSlide : public Tensor<seq_type> {
                 el = this->discretize(el);
             }
         }
+
+        Timer::stop();
+
         return sketches;
     }
 

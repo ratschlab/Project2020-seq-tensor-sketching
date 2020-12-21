@@ -6,6 +6,7 @@
 #include <iostream> //todo: remove
 #include <random>
 #include <cmath>
+#include "util/timer.hpp"
 
 namespace ts { // ts = Tensor Sketch
 
@@ -56,6 +57,7 @@ class Tensor {
      * @return an array of size #sketch_size containing the sequence's sketch
      */
     std::vector<double> compute(const std::vector<seq_type> &seq) {
+        Timer::start("tensor_sketch");
         // Tp corresponds to T+, Tm to T- in the paper; Tp[0], Tm[0] are sentinels and contain the
         // initial condition for empty strings; Tp[p], Tm[p] represent the partial sketch when
         // considering hashes h1...hp, over the prefix x1...xi. The final result is then
@@ -86,6 +88,9 @@ class Tensor {
             sketch[m] = Tp[subsequence_len][m] - Tm[subsequence_len][m];
             sketch[m] = discretize(sketch[m]);
         }
+
+        Timer::stop();
+
         return sketch;
     }
 
@@ -113,8 +118,8 @@ class Tensor {
 
     double discretize(double val) {
 //        auto bin = std::upper_bound(bins.begin(), bins.end(), val) - bins.begin();
-//        auto bin = atan(val);
-        auto bin = val;
+        auto bin = atan(val);
+//        auto bin = val;
         return bin;
     }
 

@@ -148,6 +148,7 @@ struct SeqGenModule {
         ten_sketch.resize(num_seqs);
         slide_sketch.resize(num_seqs);
         start_progress_bar(seqs.size());
+//#pragma omp parallel for default(shared) private(min_hash, wmin_hash, omin_hash)
         for (size_t si = 0; si < num_seqs; si++) {
             kmer_seqs[si]
                     = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
@@ -248,7 +249,7 @@ struct SeqGenModule {
 
         fo.open(output_dir / "timing.csv");
         assert(fo.is_open());
-        fo << Timer::summary();
+        fo << Timer::summary(FLAGS_num_seqs);
         fo.close();
 
         write_fasta(output_dir / "seqs.fa", seqs);
@@ -346,7 +347,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Computing distances ... " << std::endl;
     experiment.compute_pairwise_dists();
     std::cout << "Writing output to " << FLAGS_o << std::endl;
-//    experiment.save_output();
+    experiment.save_output();
     experiment.print_spearman();
     return 0;
 }

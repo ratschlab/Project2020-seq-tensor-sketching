@@ -1,16 +1,15 @@
 -o=/media/amir/nvm/table/
 # number of sequences to generate and compute sketches for
---num_seqs=500
+--num_seqs=100
 --alphabet_size=4
-# tuple_len and kmer_size are sort of the same thing, maybe unify the 2?
---kmer_size=4
+--kmer_size=16
 --tuple_length=3
---stride=50
---window_size=1400
---seq_len=20000
+--stride=500
+--window_size=1000
+--seq_len=10000
 --fix_len=true
---embed_dim=50
---mutation_pattern=pairs
+--embed_dim=30
+--mutation_pattern=linear
 --mutation_rate=0.02
 --block_mutation_rate=0.0
 

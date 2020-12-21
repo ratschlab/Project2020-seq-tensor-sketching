@@ -130,7 +130,7 @@ struct SeqGenModule {
         Tensor<char_type> tensor_sketch(alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
         // embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
         TensorSlide<char_type> tensor_slide(alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length,
-                                            FLAGS_window_size, FLAGS_stride);
+                                            FLAGS_window_size, FLAGS_stride, FLAGS_seq_len);
 
         size_t num_seqs = seqs.size();
         kmer_seqs.resize(num_seqs);

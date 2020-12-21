@@ -44,6 +44,8 @@ DEFINE_int32(w, 32, "Short hand for --window_size");
 
 DEFINE_int32(max_len, 32, "The maximum accepted sequence length for Ordered and Weighted min-hash");
 
+DEFINE_int32(seq_len, 1024, "The approximate sequence length, used in TSS to adjust the sketch dimension");
+
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
 DEFINE_int32(s, 8, "Short hand for --stride");
 
@@ -200,7 +202,7 @@ int main(int argc, char *argv[]) {
     } else if (FLAGS_sketch_method.starts_with("Tensor")) {
         Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length);
         TensorSlide<uint64_t> tensor_slide(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
-                                           FLAGS_window_size, FLAGS_stride);
+                                           FLAGS_window_size, FLAGS_stride, FLAGS_seq_len);
         std::function<std::vector<double>(const std::vector<uint64_t> &)> sketcher
                 = [&](const std::vector<uint64_t> &seq) { return tensor_sketch.compute(seq); };
         std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher
