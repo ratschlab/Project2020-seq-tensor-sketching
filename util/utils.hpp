@@ -277,4 +277,7 @@ T int_pow(T x, T pow) {
 
 std::string flag_values();
 
+
+std::string legacy_config();
+
 } // namespace ts

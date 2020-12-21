@@ -75,7 +75,7 @@ class SeqGen {
     Vec2D<T> genseqs_independent_pairs() {
         assert(num_seqs % 2 == 0);
         Vec2D<T> seqs(num_seqs);
-//#pragma omp parallel for default(shared)
+#pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < num_seqs; si+=2) {
             auto &s1 = seqs[si];
             auto &s2 = seqs[si+1];
@@ -86,7 +86,6 @@ class SeqGen {
             for (size_t ei=0; ei<edit_num; ei++) {
                 random_edit(s2);
             }
-//            block_permute(seqs[si]);
             if (fix_len)
                 make_fix_len(s2);
         }

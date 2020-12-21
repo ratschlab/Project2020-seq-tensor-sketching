@@ -31,14 +31,13 @@ class TensorSlide : public Tensor<seq_type> {
                 size_t win_len,
                 size_t stride,
                 size_t seq_len = -1)
-        : Tensor<seq_type>(alphabet_size, sketch_size, tup_len), win_len(win_len), stride(stride) {
+        : Tensor<seq_type>(alphabet_size, (sketch_size * stride + seq_len - 1)/seq_len, tup_len), win_len(win_len), stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
         // if seq_len not given, set it to stride
         if (seq_len<0) {
             seq_len = stride;
         }
-        sketch_size = (sketch_size*stride + seq_len-1)/seq_len;
     }
 
     /**
@@ -74,11 +73,11 @@ class TensorSlide : public Tensor<seq_type> {
                     auto r = hashes[q - 1][seq[i]];
                     bool s = signs[q - 1][seq[i]];
                     if (s) {
-                        T1[p][q] = this->shift_sum(T1[p][q], T1[p][q - 1], r, z);
-                        T2[p][q] = this->shift_sum(T2[p][q], T2[p][q - 1], r, z);
+                        this->shift_sum_inplace(T1[p][q], T1[p][q - 1], r, z);
+                        this->shift_sum_inplace(T2[p][q], T2[p][q - 1], r, z);
                     } else {
-                        T1[p][q] = this->shift_sum(T1[p][q], T2[p][q - 1], r, z);
-                        T2[p][q] = this->shift_sum(T2[p][q], T1[p][q - 1], r, z);
+                        this->shift_sum_inplace(T1[p][q], T2[p][q - 1], r, z);
+                        this->shift_sum_inplace(T2[p][q], T1[p][q - 1], r, z);
                     }
                 }
             }
@@ -93,11 +92,11 @@ class TensorSlide : public Tensor<seq_type> {
                         // this computes t/(w-t); in our case t (the tuple length) is diff+1
                         double z = (double)(diff + 1) / (win_len - diff);
                         if (s) {
-                            T1[p][q] = this->shift_sum(T1[p][q], T1[p + 1][q], r, -z);
-                            T2[p][q] = this->shift_sum(T2[p][q], T2[p + 1][q], r, -z);
+                            this->shift_sum_inplace(T1[p][q], T1[p + 1][q], r, -z);
+                            this->shift_sum_inplace(T2[p][q], T2[p + 1][q], r, -z);
                         } else {
-                            T1[p][q] = this->shift_sum(T1[p][q], T2[p + 1][q], r, -z);
-                            T2[p][q] = this->shift_sum(T2[p][q], T1[p + 1][q], r, -z);
+                            this->shift_sum_inplace(T1[p][q], T2[p + 1][q], r, -z);
+                            this->shift_sum_inplace(T2[p][q], T1[p + 1][q], r, -z);
                         }
                     }
                 }

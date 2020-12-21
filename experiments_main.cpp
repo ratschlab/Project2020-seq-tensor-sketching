@@ -8,8 +8,8 @@
 #include "util/multivec.hpp"
 #include "util/spearman.hpp"
 #include "util/timer.hpp"
-#include "util/utils.hpp"
 #include "util/progress.hpp"
+#include "util/utils.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -242,9 +242,15 @@ struct SeqGenModule {
         fs::create_directories(fs::path(output_dir / "dists"));
         fs::create_directories(fs::path(output_dir / "sketches"));
 
-        fo.open(output_dir / "conf.csv");
+        fo.open(output_dir / "conf");
         assert(fo.is_open());
         fo << flag_values();
+        fo.close();
+
+        // legacy: to be able to run old matlab scripts
+        fo.open(output_dir / "legacy_conf.csv");
+        assert(fo.is_open());
+        fo << legacy_config();
         fo.close();
 
         fo.open(output_dir / "timing.csv");

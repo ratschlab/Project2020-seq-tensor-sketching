@@ -7,6 +7,8 @@ include_directories(.)
 
 #set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -O0")
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
@@ -34,6 +36,8 @@ target_link_libraries(seqgen sequence util)
 
 # TESTS
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Werror")
+
+
 
 enable_testing()
 include(GoogleTest)

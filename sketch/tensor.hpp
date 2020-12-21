@@ -75,11 +75,11 @@ class Tensor {
                 seq_type r = hashes[p - 1][seq[i]];
                 bool s = signs[p - 1][seq[i]];
                 if (s) {
-                    Tp[p] = shift_sum(Tp[p], Tp[p - 1], r, z);
-                    Tm[p] = shift_sum(Tm[p], Tm[p - 1], r, z);
+                    this->shift_sum_inplace(Tp[p], Tp[p - 1], r, z);
+                    this->shift_sum_inplace(Tm[p], Tm[p - 1], r, z);
                 } else {
-                    Tp[p] = shift_sum(Tp[p], Tm[p - 1], r, z);
-                    Tm[p] = shift_sum(Tm[p], Tp[p - 1], r, z);
+                    this->shift_sum_inplace(Tp[p], Tm[p - 1], r, z);
+                    this->shift_sum_inplace(Tm[p], Tp[p - 1], r, z);
                 }
             }
         }
@@ -102,7 +102,7 @@ class Tensor {
 
   protected:
     /** Computes (1-z)*a + z*b_shift */
-    std::vector<double> shift_sum(const std::vector<double> &a,
+    inline std::vector<double> shift_sum(const std::vector<double> &a,
                                   const std::vector<double> &b,
                                   seq_type shift,
                                   double z) {
@@ -114,6 +114,19 @@ class Tensor {
             assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
         }
         return result;
+    }
+
+    /** Computes (1-z)*a + z*b_shift */
+    void shift_sum_inplace(std::vector<double> &a,
+                                         const std::vector<double> &b,
+                                         seq_type shift,
+                                         double z) {
+        assert(a.size() == b.size());
+        size_t len = a.size();
+        for (uint32_t i = 0; i < a.size(); i++) {
+            a[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
+            assert(a[i] <= 1 + 1e-5 && a[i] >= -1e-5);
+        }
     }
 
     double discretize(double val) {

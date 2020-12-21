@@ -61,6 +61,9 @@ std::string summary(uint32_t num_seqs) {
             if (arg_name.find("hash") != std::string::npos) {
                 count += acc["seq2kmer"];
             }
+            // dont print seq2kmer, it's part of other functions
+            if (arg_name.find("seq2kmer") != std::string::npos)
+                continue;
             str += " " + arg_name + ",\t" + trans[arg_name] + ",\t" + std::to_string(count/1e6/num_seqs) + '\n';
         }
     return str;

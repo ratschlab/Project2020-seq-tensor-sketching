@@ -1,15 +1,15 @@
--o=/media/amir/nvm/table/
+-o=/media/amir/nvm/tablek8/
 # number of sequences to generate and compute sketches for
---num_seqs=100
+--num_seqs=2000
 --alphabet_size=4
---kmer_size=4
+--kmer_size=8
 --tuple_length=3
---stride=500
---window_size=1000
---seq_len=10000
+--stride=700
+--window_size=1400
+--seq_len=20000
 --fix_len=true
 --embed_dim=30
---mutation_pattern=uniform
+--mutation_pattern=pairs
 --mutation_rate=0.12
 --block_mutation_rate=0.0
 
