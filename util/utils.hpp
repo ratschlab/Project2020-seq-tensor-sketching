@@ -45,12 +45,23 @@ std::vector<kmer> seq2kmer(const std::vector<chr> &seq, size_t kmer_size, size_t
     return result;
 }
 
+
+/***
+ * sign function: -1, 0, +1 for negative, 0, and positive values
+ * @tparam T type
+ * @param val: input value
+ * @return sign of val
+ */
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
 template <class T>
 T l1_dist(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     T res = 0;
     for (size_t i = 0; i < a.size(); i++) {
-        auto el = std::abs(atan(a[i]*5) - atan(5*b[i]));
+        auto el = std::abs(a[i] - b[i]);
         res += el;
     }
     return res;
@@ -107,7 +118,7 @@ T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
     T val = 0;
     for (size_t i = 0; i < len; i++) {
         for (size_t j = 0; j < a[i].size() and j < b[i].size(); j++) {
-            auto el  = std::abs(atan(a[i][j]*5) - atan(5*b[i][j]));
+            auto el  = std::abs(a[i][j] - b[i][j]);
             val += el;
         }
     }

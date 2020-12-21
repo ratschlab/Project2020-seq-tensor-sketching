@@ -44,6 +44,9 @@ DEFINE_string(o, "/tmp", "Directory where the generated sequence should be writt
 
 DEFINE_int32(embed_dim, 16, "Embedding dimension, used for all sketching methods");
 
+DEFINE_int32(num_bins, -1, "Number of bins used to discretize the sketch output"
+             ", use num_bins=-1 to use the raw sketch without binning");
+
 DEFINE_int32(tuple_length,
              3,
              "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
@@ -54,9 +57,10 @@ DEFINE_int32(w, 32, "Short hand for --window_size");
 
 DEFINE_int32(
         max_len,
-        300,
+        -1,
         "The maximum accepted sequence length for Ordered and Weighted min-hash. Must be larger "
-        "than seq_len + delta, where delta is the number of random insertions");
+        "than seq_len + delta, where delta is the number of random insertions, if max_len=-1, "
+        "its value will be set to seq_len (default=-1)");
 
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
 DEFINE_int32(s, 8, "Short hand for --stride");
@@ -134,7 +138,7 @@ struct SeqGenModule {
         Tensor<char_type> tensor_sketch(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
         // embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
         TensorSlide<char_type> tensor_slide(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length,
-                                            FLAGS_window_size, FLAGS_stride);
+                                            FLAGS_window_size, FLAGS_stride, FLAGS_seq_len);
 
         size_t num_seqs = seqs.size();
         kmer_seqs.resize(num_seqs);
@@ -330,6 +334,9 @@ struct SeqGenModule {
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
+    if (FLAGS_max_len<0) {
+        FLAGS_max_len = FLAGS_seq_len;
+    }
 
     SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_o);
     std::cout << "Generating sequences ..." << std::endl;
@@ -339,7 +346,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Computing distances ... " << std::endl;
     experiment.compute_pairwise_dists();
     std::cout << "Writing output to " << FLAGS_o << std::endl;
-    experiment.save_output();
+//    experiment.save_output();
     experiment.print_spearman();
     return 0;
 }

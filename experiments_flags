@@ -1,18 +1,15 @@
 -o=/media/amir/nvm/table/
 # number of sequences to generate and compute sketches for
---num_seqs=200
+--num_seqs=500
 --alphabet_size=4
 # tuple_len and kmer_size are sort of the same thing, maybe unify the 2?
---kmer_size=3
+--kmer_size=4
 --tuple_length=3
---stride=256
---window_size=512
+--stride=50
+--window_size=1400
 --seq_len=20000
-# how many times a kmer may repeat itself in a sequence; in theory this is --seq_len, but in practice the
-# value is waaaaay smaller; for larger k-mer sizes it's probably 2-3
---max_len=20024
-# size of the embedded space, i.e. number of hash functions used
---embed_dim=10
+--fix_len=true
+--embed_dim=50
 --mutation_pattern=pairs
 --mutation_rate=0.02
 --block_mutation_rate=0.0

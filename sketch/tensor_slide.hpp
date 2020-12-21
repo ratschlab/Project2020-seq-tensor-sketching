@@ -29,10 +29,13 @@ class TensorSlide : public Tensor<seq_type> {
                 size_t sketch_size,
                 size_t tup_len,
                 size_t win_len,
-                size_t stride)
+                size_t stride,
+                size_t seq_len)
         : Tensor<seq_type>(alphabet_size, sketch_size, tup_len), win_len(win_len), stride(stride) {
+//        : Tensor<seq_type>(alphabet_size, (sketch_size*stride+seq_len-1 )/seq_len, tup_len), win_len(win_len), stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
+        seq_len--;
     }
 
     /**
@@ -96,8 +99,15 @@ class TensorSlide : public Tensor<seq_type> {
                 }
             }
 
-            if ((i + 1) % stride == 0) { // save a sketch every stride times
-                sketches.push_back(diff(T1[1].back(), T2[1].back()));
+            sketches.push_back(diff(T1[1].back(), T2[1].back()));
+//            if ((i + 1) % stride == 0) { // save a sketch every stride times
+//                sketches.push_back(diff(T1[1].back(), T2[1].back()));
+//            }
+        }
+
+        for (auto &vec: sketches) {
+            for (auto &el: vec) {
+                el = this->discretize(el);
             }
         }
         return sketches;
