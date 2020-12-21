@@ -38,7 +38,7 @@ class SeqGen {
         Vec2D<T> seqs(num_seqs);
         gen_seq(seqs[0]);
         for (uint32_t si = 1; si < num_seqs; si++) {
-            point_mutate(seqs[si - 1], seqs[si]);
+            point_mutate(seqs[si - 1], seqs[si], mutation_rate);
             block_permute(seqs[si]);
             if (fix_len)
                 make_fix_len(seqs[si]);
@@ -94,17 +94,18 @@ class SeqGen {
     }
 
     /**
-     * Generate sequences such that every pair of sequences have approximately the same edit
-     * distance.
+     * Generate sequences with mutation rate uniformly drawn from [0,1] in order
+     * to cover an spectrum of edit distances.
      */
     template <class T>
     Vec2D<T> genseqs_uniform() {
         Vec2D<T> seqs(num_seqs);
         std::vector<T> base;
         gen_seq(base);
+        std::uniform_real_distribution<double> uniform_rate(0.0,1);
 //#pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < num_seqs; si++) {
-            point_mutate(base, seqs[si]);
+            point_mutate(base, seqs[si], uniform_rate(gen));
             block_permute(seqs[si]);
             if (fix_len)
                 make_fix_len(seqs[si]);
@@ -122,9 +123,9 @@ class SeqGen {
         while (seqs.size() < num_seqs) {
             for (auto &seq : seqs) {
                 std::vector<T> ch1, ch2;
-                point_mutate(seq, ch1);
+                point_mutate(seq, ch1, mutation_rate);
                 block_permute(ch1);
-                point_mutate(seq, ch2);
+                point_mutate(seq, ch2, mutation_rate);
                 block_permute(ch2);
                 ch1 = seq;
                 children.push_back(ch1);
@@ -177,8 +178,7 @@ class SeqGen {
     }
 
     template <class T>
-    void point_mutate(const std::vector<T> &ref, std::vector<T> &seq) {
-        float rate = mutation_rate;
+    void point_mutate(const std::vector<T> &ref, std::vector<T> &seq, float rate) {
         std::discrete_distribution<int> mut { 1 - rate, rate / 3, rate / 3, rate / 3 };
         std::uniform_int_distribution<T> unif_sub(1, alphabet_size - 1);
         std::uniform_int_distribution<T> unif_insert(0, alphabet_size - 1);
@@ -235,7 +235,7 @@ class SeqGen {
             }
             case 2: { // substitute
                 auto pos = rpos_exc(gen);
-                auto c = ins_char(gen);
+                auto c = sub_char(gen);
                 if (c == ref[pos]) {
                     c++;
                     c = (c % alphabet_size);
