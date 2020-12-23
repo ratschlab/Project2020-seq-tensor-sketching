@@ -1,7 +1,7 @@
 #pragma once
 
 #include "util/multivec.hpp"
-#include "util/timer.hpp"
+#include "util/Timer.hpp"
 
 #include <gflags/gflags.h>
 
@@ -12,6 +12,22 @@
 #include <cmath>
 
 namespace ts { // ts = Tensor Sketch
+
+
+template <class T, class = is_u_integral<T>>
+T int_pow(T x, T pow) {
+    T result = 1;
+    for (;;) {
+        if (pow & 1)
+            result *= x;
+        pow >>= 1;
+        if (!pow)
+            break;
+        x *= x;
+    }
+
+    return result;
+}
 
 /**
  * Extracts k-mers from a sequence. The k-mer is treated as a number in base alphabet_size and then
@@ -26,11 +42,10 @@ namespace ts { // ts = Tensor Sketch
  */
 template <class chr, class kmer>
 std::vector<kmer> seq2kmer(const std::vector<chr> &seq, size_t kmer_size, size_t alphabet_size) {
+    Timer timer("seq2kmer");
     if (seq.size() < (size_t)kmer_size) {
-        Timer::stop();
         return std::vector<kmer>();
     }
-    Timer::start("seq2kmer");
 
     std::vector<kmer> result(seq.size() - kmer_size + 1, 0);
     for (size_t i=0; i<result.size(); i++) {
@@ -41,7 +56,6 @@ std::vector<kmer> seq2kmer(const std::vector<chr> &seq, size_t kmer_size, size_t
         }
     }
 
-    Timer::stop();
     return result;
 }
 
@@ -221,7 +235,7 @@ size_t lcs_distance(const std::vector<seq_type> &s1, const std::vector<seq_type>
 
 template <class seq_type>
 size_t edit_distance(const std::vector<seq_type> &s1, const std::vector<seq_type> &s2) {
-    Timer::start("edit_distance");
+    Timer timer("edit_distance");
     const size_t m(s1.size());
     const size_t n(s2.size());
 
@@ -256,24 +270,10 @@ size_t edit_distance(const std::vector<seq_type> &s1, const std::vector<seq_type
 
     size_t result = costs[n];
 
-    Timer::stop();
     return result;
 }
 
-template <class T, class = is_u_integral<T>>
-T int_pow(T x, T pow) {
-    T result = 1;
-    for (;;) {
-        if (pow & 1)
-            result *= x;
-        pow >>= 1;
-        if (!pow)
-            break;
-        x *= x;
-    }
 
-    return result;
-}
 
 std::string flag_values();
 

@@ -7,13 +7,14 @@
 #include "sketch/tensor_slide.hpp"
 #include "util/multivec.hpp"
 #include "util/spearman.hpp"
-#include "util/timer.hpp"
+#include "util/Timer.hpp"
 #include "util/progress.hpp"
 #include "util/utils.hpp"
+#include "util/transformer.hpp"
 
 #include <filesystem>
-#include <fstream>
 #include <memory>
+#include <omp.h>
 
 
 DEFINE_uint32(kmer_size, 3, "Kmer size for MH, OMH, WMH");
@@ -44,9 +45,6 @@ DEFINE_string(o, "/tmp", "Directory where the generated sequence should be writt
 
 DEFINE_int32(embed_dim, 16, "Embedding dimension, used for all sketching methods");
 
-DEFINE_int32(num_bins, -1, "Number of bins used to discretize the sketch output"
-             ", use num_bins=-1 to use the raw sketch without binning");
-
 DEFINE_int32(tuple_length,
              3,
              "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
@@ -75,6 +73,35 @@ DEFINE_string(mutation_pattern,
               "linear",
               "the mutational pattern, can be 'linear', 'uniform' or 'tree'");
 DEFINE_validator(mutation_pattern, &ValidateMutationPattern);
+
+static bool ValidateTransformation(const char *flagname, const std::string &value) {
+    if (value == "none" || value == "atan" || value == "disc" )
+        return true;
+    printf("Invalid value for --%s: %s\n", flagname, value.c_str());
+    return false;
+}
+DEFINE_string(transform,
+              "none",
+              "transform TS and TSS output, can be 'none', 'atan' or 'disc'");
+DEFINE_validator(transform, &ValidateTransformation);
+
+
+static bool ValidateHashAlg(const char *flagname, const std::string &value) {
+    if (value == "uniform" || value == "crc32" )
+        return true;
+    printf("Invalid value for --%s: %s\n", flagname, value.c_str());
+    return false;
+}
+DEFINE_string(hash_alg,
+              "uniform",
+              "hash algorithm to be used as basis, can be 'uniform', or 'crc32'");
+DEFINE_validator(hash_alg, &ValidateHashAlg);
+
+DEFINE_uint32(num_bins, 256, "Number of bins used to discretize, if --transform=disc");
+
+DEFINE_uint32(num_threads, 1, "number of OpenMP threads, default: 1, "
+                              "use --num_threads=0 to use all available cores");
+
 
 void adjust_short_names() {
     if (!gflags::GetCommandLineFlagInfoOrDie("K").is_default) {
@@ -127,6 +154,16 @@ struct SeqGenModule {
         } else if (FLAGS_mutation_pattern == "tree") {
             seqs = seq_gen.genseqs_tree<char_type>(FLAGS_sequence_seeds);
         }
+
+
+        size_t num_seqs = seqs.size();
+        kmer_seqs.resize(num_seqs);
+        wmh_sketch.resize(num_seqs);
+        mh_sketch.resize(num_seqs);
+        omh_sketch.resize(num_seqs);
+        ten_sketch.resize(num_seqs);
+        slide_sketch.resize(num_seqs);
+
     }
 
     void compute_sketches() {
@@ -136,38 +173,49 @@ struct SeqGenModule {
         OrderedMinHash<kmer_type> omin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len,
                                             FLAGS_tuple_length);
         Tensor<char_type> tensor_sketch(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
-        // embed_type slide_sketch_dim = FLAGS_embed_dim / FLAGS_stride + 1;
         TensorSlide<char_type> tensor_slide(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length,
                                             FLAGS_window_size, FLAGS_stride, FLAGS_seq_len);
+        min_hash.set_hash_algorithm(FLAGS_hash_alg);
+        wmin_hash.set_hash_algorithm(FLAGS_hash_alg);
+        omin_hash.set_hash_algorithm(FLAGS_hash_alg);
 
-        size_t num_seqs = seqs.size();
-        kmer_seqs.resize(num_seqs);
-        wmh_sketch.resize(num_seqs);
-        mh_sketch.resize(num_seqs);
-        omh_sketch.resize(num_seqs);
-        ten_sketch.resize(num_seqs);
-        slide_sketch.resize(num_seqs);
-        start_progress_bar(seqs.size());
-//#pragma omp parallel for default(shared) private(min_hash, wmin_hash, omin_hash)
-        for (size_t si = 0; si < num_seqs; si++) {
-            kmer_seqs[si]
-                    = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
-            mh_sketch[si] = min_hash.compute(kmer_seqs[si]);
-            wmh_sketch[si] = wmin_hash.compute(kmer_seqs[si]);
-            omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
-            ten_sketch[si] = tensor_sketch.compute(seqs[si]);
-            slide_sketch[si] = tensor_slide.compute(seqs[si]);
-            iterate_progress_bar();
-        }
+
+        pbar_start(seqs.size());
+#pragma omp parallel for
+            for (size_t si = 0; si < seqs.size(); si++) {
+                kmer_seqs[si] = seq2kmer<char_type, kmer_type>(
+                        seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
+                mh_sketch[si] = min_hash.compute(kmer_seqs[si]);
+                wmh_sketch[si] = wmin_hash.compute(kmer_seqs[si]);
+                omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
+                ten_sketch[si] = tensor_sketch.compute(seqs[si]);
+                slide_sketch[si] = tensor_slide.compute(seqs[si]);
+                pbar_inc();
+            }
+
         std::cout << std::endl;
+
+    }
+
+    // discretize or scale results
+    void transform_sketches() {
+        if (FLAGS_transform == "disc") {
+            discretize<double> disc(FLAGS_num_bins);
+            apply2D(ten_sketch, disc);
+            apply3D(slide_sketch, disc);
+        } else if (FLAGS_transform == "atan") {
+            atan_scaler<double> atan;
+            apply2D(ten_sketch, atan);
+            apply3D(slide_sketch, atan);
+        }
     }
 
     void compute_pairwise_dists() {
         int num_seqs = seqs.size();
         if (FLAGS_mutation_pattern == "pairs") {
             dists = new3D<double>(8, num_seqs, 1, -1);
-            start_progress_bar(seqs.size()/2);
-#pragma omp parallel for default(shared) schedule(dynamic)
+            pbar_start(seqs.size() / 2);
+#pragma omp parallel for default(shared)
             for (size_t i = 0; i < seqs.size(); i += 2) {
                 int j = i + 1;
                 dists[0][i][0] = edit_distance(seqs[i], seqs[j]);
@@ -176,12 +224,12 @@ struct SeqGenModule {
                 dists[3][i][0] = hamming_dist(omh_sketch[i], omh_sketch[j]);
                 dists[4][i][0] = l1_dist(ten_sketch[i], ten_sketch[j]);
                 dists[5][i][0] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
-                iterate_progress_bar();
+                pbar_inc();
             }
         } else {
             dists = new3D<double>(8, num_seqs, num_seqs, 0);
-            start_progress_bar(seqs.size());
-#pragma omp parallel for default(shared) schedule(dynamic)
+            pbar_start(seqs.size());
+#pragma omp parallel for default(shared)
             for (size_t i = 0; i < seqs.size(); i++) {
                 for (size_t j = i + 1; j < seqs.size(); j++) {
                     dists[0][i][j] = edit_distance(seqs[i], seqs[j]);
@@ -191,7 +239,7 @@ struct SeqGenModule {
                     dists[4][i][j] = l1_dist(ten_sketch[i], ten_sketch[j]);
                     dists[5][i][j] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
                 }
-                iterate_progress_bar();
+                pbar_inc();
             }
         }
         std::cout << std::endl;
@@ -255,7 +303,7 @@ struct SeqGenModule {
 
         fo.open(output_dir / "timing.csv");
         assert(fo.is_open());
-        fo << Timer::summary(FLAGS_num_seqs);
+        fo << timer_summary(FLAGS_num_seqs);
         fo.close();
 
         write_fasta(output_dir / "seqs.fa", seqs);
@@ -340,20 +388,30 @@ struct SeqGenModule {
 
 
 int main(int argc, char *argv[]) {
+
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     if (FLAGS_max_len<0) {
         FLAGS_max_len = FLAGS_seq_len;
     }
+    if (FLAGS_num_threads > 0)
+        omp_set_num_threads(FLAGS_num_threads);
 
+    timer_start("main_func"); // start measuring the main execution time
     SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_o);
     std::cout << "Generating sequences ..." << std::endl;
     experiment.generate_sequences();
     std::cout << "Computing sketches ... " << std::endl;
     experiment.compute_sketches();
+    std::cout << "Transform sketches ... " << std::endl;
+    experiment.transform_sketches();
     std::cout << "Computing distances ... " << std::endl;
     experiment.compute_pairwise_dists();
+    experiment.print_spearman();
+    timer_stop(); // stop measuring time
+
     std::cout << "Writing output to " << FLAGS_o << std::endl;
     experiment.save_output();
-    experiment.print_spearman();
+
+
     return 0;
 }

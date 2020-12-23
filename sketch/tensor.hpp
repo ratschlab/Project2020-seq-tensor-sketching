@@ -6,7 +6,9 @@
 #include <iostream> //todo: remove
 #include <random>
 #include <cmath>
-#include "util/timer.hpp"
+#include "util/Timer.hpp"
+#include "nmmintrin.h" // for SSE4.2
+#include "immintrin.h" // for AVX
 
 namespace ts { // ts = Tensor Sketch
 
@@ -42,13 +44,6 @@ class Tensor {
                 signs[h][c] = rand_bool(gen);
             }
         }
-        double pie = std::atan(1)*4;
-        bins = std::vector<double>(num_bins);
-        for (size_t b = 0; b < num_bins; b++) {
-            bins[b] = std::tan(pie * (((double) b + .5) / num_bins - .5 ));
-        }
-        bins.push_back(std::numeric_limits<double>::max());
-        bins.insert(bins.begin(), -std::numeric_limits<double>::max());
     }
 
     /**
@@ -57,7 +52,7 @@ class Tensor {
      * @return an array of size #sketch_size containing the sequence's sketch
      */
     std::vector<double> compute(const std::vector<seq_type> &seq) {
-        Timer::start("tensor_sketch");
+        Timer timer("tensor_sketch");
         // Tp corresponds to T+, Tm to T- in the paper; Tp[0], Tm[0] are sentinels and contain the
         // initial condition for empty strings; Tp[p], Tm[p] represent the partial sketch when
         // considering hashes h1...hp, over the prefix x1...xi. The final result is then
@@ -86,10 +81,7 @@ class Tensor {
         std::vector<double> sketch(sketch_size, 0);
         for (size_t m = 0; m < sketch_size; m++) {
             sketch[m] = Tp[subsequence_len][m] - Tm[subsequence_len][m];
-            sketch[m] = discretize(sketch[m]);
         }
-
-        Timer::stop();
 
         return sketch;
     }
@@ -123,17 +115,10 @@ class Tensor {
                                          double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
-        for (uint32_t i = 0; i < a.size(); i++) {
+        for (uint32_t i = 0; i < len; i++) {
             a[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
             assert(a[i] <= 1 + 1e-5 && a[i] >= -1e-5);
         }
-    }
-
-    double discretize(double val) {
-//        auto bin = std::upper_bound(bins.begin(), bins.end(), val) - bins.begin();
-        auto bin = atan(val);
-//        auto bin = val;
-        return bin;
     }
 
     /** Size of the alphabet over which sequences to be sketched are defined, e.g. 4 for DNA */
@@ -142,8 +127,7 @@ class Tensor {
     size_t sketch_size;
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
     size_t subsequence_len;
-    /** number of bins used to discretize the output*/
-    size_t num_bins = 1000;
+
 
     /**
      * Denotes the hash functions h1,....ht:A->{1....D}, where t is #subsequence_len and D is
@@ -154,8 +138,6 @@ class Tensor {
     /** The sign functions s1...st:A->{-1,1} */
     Vec2D<bool> signs;
 
-    // bin edges used to discretize the sketch output
-    std::vector<double> bins;
 };
 
 } // namespace ts

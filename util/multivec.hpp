@@ -2,6 +2,8 @@
 
 #include <type_traits>
 #include <vector>
+#include <functional>
+#include "util/transformer.hpp"
 
 namespace ts { // ts = Tensor Sketch
 
@@ -25,6 +27,27 @@ auto new2D(int d1, int d2, T val = 0) {
 template <class T>
 auto new3D(int d1, int d2, int d3, T val = 0) {
     return Vec3D<T>(d1, new2D(d2, d3, val));
+}
+
+template <class T>
+void apply1D(std::vector<T> &vec, const transformer<T> &tr) {
+    for (auto &v : vec) {
+        v = tr.transform(v);
+    }
+}
+
+template <class T>
+void apply2D(Vec2D<T> &vec2D, const transformer<T> &tr) {
+    for (auto & vec : vec2D) {
+        apply1D(vec, tr);
+    }
+}
+
+template <class T>
+void apply3D(Vec3D<double> &vec3D, const transformer<T> &tr) {
+    for (auto &vec2D : vec3D) {
+       apply2D(vec2D, tr);
+    }
 }
 
 } // namespace ts

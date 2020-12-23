@@ -7,7 +7,7 @@
 #include "sketch/tensor_slide.hpp"
 #include "util/multivec.hpp"
 #include "util/spearman.hpp"
-#include "util/timer.hpp"
+#include "util/Timer.hpp"
 #include "util/utils.hpp"
 
 #include <filesystem>

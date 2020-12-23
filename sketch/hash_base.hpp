@@ -1,13 +1,20 @@
 #pragma once
 
-#include "util/timer.hpp"
+#include "util/Timer.hpp"
 #include "util/utils.hpp"
 
 #include <random>
 #include <unordered_map>
 #include <unordered_set>
+#include <algorithm>
+#include <immintrin.h>
 
 namespace ts {
+
+enum hash_algorithm_enum { uniform, crc32};
+
+
+
 template <typename T>
 class HashBase {
   public:
@@ -22,9 +29,20 @@ class HashBase {
         std::random_device rd;
         rng = std::mt19937(rd());
         rand = std::uniform_int_distribution<T>(0, this->hash_size - 1);
+        base = rand(rng);
+        base2 = rand(rng);
     }
 
     void set_hashes_for_testing(const std::vector<std::unordered_map<T, T>> &h) { hashes = h; }
+
+    void set_hash_algorithm(std::string name) {
+        if (name == "uniform") {
+            hash_algorithm = hash_algorithm_enum::uniform;
+        } else if (name == "crc32") {
+            hash_algorithm = hash_algorithm_enum::crc32;
+        }
+    }
+
 
   protected:
     T set_size;
@@ -35,18 +53,40 @@ class HashBase {
      * Returns the hash value for the index-th hash function.
      * Since the Hashes are generated on demand.
      */
-    T hash(size_t index, size_t key) {
-        if (hashes[index].contains(key)) {
-            return hashes[index][key];
+    uint32_t hash(size_t index, size_t key) {
+        T val = -1;
+        switch (hash_algorithm) {
+            case hash_algorithm_enum::uniform:
+                T random_hash;
+                bool contains;
+//#pragma omp critical
+                {
+                    contains = hashes[index].contains(key);
+                };
+                if (contains) {
+                    random_hash = hashes[index][key];
+                } else {
+//#pragma omp critical
+                    while (true) {
+                        random_hash = rand(rng);
+                        if (!hash_values[index].contains(random_hash)) {
+                            hashes[index][key] = random_hash;
+                            hash_values[index].insert(random_hash);
+                            break;
+                        }
+                    }
+                }
+                assert(random_hash>=0 && random_hash<hash_size && " Hash values are not in [0,set_size-1] range");
+                val = random_hash;
+                break;
+            case hash_algorithm_enum::crc32:
+                val = _mm_crc32_u32((unsigned int)base,(unsigned int)key);
+                val = _mm_crc32_u32((unsigned int)val,(unsigned int)index);
+                return val;
         }
-        while (true) {
-            T random_hash = rand(rng);
-            if (!hash_values[index].contains(random_hash)) {
-                hashes[index][key] = random_hash;
-                hash_values[index].insert(random_hash);
-                return random_hash;
-            }
-        }
+
+
+        return val;
     }
 
   private:
@@ -56,6 +96,12 @@ class HashBase {
     std::vector<std::unordered_set<T>> hash_values;
     std::uniform_int_distribution<T> rand;
     std::mt19937 rng;
+    uint32_t base, base2;
+
+    hash_algorithm_enum hash_algorithm = hash_algorithm_enum::uniform;
 };
+
+
+
 
 } // namespace ts

@@ -10,7 +10,7 @@ size_t global_num;
 size_t global_iter;
 size_t global_bar;
 
-void start_progress_bar(size_t num, size_t bar_len = 100) {
+void pbar_start(size_t num, size_t bar_len = 100) {
     if (num < bar_len)
         bar_len= num;
     global_num = num;
@@ -18,7 +18,7 @@ void start_progress_bar(size_t num, size_t bar_len = 100) {
     global_bar = bar_len;
 }
 
-void iterate_progress_bar() {
+void pbar_inc() {
     // create aliases
     auto &iter = global_iter, num=global_num, bar = global_bar;
 

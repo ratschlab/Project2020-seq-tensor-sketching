@@ -2,7 +2,7 @@
 
 #include "hash_base.hpp"
 
-#include "util/timer.hpp"
+#include "util/Timer.hpp"
 #include "util/utils.hpp"
 
 #include <cstdint>
@@ -37,10 +37,9 @@ class MinHash : public HashBase<T> {
      * @return the min-hash sketch of #kmers
      */
     std::vector<T> compute(const std::vector<T> &kmers) {
-        Timer::start("minhash");
+        Timer timer("minhash");
         std::vector<T> sketch(this->sketch_dim);
         if (kmers.empty()) {
-            Timer::stop();
             return sketch;
         }
 
@@ -56,7 +55,6 @@ class MinHash : public HashBase<T> {
             }
             sketch[si] = min_char;
         }
-        Timer::stop();
         return sketch;
     }
 
@@ -71,10 +69,10 @@ class MinHash : public HashBase<T> {
      */
     template <typename C>
     std::vector<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
-        Timer::start("compute_sequence");
+        timer_start("compute_sequence");
         std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
         std::vector<T> sketch = compute(kmers);
-        Timer::stop();
+        timer_stop();
         return sketch;
     }
 };

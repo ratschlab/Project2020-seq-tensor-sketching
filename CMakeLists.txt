@@ -7,14 +7,14 @@ include_directories(.)
 
 #set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -O0")
 #set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -O0")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -msse4")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -msse4")
 
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
 file(GLOB util_files "util/*.cpp")
-add_library(util ${util_files} util/progress.hpp)
+add_library(util ${util_files} util/progress.hpp util/transformer.hpp)
 target_link_libraries(util gflags OpenMP::OpenMP_CXX)
 
 file(GLOB sequence_files "sequence/*.cpp")

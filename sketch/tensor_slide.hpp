@@ -30,14 +30,10 @@ class TensorSlide : public Tensor<seq_type> {
                 size_t tup_len,
                 size_t win_len,
                 size_t stride,
-                size_t seq_len = -1)
-        : Tensor<seq_type>(alphabet_size, (sketch_size * stride + seq_len - 1)/seq_len, tup_len), win_len(win_len), stride(stride) {
+                size_t seq_len = 0)
+        : Tensor<seq_type>(alphabet_size, calc_dim(stride,seq_len,sketch_size), tup_len), win_len(win_len), stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
-        // if seq_len not given, set it to stride
-        if (seq_len<0) {
-            seq_len = stride;
-        }
     }
 
     /**
@@ -46,7 +42,7 @@ class TensorSlide : public Tensor<seq_type> {
      * @return seq.size()/stride sketches of size #sketch_size
      */
     Vec2D<double> compute(const std::vector<seq_type> &seq) {
-        Timer::start("tensor_slide_sketch");
+        Timer timer("tensor_slide_sketch");
         Vec2D<double> sketches;
         if (seq.size() < this->subsequence_len) {
             return new2D<double>(seq.size() / this->stride, this->sketch_size, double(0));
@@ -107,15 +103,17 @@ class TensorSlide : public Tensor<seq_type> {
             }
         }
 
-        for (auto &vec: sketches) {
-            for (auto &el: vec) {
-                el = this->discretize(el);
-            }
-        }
-
-        Timer::stop();
-
         return sketches;
+    }
+
+    size_t calc_dim(size_t step, size_t seq_len, size_t sketch_dim) {
+        // if seq_len=0, default behavior: no change in dimension
+        if (seq_len == 0) {
+            return sketch_dim;
+        }
+        size_t dim = (sketch_dim * step + seq_len - 1)/seq_len; // lower dimension
+        dim = pow(2, ceil(log(dim)/log(2))); // find the next power of 2
+        return dim;
     }
 
   private:
