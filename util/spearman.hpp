@@ -5,22 +5,20 @@
 #include <cmath>
 using namespace std;
 
-// Function returns the rank vector of a set of observations v
+// Function returns the 1-based rank vector of a set of observations v
 template <typename T>
-std::vector<double> rankify(std::vector<T> &v) {
+std::vector<double> rankify(const std::vector<T> &v) {
+    std::vector<T> sorted = v;
+    std::sort(begin(sorted), end(sorted));
+
     std::vector<double> result(v.size());
 
     for (size_t i = 0; i < v.size(); i++) {
-        size_t r = 1, s = 1;
+        const auto lb = std::lower_bound(std::begin(sorted), std::end(sorted), v[i]);
+        const auto ub = std::upper_bound(std::begin(sorted), std::end(sorted), v[i]);
+        const size_t r = 1 + (lb - std::begin(sorted)), s = ub - lb;
 
-        for (size_t j = 0; j < v.size(); j++) {
-            if (v[j] < v[i])
-                r++;
-            if (v[j] == v[i])
-                s++;
-        }
-
-        // Use Fractional Rank formula fractional_rank = r + (n-1)/2
+        // Use Fractional Rank formula fractional_rank = r + (s-1)/2
         result[i] = r + (s - 1) * 0.5;
     }
 
@@ -29,7 +27,7 @@ std::vector<double> rankify(std::vector<T> &v) {
 
 /* Compute the Pearson correlation coefficient of a and b */
 template <typename T>
-double pearson(std::vector<T> &a, std::vector<T> &b) {
+double pearson(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     T sum_a = 0, sum_b = 0, sum_ab = 0;
     T square_sum_a = 0, square_sum_b = 0;
@@ -57,7 +55,7 @@ double pearson(std::vector<T> &a, std::vector<T> &b) {
 }
 
 template <typename T>
-double spearman(std::vector<T> &a, std::vector<T> &b) {
+double spearman(const std::vector<T> &a, const std::vector<T> &b) {
     std::vector<double> rank1 = rankify(a);
     std::vector<double> rank2 = rankify(b);
     return pearson(rank1, rank2);
