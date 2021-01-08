@@ -7,7 +7,7 @@
 #include "sketch/tensor_slide.hpp"
 #include "util/multivec.hpp"
 #include "util/spearman.hpp"
-#include "util/Timer.hpp"
+#include "util/timer.hpp"
 #include "util/utils.hpp"
 
 #include <filesystem>
@@ -109,8 +109,8 @@ struct SeqGenModule {
 
     void generate_sequences() {
         ts::SeqGen seq_gen(alphabet_size, FLAGS_fix_len, FLAGS_max_num_blocks, FLAGS_min_num_blocks,
-                           FLAGS_num_seqs, FLAGS_seq_len, (float)FLAGS_mutation_rate,
-                           (float)FLAGS_block_mutation_rate);
+                           FLAGS_num_seqs, FLAGS_seq_len, (double)FLAGS_mutation_rate,
+                           (double)FLAGS_block_mutation_rate);
 
         if (FLAGS_mutation_pattern == "uniform") {
             seqs = seq_gen.genseqs_uniform<char_type>();

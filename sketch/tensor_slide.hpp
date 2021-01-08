@@ -55,16 +55,16 @@ class TensorSlide : public Tensor<seq_type> {
         auto T1 = new3D<double>(tup_len + 2, tup_len + 1, this->sketch_size, 0);
         auto T2 = new3D<double>(tup_len + 2, tup_len + 1, this->sketch_size, 0);
 
-        for (size_t p = 0; p <= tup_len; p++) {
+        for (uint32_t p = 0; p <= tup_len; p++) {
             T1[p + 1][p][0] = 1;
         }
 
         // T[p][q] at step i represents the sketch for seq[i-w+1]...seq[i] when only using hash
         // functions 1<=p,p+1,...q<=t, where t is the sketch size
-        for (size_t i = 0; i < seq.size(); i++) {
-            for (size_t p = 1; p <= tup_len; p++) {
+        for (uint32_t i = 0; i < seq.size(); i++) {
+            for (uint32_t p = 1; p <= tup_len; p++) {
                 // q-p must be smaller than i, hence the min in the condition
-                for (uint32_t q = std::min(p + i, (size_t)tup_len); q >= p; q--) {
+                for (uint32_t q = std::min(p + i, (uint32_t)tup_len); q >= p; q--) {
                     double z = (double)(q - p + 1) / std::min(i + 1, win_len + 1);
                     auto r = hashes[q - 1][seq[i]];
                     bool s = signs[q - 1][seq[i]];
@@ -80,11 +80,11 @@ class TensorSlide : public Tensor<seq_type> {
 
             if (i >= win_len) { // only start deleting from front after reaching #win_len
                 uint64_t ws = i - win_len; // the element to be removed from the sketch
-                for (size_t diff = 0; diff < tup_len; ++diff) {
-                    for (size_t p = 1; p <= tup_len - diff; p++) {
+                for (uint32_t diff = 0; diff < tup_len; ++diff) {
+                    for (uint32_t p = 1; p <= tup_len - diff; p++) {
                         auto r = hashes[p - 1][seq[ws]];
                         bool s = signs[p - 1][seq[ws]];
-                        size_t q = p + diff;
+                        uint32_t q = p + diff;
                         // this computes t/(w-t); in our case t (the tuple length) is diff+1
                         double z = (double)(diff + 1) / (win_len - diff);
                         if (s) {
@@ -110,12 +110,12 @@ class TensorSlide : public Tensor<seq_type> {
      * the overal sketch size is comparable to the other methods.
      * It is set to sketch-dim/stride, rounded to the next power of 2.
      */
-    size_t calc_dim(size_t stride, size_t seq_len, size_t sketch_dim) {
+    uint32_t calc_dim(uint32_t stride, uint32_t seq_len, uint32_t sketch_dim) {
         // if seq_len=0, default behavior: no change in dimension
         if (seq_len == 0) {
             return sketch_dim;
         }
-        size_t dim = (sketch_dim * stride + seq_len - 1)/seq_len; // lower dimension
+        uint32_t dim = (sketch_dim * stride + seq_len - 1)/seq_len; // lower dimension
         dim = pow(2, ceil(log(dim)/log(2))); // find the next power of 2
         return dim;
     }
@@ -130,8 +130,8 @@ class TensorSlide : public Tensor<seq_type> {
         return result;
     }
 
-    size_t win_len;
-    size_t stride;
+    uint32_t win_len;
+    uint32_t stride;
 };
 
 } // namespace ts

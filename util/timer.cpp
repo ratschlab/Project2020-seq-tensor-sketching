@@ -1,25 +1,14 @@
 #include <omp.h>
 #include <utility>
 #include <vector>
-#include "Timer.hpp"
+#include "timer.hpp"
 
 namespace ts {
 
 using namespace std::chrono;
 
-std::vector<std::string> last_func_vec(100);
-std::vector<time_point<high_resolution_clock>> last_time_vec(100);
 std::vector<std::map<std::string, nanoseconds>> durations_vec(100);
 
-void timer_start(std::string func_name) {
-    auto tid = omp_get_thread_num();
-    auto &last_time = last_time_vec[tid];
-    auto &last_func = last_func_vec[tid];
-    assert(last_func.empty());
-    last_time = high_resolution_clock::now();
-    last_func = std::move(func_name);
-func_name = "";
-}
 
 void timer_add_duration(const std::string &func_name, nanoseconds dur) {
     auto tid = omp_get_thread_num();
@@ -32,19 +21,7 @@ void timer_add_duration(const std::string &func_name, nanoseconds dur) {
     }
 }
 
-void timer_stop() {
-    auto tid = omp_get_thread_num();
-    auto &last_time = last_time_vec[tid];
-    auto &last_func = last_func_vec[tid];
-
-    auto curr_time = high_resolution_clock::now();
-    auto dur = duration_cast<nanoseconds>(curr_time - last_time);
-    timer_add_duration(last_func, dur);
-    last_func = "";
-}
-
 std::string timer_summary(uint32_t num_seqs) {
-//    start("edit_distance");
     std::map<std::string, std::string> trans= {
             { "edit_distance", "ED" },
             { "minhash", "MH" },
@@ -52,7 +29,6 @@ std::string timer_summary(uint32_t num_seqs) {
             { "ordered_minhash_flat", "OMH" },
             { "tensor_sketch", "TenSketch" },
             { "tensor_slide_sketch", "TenSlide" },
-            {"main_func" , "Main"},
             {"seq2kmer", "S2K"}
     };
     std::string str;
@@ -68,7 +44,7 @@ std::string timer_summary(uint32_t num_seqs) {
     }
         for (auto const &[arg_name, arg] : acc) {
             auto count = arg;
-            // add seq2kmer time to the sketchin gtime of MH* methods
+            // add seq2kmer time to the sketch time of MH* methods
             if (arg_name.find("hash") != std::string::npos) {
                 count += acc["seq2kmer"];
             }

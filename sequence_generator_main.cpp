@@ -111,9 +111,9 @@ int main(int argc, char *argv[]) {
                        FLAGS_num_seqs,
                        FLAGS_seq_len,
                        FLAGS_group_size,
-                       (float)FLAGS_mutation_rate,
-                       (float)FLAGS_min_mutation_rate,
-                       (float)FLAGS_block_mutation_rate,
+                       (double)FLAGS_mutation_rate,
+                       (double)FLAGS_min_mutation_rate,
+                       (double)FLAGS_block_mutation_rate,
                        FLAGS_mutation_type);
 
     if (FLAGS_phylogeny_shape == "path") {

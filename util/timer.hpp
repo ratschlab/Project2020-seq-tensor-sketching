@@ -12,14 +12,7 @@ namespace ts { // ts = Tensor Sketch
 
 using namespace std::chrono;
 
-//extern std::map<std::string, std::chrono::nanoseconds> durations;
-extern std::vector<std::string> last_func_vec;
-extern std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> last_time_vec;
 extern std::vector<std::map<std::string, std::chrono::nanoseconds>> durations_vec;
-
-void timer_start(std::string func_name);
-
-void timer_stop();
 
 void timer_add_duration(const std::string &func_name, std::chrono::nanoseconds dur) ;
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/Timer.hpp"
+#include "util/timer.hpp"
 #include "util/utils.hpp"
 
 #include <random>
@@ -55,8 +55,8 @@ class HashBase {
     uint32_t hash(size_t index, size_t key) {
         T val = -1;
         switch (hash_algorithm) {
+            T random_hash;
             case hash_algorithm_enum::uniform:
-                T random_hash;
                 if (hashes[index].contains(key)) {
                     random_hash = hashes[index][key];
                 } else {

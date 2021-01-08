@@ -7,7 +7,7 @@
 #include "sketch/tensor_slide.hpp"
 #include "util/multivec.hpp"
 #include "util/spearman.hpp"
-#include "util/Timer.hpp"
+#include "util/timer.hpp"
 #include "util/progress.hpp"
 #include "util/utils.hpp"
 #include "util/transformer.hpp"
@@ -20,9 +20,6 @@
 DEFINE_uint32(kmer_size, 3, "Kmer size for MH, OMH, WMH");
 DEFINE_uint32(k, 3, "Short hand for --kmer_size");
 
-//DEFINE_string(alphabet,
-//              "dna4",
-//              "The alphabet over which sequences are defined (dna4, dna5, protein)");
 DEFINE_int32(alphabet_size, 4, "size of alphabet for synthetic sequence generation");
 
 DEFINE_int32(max_num_blocks, 4, "Maximum number of blocks for block permutation");
@@ -151,7 +148,7 @@ struct SeqGenModule {
     Vec2D<embed_type> ten_sketch;
     Vec3D<embed_type> slide_sketch;
     Vec2D<double> dists;
-    std::vector<std::pair<size_t,size_t>> pairs;
+    std::vector<std::pair<uint32_t,uint32_t>> pairs;
 
 
     std::filesystem::path output_dir;
@@ -165,9 +162,9 @@ struct SeqGenModule {
                            FLAGS_num_seqs,
                            FLAGS_seq_len,
                            FLAGS_group_size,
-                           (float)FLAGS_mutation_rate,
-                           (float)FLAGS_min_mutation_rate,
-                           (float)FLAGS_block_mutation_rate,
+                           (double)FLAGS_mutation_rate,
+                           (double)FLAGS_min_mutation_rate,
+                           (double)FLAGS_block_mutation_rate,
                            FLAGS_mutation_type);
 
 
@@ -178,7 +175,7 @@ struct SeqGenModule {
         }
 
 
-        size_t num_seqs = seqs.size();
+        uint32_t num_seqs = seqs.size();
         kmer_seqs.resize(num_seqs);
         wmh_sketch.resize(num_seqs);
         mh_sketch.resize(num_seqs);
@@ -189,7 +186,7 @@ struct SeqGenModule {
     }
 
     void compute_sketches() {
-        embed_type set_size = int_pow<size_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
+        embed_type set_size = int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
         MinHash<kmer_type> min_hash(set_size, FLAGS_embed_dim);
         WeightedMinHash<kmer_type> wmin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len);
         OrderedMinHash<kmer_type> omin_hash(set_size, FLAGS_embed_dim, FLAGS_max_len,
@@ -204,7 +201,7 @@ struct SeqGenModule {
 
         PB_init(seqs.size());
 #pragma omp parallel for
-        for (size_t si = 0; si < seqs.size(); si++) {
+        for (uint32_t si = 0; si < seqs.size(); si++) {
             kmer_seqs[si] = seq2kmer<char_type, kmer_type>(
                     seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
             mh_sketch[si] = min_hash.compute(kmer_seqs[si]);
@@ -278,12 +275,6 @@ struct SeqGenModule {
         fo.open(output_dir / "conf");
         assert(fo.is_open());
         fo << flag_values();
-        fo.close();
-
-        // legacy: to be able to run old matlab scripts
-        fo.open(output_dir / "legacy_conf.csv");
-        assert(fo.is_open());
-        fo << legacy_config();
         fo.close();
 
         fo.open(output_dir / "timing.csv");
@@ -372,7 +363,6 @@ int main(int argc, char *argv[]) {
     if (FLAGS_num_threads > 0)
         omp_set_num_threads(FLAGS_num_threads);
 
-    timer_start("main_func"); // start measuring the main execution time
     SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_o);
     std::cout << "Generating sequences ..." << std::endl;
     experiment.generate_sequences();
@@ -383,7 +373,6 @@ int main(int argc, char *argv[]) {
     std::cout << "Computing distances ... " << std::endl;
     experiment.compute_pairwise_dists();
     experiment.print_spearman();
-    timer_stop(); // stop measuring time
 
     std::cout << "Writing output to " << FLAGS_o << std::endl;
     experiment.save_output();

@@ -19,9 +19,9 @@ class SeqGen {
            uint32_t num_seqs,
            uint32_t seq_len,
            uint32_t  group_size,
-           float mutation_rate,
-           float min_mutation_rate,
-           float block_mutation_rate,
+           double mutation_rate,
+           double min_mutation_rate,
+           double block_mutation_rate,
            std::string mutation_type)
         : alphabet_size(alphabet_size),
           fix_len(fix_len),
@@ -97,7 +97,7 @@ class SeqGen {
 //        Vec2D<T> seqs(num_seqs);
 //        std::vector<T> base;
 //        random_sequence(base, seq_len);
-//        std::uniform_real_distribution<float> uniform_rate(0.0,1);
+//        std::uniform_real_distribution<double> uniform_rate(0.0,1);
 ////#pragma omp parallel for default(shared)
 //        for (uint32_t si = 0; si < num_seqs; si++) {
 //            mutate_rate(base, seqs[si], uniform_rate(gen));
@@ -190,7 +190,7 @@ class SeqGen {
 
     template <class T>
     void mutate(const std::vector<T> &ref, std::vector<T> &seq) {
-        std::uniform_real_distribution<float> unif(min_mutation_rate, mutation_rate);
+        std::uniform_real_distribution<double> unif(min_mutation_rate, mutation_rate);
         if (mutation_type == "edit") {
             mutate_edits(ref, seq, unif(gen));
         } else if (mutation_type == "rate") {
@@ -212,7 +212,7 @@ class SeqGen {
      * @param rate : probability of mutation at each index
      */
     template <class T>
-    void mutate_rate(const std::vector<T> &ref, std::vector<T> &seq, float rate) {
+    void mutate_rate(const std::vector<T> &ref, std::vector<T> &seq, double rate) {
         assert((rate>=0.0) && (rate<= 1.0) && " rate must be strictly in the range [0,1]");
         // probabilities for each index position: no mutation, insert, delete, substitute
         std::discrete_distribution<int> mut { 1 - rate, rate / 3, rate / 3, rate / 3 };
@@ -252,10 +252,10 @@ class SeqGen {
      * @param ed_norm : normalized edit operations
      */
     template <class T>
-    void mutate_edits(const std::vector<T> &ref, std::vector<T> &seq, float ed_norm) {
+    void mutate_edits(const std::vector<T> &ref, std::vector<T> &seq, double ed_norm) {
         assert(ed_norm>=0 && ed_norm<=1 && "ed_norm argument must be always in [0,1] range");
-        std::uniform_real_distribution<float> r(0.0,1.0);
-        float ins = r(gen), del =r(gen), sub = r(gen), S = (ins + del + sub)/(ed_norm *seq_len);
+        std::uniform_real_distribution<double> r(0.0,1.0);
+        double ins = r(gen), del =r(gen), sub = r(gen), S = (ins + del + sub)/(ed_norm *seq_len);
         ins = (size_t)ins / S;
         del = (size_t) del / S;
         sub = (ed_norm *seq_len)- ins - del;
@@ -376,9 +376,9 @@ class SeqGen {
     uint32_t num_seqs;
     uint32_t seq_len;
     uint32_t group_size;
-    float mutation_rate;
-    float min_mutation_rate;
-    float block_mutate_rate;
+    double mutation_rate;
+    double min_mutation_rate;
+    double block_mutate_rate;
     std::string mutation_type;
 };
 

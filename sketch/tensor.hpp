@@ -6,7 +6,7 @@
 #include <iostream> //todo: remove
 #include <random>
 #include <cmath>
-#include "util/Timer.hpp"
+#include "util/timer.hpp"
 #include "nmmintrin.h" // for SSE4.2
 #include "immintrin.h" // for AVX
 
@@ -79,7 +79,7 @@ class Tensor {
             }
         }
         std::vector<double> sketch(sketch_size, 0);
-        for (size_t m = 0; m < sketch_size; m++) {
+        for (uint32_t m = 0; m < sketch_size; m++) {
             sketch[m] = Tp[subsequence_len][m] - Tm[subsequence_len][m];
         }
 

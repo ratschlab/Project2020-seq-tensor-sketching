@@ -1,7 +1,7 @@
 #pragma once
 
 #include "util/multivec.hpp"
-#include "util/Timer.hpp"
+#include "util/timer.hpp"
 
 #include <gflags/gflags.h>
 
@@ -12,22 +12,6 @@
 #include <cmath>
 
 namespace ts { // ts = Tensor Sketch
-
-
-template <class T, class = is_u_integral<T>>
-T int_pow(T x, T pow) {
-    T result = 1;
-    for (;;) {
-        if (pow & 1)
-            result *= x;
-        pow >>= 1;
-        if (!pow)
-            break;
-        x *= x;
-    }
-
-    return result;
-}
 
 /**
  * Extracts k-mers from a sequence. The k-mer is treated as a number in base alphabet_size and then
@@ -41,33 +25,27 @@ T int_pow(T x, T pow) {
  * @return the extracted kmers, as integers converted from base #alphabet_size
  */
 template <class chr, class kmer>
-std::vector<kmer> seq2kmer(const std::vector<chr> &seq, size_t kmer_size, size_t alphabet_size) {
+std::vector<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size) {
     Timer timer("seq2kmer");
     if (seq.size() < (size_t)kmer_size) {
         return std::vector<kmer>();
     }
 
     std::vector<kmer> result(seq.size() - kmer_size + 1, 0);
-    for (size_t i=0; i<result.size(); i++) {
-        size_t c = 1;
-        for (size_t j=0; j<kmer_size; j++) {
-            result[i] += seq[i+j]*c;
-            c *= alphabet_size;
-        }
+
+    kmer c = 1;
+    for (uint8_t i = 0; i < kmer_size; i++) {
+        result[0] += c * seq[i];
+        c *= alphabet_size;
     }
+    c /= alphabet_size;
 
+    for (size_t i = 0; i < result.size() - 1; i++) {
+        kmer base = result[i] - seq[i];
+        assert(base % alphabet_size == 0);
+        result[i + 1] = base / alphabet_size + seq[i + kmer_size] * c;
+    }
     return result;
-}
-
-
-/***
- * sign function: -1, 0, +1 for negative, 0, and positive values
- * @tparam T type
- * @param val: input value
- * @return sign of val
- */
-template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
 }
 
 template <class T>
@@ -273,11 +251,21 @@ size_t edit_distance(const std::vector<seq_type> &s1, const std::vector<seq_type
     return result;
 }
 
+template <class T, class = is_u_integral<T>>
+T int_pow(T x, T pow) {
+    T result = 1;
+    for (;;) {
+        if (pow & 1)
+            result *= x;
+        pow >>= 1;
+        if (!pow)
+            break;
+        x *= x;
+    }
 
+    return result;
+}
 
 std::string flag_values();
-
-
-std::string legacy_config();
 
 } // namespace ts
