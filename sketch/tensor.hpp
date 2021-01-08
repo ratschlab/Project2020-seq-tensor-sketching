@@ -124,10 +124,9 @@ class Tensor {
     /** Size of the alphabet over which sequences to be sketched are defined, e.g. 4 for DNA */
     seq_type alphabet_size;
     /** Number of elements in the sketch, denoted by D in the paper */
-    size_t sketch_size;
+    uint32_t sketch_size;
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
-    size_t subsequence_len;
-
+    uint8_t subsequence_len;
 
     /**
      * Denotes the hash functions h1,....ht:A->{1....D}, where t is #subsequence_len and D is
@@ -137,7 +136,6 @@ class Tensor {
 
     /** The sign functions s1...st:A->{-1,1} */
     Vec2D<bool> signs;
-
 };
 
 } // namespace ts

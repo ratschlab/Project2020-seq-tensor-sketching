@@ -18,130 +18,284 @@ class SeqGen {
            uint32_t min_num_blocks,
            uint32_t num_seqs,
            uint32_t seq_len,
+           uint32_t  group_size,
            float mutation_rate,
-           float block_mutation_rate)
+           float min_mutation_rate,
+           float block_mutation_rate,
+           std::string mutation_type)
         : alphabet_size(alphabet_size),
           fix_len(fix_len),
           max_num_blocks(max_num_blocks),
           min_num_blocks(min_num_blocks),
           num_seqs(num_seqs),
           seq_len(seq_len),
+          group_size(group_size),
           mutation_rate(mutation_rate),
-          block_mutate_rate(block_mutation_rate) {}
+          min_mutation_rate(min_mutation_rate),
+          block_mutate_rate(block_mutation_rate),
+          mutation_type(mutation_type) {}
+//
+//    /**
+//     * Generate sequences in a linear fashion, ie s1->s2, s2->s3, ...
+//     * @tparam T sequence type
+//     */
+//    template <class T>
+//    Vec2D<T> genseqs_linear() {
+//        Vec2D<T> seqs(num_seqs);
+//        random_sequence(seqs[0], seq_len);
+//        for (uint32_t si = 1; si < num_seqs; si++) {
+//            mutate_rate(seqs[si - 1], seqs[si], mutation_rate);
+//            mutate_block(seqs[si]);
+//            if (fix_len)
+//                make_fix_len(seqs[si]);
+//        }
+//        return seqs;
+//    }
+//
+//    template<class T>
+//    Vec2D<T> genseqs_pairs() {
+//        Vec2D<T> seqs;
+//        seqs = Vec2D<T>(num_seqs, std::vector<T>());
+//        assert(num_seqs % 2 == 0);
+//        for (size_t si = 0; si < seqs.size(); si++) {
+//            random_sequence(seqs[si], seq_len);
+//        }
+//        for (size_t si = 0; si < num_seqs; si += 2) {
+//            int lcs = si * seq_len / num_seqs;
+//            std::vector<int> perm(seq_len), perm2(seq_len);
+//            std::iota(perm.begin(), perm.end(), 0);
+//            std::shuffle(perm.begin(), perm.end(), gen);
+//            std::iota(perm2.begin(), perm2.end(), 0);
+//            std::shuffle(perm2.begin(), perm2.end(), gen);
+//
+//            std::sort(perm.begin(), perm.begin() + lcs);
+//            std::sort(perm2.begin(), perm2.begin() + lcs);
+//            for (int i = 0; i < lcs; i++) {
+//                seqs[si][perm[i]] = seqs[si + 1][perm2[i]];
+//            }
+//        }
+//        return seqs;
+//    }
+//
+//    template <class T>
+//    Vec2D<T> genseqs_independent_pairs() {
+//        assert(num_seqs % 2 == 0);
+//        Vec2D<T> seqs(num_seqs);
+////#pragma omp parallel for default(shared)
+//        for (uint32_t si = 0; si < num_seqs; si+=2) {
+//            random_sequence(seqs[si], seq_len);
+//            mutate_rand_edit(seqs[si], seqs[si + 1]);
+//            if (fix_len)
+//                make_fix_len(seqs[si+1]);
+//        }
+//        return seqs;
+//    }
+//
+//
+//    template <class T>
+//    Vec2D<T> genseqs_uniform() {
+//        Vec2D<T> seqs(num_seqs);
+//        std::vector<T> base;
+//        random_sequence(base, seq_len);
+//        std::uniform_real_distribution<float> uniform_rate(0.0,1);
+////#pragma omp parallel for default(shared)
+//        for (uint32_t si = 0; si < num_seqs; si++) {
+//            mutate_rate(base, seqs[si], uniform_rate(gen));
+//            mutate_block(seqs[si]);
+//            if (fix_len)
+//                make_fix_len(seqs[si]);
+//        }
+//        return seqs;
+//    }
+//
+//    template <class T>
+//    Vec2D<T> genseqs_tree(uint32_t sequence_seeds) {
+//        Vec2D<T> seqs(sequence_seeds);
+//        for (uint32_t i = 0; i < sequence_seeds; i++) {
+//            random_sequence(seqs[i], seq_len);
+//        }
+//        Vec2D<T> children;
+//        while (seqs.size() < num_seqs) {
+//            for (auto &seq : seqs) {
+//                std::vector<T> ch1, ch2;
+//                mutate_rate(seq, ch1, mutation_rate);
+//                mutate_block(ch1);
+//                mutate_rate(seq, ch2, mutation_rate);
+//                mutate_block(ch2);
+//                ch1 = seq;
+//                children.push_back(ch1);
+//                children.push_back(ch2);
+//            }
+//            std::swap(seqs, children);
+//        }
+//        seqs.resize(num_seqs);
+//        for (auto &seq : seqs)
+//            if (fix_len)
+//                make_fix_len(seq);
+//        return seqs;
+//    }
+//
+//    template <class T>
+//    Vec2D<T> generate_sequences() {
+//        assert(num_seqs % group_size == 0);
+//        Vec2D<T> seqs(num_seqs);
+//        for (uint32_t gi = 0; gi < group_size; gi++) {
+//            uint32_t si = gi * group_size;
+//            for (auto sj=si+1; sj<si+group_size; sj)
+//            random_sequence(seqs[si], seq_len);
+//            mutate_rand_edit(seqs[si], seqs[si + 1]);
+//            if (fix_len)
+//                make_fix_len(seqs[si+1]);
+//        }
+//        return seqs;
+//    }
 
-    /**
-     * Generate sequences in a linear fashion, ie s1->s2, s2->s3, ...
-     * @tparam T sequence type
-     */
+
     template <class T>
-    Vec2D<T> genseqs_linear() {
-        Vec2D<T> seqs(num_seqs);
-        gen_seq(seqs[0]);
-        for (uint32_t si = 1; si < num_seqs; si++) {
-            point_mutate(seqs[si - 1], seqs[si], mutation_rate);
-            block_permute(seqs[si]);
-            if (fix_len)
-                make_fix_len(seqs[si]);
-        }
-        return seqs;
-    }
-
-    template<class T>
-    Vec2D<T> genseqs_pairs() {
-        Vec2D<T> seqs;
-        seqs = Vec2D<T>(num_seqs, std::vector<T>());
-        assert(num_seqs % 2 == 0);
-        for (size_t si = 0; si < seqs.size(); si++) {
-            gen_seq(seqs[si]);
-        }
-        for (size_t si = 0; si < num_seqs; si += 2) {
-            int lcs = si * seq_len / num_seqs;
-            std::vector<int> perm(seq_len), perm2(seq_len);
-            std::iota(perm.begin(), perm.end(), 0);
-            std::shuffle(perm.begin(), perm.end(), gen);
-            std::iota(perm2.begin(), perm2.end(), 0);
-            std::shuffle(perm2.begin(), perm2.end(), gen);
-
-            std::sort(perm.begin(), perm.begin() + lcs);
-            std::sort(perm2.begin(), perm2.begin() + lcs);
-            for (int i = 0; i < lcs; i++) {
-                seqs[si][perm[i]] = seqs[si + 1][perm2[i]];
+    void generate_path(Vec2D<T> &seqs) {
+        seqs.resize(num_seqs + group_size);
+        for (size_t gi=0; gi<num_seqs; gi += group_size) {
+            random_sequence(seqs[gi], seq_len);
+            for (size_t i=0; i<group_size-1; i++) {
+                mutate(seqs[gi+i], seqs[gi+i+1]);
             }
-        }
-        return seqs;
-    }
-
-    template <class T>
-    Vec2D<T> genseqs_independent_pairs() {
-        assert(num_seqs % 2 == 0);
-        Vec2D<T> seqs(num_seqs);
-#pragma omp parallel for default(shared)
-        for (uint32_t si = 0; si < num_seqs; si+=2) {
-            auto &s1 = seqs[si];
-            auto &s2 = seqs[si+1];
-            gen_seq(s1);
-            s2 = std::vector<T>(s1);
-            std::uniform_int_distribution<size_t> unif_insert(0, s1.size());
-            size_t edit_num = unif_insert(gen);
-            for (size_t ei=0; ei<edit_num; ei++) {
-                random_edit(s2);
-            }
-            if (fix_len)
-                make_fix_len(s2);
-        }
-        return seqs;
-    }
-
-    /**
-     * Generate sequences with mutation rate uniformly drawn from [0,1] in order
-     * to cover an spectrum of edit distances.
-     */
-    template <class T>
-    Vec2D<T> genseqs_uniform() {
-        Vec2D<T> seqs(num_seqs);
-        std::vector<T> base;
-        gen_seq(base);
-        std::uniform_real_distribution<double> uniform_rate(0.0,1);
-//#pragma omp parallel for default(shared)
-        for (uint32_t si = 0; si < num_seqs; si++) {
-            point_mutate(base, seqs[si], uniform_rate(gen));
-            block_permute(seqs[si]);
-            if (fix_len)
-                make_fix_len(seqs[si]);
-        }
-        return seqs;
-    }
-
-    template <class T>
-    Vec2D<T> genseqs_tree(uint32_t sequence_seeds) {
-        Vec2D<T> seqs(sequence_seeds);
-        for (uint32_t i = 0; i < sequence_seeds; i++) {
-            gen_seq(seqs[i]);
-        }
-        Vec2D<T> children;
-        while (seqs.size() < num_seqs) {
-            for (auto &seq : seqs) {
-                std::vector<T> ch1, ch2;
-                point_mutate(seq, ch1, mutation_rate);
-                block_permute(ch1);
-                point_mutate(seq, ch2, mutation_rate);
-                block_permute(ch2);
-                ch1 = seq;
-                children.push_back(ch1);
-                children.push_back(ch2);
-            }
-            std::swap(seqs, children);
         }
         seqs.resize(num_seqs);
-        for (auto &seq : seqs)
-            if (fix_len)
-                make_fix_len(seq);
-        return seqs;
+    }
+
+
+    template <class T>
+    void generate_tree(Vec2D<T> seqs) {
+        seqs.reserve(num_seqs);
+        while (seqs.size() < num_seqs) {
+            Vec2D<T> group(1), children;
+            random_sequence(group[0], seq_len);
+            while (group.size() < group_size) {
+                children.clear();
+                for (auto &seq : group) {
+                    std::vector<T> ch;
+                    mutate(seq, ch);
+                    children.push_back(seq);
+                    children.push_back(ch);
+                }
+                std::swap(group, children);
+            }
+            group.resize(group_size);
+            seqs.insert(seqs.end(), group.begin(), group.end());
+        }
+        seqs.resize(num_seqs);
     }
 
   private:
+
     template <class T>
-    void block_permute(std::vector<T> &seq) {
+    void mutate(const std::vector<T> &ref, std::vector<T> &seq) {
+        std::uniform_real_distribution<float> unif(min_mutation_rate, mutation_rate);
+        if (mutation_type == "edit") {
+            mutate_edits(ref, seq, unif(gen));
+        } else if (mutation_type == "rate") {
+            mutate_rate(ref, seq, unif(gen));
+        } else {
+            exit(1);
+        }
+        mutate_block(seq);
+        if (fix_len)
+            make_fix_len(seq);
+    }
+
+
+    /**
+     * mutate seq from ref, by mutating each position with the probability = `rate`
+     * @tparam T : character type
+     * @param ref : reference
+     * @param seq : mutated sequence
+     * @param rate : probability of mutation at each index
+     */
+    template <class T>
+    void mutate_rate(const std::vector<T> &ref, std::vector<T> &seq, float rate) {
+        assert((rate>=0.0) && (rate<= 1.0) && " rate must be strictly in the range [0,1]");
+        // probabilities for each index position: no mutation, insert, delete, substitute
+        std::discrete_distribution<int> mut { 1 - rate, rate / 3, rate / 3, rate / 3 };
+        // the range chosen such that (sub_char+ref % alphabet_size) will different from ref
+        std::uniform_int_distribution<T> sub_char(1, alphabet_size - 1);
+        // random character from the alphabet
+        std::uniform_int_distribution<T> rand_char(0, alphabet_size - 1);
+        for (size_t i = 0; i < ref.size(); i++) {
+            switch (mut(gen)) {
+                case 0: { // no mutation
+                    seq.push_back(ref[i]);
+                    break;
+                }
+                case 1: { // insert
+                    seq.push_back(rand_char(gen));
+                    i--; // init_tensor_slide_params negate the increment
+                    break;
+                }
+                case 2: { // delete
+                    break;
+                }
+                case 3: { // substitute
+                    seq.push_back( (sub_char(gen) + ref[i]) % alphabet_size);
+                    break;
+                }
+            }
+        }
+    }
+
+
+    /**
+     * generate seq by mutating it from ref with `ed_norm * seq_len` random edit operations,
+     * with number of insert, substitute, and deletes chosen randomly to sum to 'edit'
+     * @tparam T : char type
+     * @param ref : reference
+     * @param seq : mutated sequence
+     * @param ed_norm : normalized edit operations
+     */
+    template <class T>
+    void mutate_edits(const std::vector<T> &ref, std::vector<T> &seq, float ed_norm) {
+        assert(ed_norm>=0 && ed_norm<=1 && "ed_norm argument must be always in [0,1] range");
+        std::uniform_real_distribution<float> r(0.0,1.0);
+        float ins = r(gen), del =r(gen), sub = r(gen), S = (ins + del + sub)/(ed_norm *seq_len);
+        ins = (size_t)ins / S;
+        del = (size_t) del / S;
+        sub = (ed_norm *seq_len)- ins - del;
+        random_edits(ref, seq, (size_t)ins, (size_t)del, (size_t)sub);
+    }
+
+
+    /**
+     * generate seq based on ref by mutating it with random edit operations, number of each edit
+     * is given bby the input arguments ins, del, sub
+     * @tparam T : char type
+     * @param ref : reference sequence
+     * @param seq : sequence to be generated by mutation from ref
+     * @param ins : number of insert operation
+     * @param del : number of delete operations
+     * @param sub : number of substitute operations
+     */
+    template <class T>
+    void random_edits(const std::vector<T> &ref, std::vector<T> &seq, size_t ins, size_t del, size_t sub) {
+        assert(ref.size() + ins >= del && " can't delete more than ref len + inserted chars");
+        random_sequence(seq, ref.size() + ins - del);   // calc. length of the resulting sequence
+
+        // generate random indices not part of deleted nor inserted indices
+        auto idx1 = rand_n_choose_k<size_t>(ref.size(), ref.size() - del),
+             idx2 = rand_n_choose_k<size_t>(seq.size(), seq.size() - ins );
+        for (size_t i = 0; i < idx2.size(); i++) {
+            seq[idx2[i]] = ref[idx1[i]];
+        }
+
+        // generate substituted indices randomly
+        std::uniform_int_distribution<T> sub_char(1, alphabet_size - 1);
+        auto sub_idx = rand_n_choose_k<size_t>(idx2.size(), sub);
+        for (auto & i : sub_idx) {
+            seq[idx2[i]] = (seq[idx2[i]] + sub_char(gen) ) % alphabet_size;
+        }
+    }
+
+
+    template <class T>
+    void mutate_block(std::vector<T> &seq) {
         std::uniform_real_distribution<double> mute(0, 1);
         if (mute(gen) > block_mutate_rate) {
             return;
@@ -168,99 +322,52 @@ class SeqGen {
     }
 
     template <class T>
-    void gen_seq(std::vector<T> &seq) {
-        seq.resize(0);
-        std::uniform_int_distribution<T> unif(0, alphabet_size - 1);
-        for (uint32_t i = 0; i < seq_len; i++) {
-            seq.push_back(unif(gen));
-        }
-    }
-
-    template <class T>
-    void point_mutate(const std::vector<T> &ref, std::vector<T> &seq, float rate) {
-        std::discrete_distribution<int> mut { 1 - rate, rate / 3, rate / 3, rate / 3 };
-        std::uniform_int_distribution<T> unif_sub(1, alphabet_size - 1);
-        std::uniform_int_distribution<T> unif_insert(0, alphabet_size - 1);
-        // TODO: add alignment
-        for (size_t i = 0; i < ref.size(); i++) {
-            switch (mut(gen)) {
-                case 0: { // no mutation
-                    seq.push_back(ref[i]);
-                    break;
-                }
-                case 1: { // insert
-                    seq.push_back(unif_insert(gen));
-                    i--; // init_tensor_slide_params negate the increment
-                    break;
-                }
-                case 2: { // delete
-                    break;
-                }
-                case 3: { // substitute
-                    seq.push_back( (unif_sub(gen) + ref[i]) % alphabet_size);
-                    break;
-                }
-            }
-        }
-    }
-
-    template <class T>
-    void random_edit(std::vector<T> &ref) {
-        std::discrete_distribution<int> mut { 1.0 / 3, 1.0 / 3, 1.0/3 };
-        std::uniform_int_distribution<T> ins_char(0, alphabet_size - 1);
-        std::uniform_int_distribution<T> sub_char(0, alphabet_size - 2);
-        std::uniform_int_distribution<size_t> rpos_inc(
-                0, seq_len); // inclusinve of seq_len, insertion to the very end
-        std::uniform_int_distribution<size_t> rpos_exc(
-                0, seq_len - 1); // inclusinve of seq_len, insertion to the very end
-        switch (mut(gen)) {
-            case 0: { // insert
-                size_t pos = rpos_inc(gen);
-                auto c = ins_char(gen);
-                ref.push_back(ref[ref.size()-1]);
-                for (size_t cur=ref.size()-1; cur>pos; cur--) {
-                    ref[cur] = ref[cur-1];
-                }
-                ref[pos] = c;
-                break;
-            }
-            case 1: { // delete
-                size_t pos = rpos_exc(gen);
-                for (size_t cur=pos; cur<ref.size()-1; cur++) {
-                    ref[cur] = ref[cur+1];
-                }
-                ref.resize(ref.size()-1);
-                break;
-            }
-            case 2: { // substitute
-                auto pos = rpos_exc(gen);
-                auto c = sub_char(gen);
-                if (c == ref[pos]) {
-                    c++;
-                    c = (c % alphabet_size);
-                }
-                ref[pos] = c;
-                break;
-            }
-        }
-    }
-
-    template <class T>
     void make_fix_len(std::vector<T> &seq) {
-        std::uniform_int_distribution<T> unif(0, alphabet_size - 1),
+        std::uniform_int_distribution<T> rand_char(0, alphabet_size - 1),
                 blocks(min_num_blocks, max_num_blocks);
         if (seq.size() > seq_len) {
             seq = std::vector<T>(seq.begin(), seq.end());
         } else if (seq.size() < seq_len) {
             while (seq.size() < seq_len) {
-                seq.push_back(unif(gen));
+                seq.push_back(rand_char(gen));
             }
         }
     }
 
+    /**
+     * Generate a random sequence of length `len`
+     * @tparam T
+     * @param seq : the result will be stored in `seq`
+     * @param len : length of the random sequence
+     */
+    template <class T>
+    void random_sequence(std::vector<T> &seq, size_t len) {
+        seq.resize(len);
+        std::uniform_int_distribution<T> rand_char(0, alphabet_size - 1);
+        for (uint32_t i = 0; i < len; i++) {
+            seq[i] = rand_char(gen);
+        }
+    }
+
+    /**
+     * randomly select k items from {0, ..., n-1}
+     * @param n: size of set to choose from {0, ..., n-1}
+     * @param k: size of the output set permutation
+     * @return the set containing the randomly selected indices, sorted
+     */
+    template <class T>
+    std::vector<T> rand_n_choose_k( size_t n, size_t k) {
+        assert(k <= n);
+        std::vector<T> idx(n);
+        std::iota(idx.begin(), idx.end(), 0);
+        std::shuffle(idx.begin(), idx.end(), gen);
+        idx.resize(k);
+        std::sort(idx.begin(), idx.end());
+        return idx;
+    }
+
   private:
-    std::random_device rd;
-    std::mt19937 gen = std::mt19937(rd());
+    std::mt19937 gen = std::mt19937(341234);
 
     uint8_t alphabet_size;
     bool fix_len;
@@ -268,8 +375,11 @@ class SeqGen {
     uint32_t min_num_blocks;
     uint32_t num_seqs;
     uint32_t seq_len;
+    uint32_t group_size;
     float mutation_rate;
+    float min_mutation_rate;
     float block_mutate_rate;
+    std::string mutation_type;
 };
 
 } // namespace ts

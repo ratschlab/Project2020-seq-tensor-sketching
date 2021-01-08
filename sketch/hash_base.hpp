@@ -29,8 +29,7 @@ class HashBase {
         std::random_device rd;
         rng = std::mt19937(rd());
         rand = std::uniform_int_distribution<T>(0, this->hash_size - 1);
-        base = rand(rng);
-        base2 = rand(rng);
+        crc32_base = rand(rng);
     }
 
     void set_hashes_for_testing(const std::vector<std::unordered_map<T, T>> &h) { hashes = h; }
@@ -58,15 +57,9 @@ class HashBase {
         switch (hash_algorithm) {
             case hash_algorithm_enum::uniform:
                 T random_hash;
-                bool contains;
-//#pragma omp critical
-                {
-                    contains = hashes[index].contains(key);
-                };
-                if (contains) {
+                if (hashes[index].contains(key)) {
                     random_hash = hashes[index][key];
                 } else {
-//#pragma omp critical
                     while (true) {
                         random_hash = rand(rng);
                         if (!hash_values[index].contains(random_hash)) {
@@ -80,7 +73,7 @@ class HashBase {
                 val = random_hash;
                 break;
             case hash_algorithm_enum::crc32:
-                val = _mm_crc32_u32((unsigned int)base,(unsigned int)key);
+                val = _mm_crc32_u32((unsigned int)crc32_base,(unsigned int)key);
                 val = _mm_crc32_u32((unsigned int)val,(unsigned int)index);
                 return val;
         }
@@ -96,7 +89,7 @@ class HashBase {
     std::vector<std::unordered_set<T>> hash_values;
     std::uniform_int_distribution<T> rand;
     std::mt19937 rng;
-    uint32_t base, base2;
+    uint32_t crc32_base;
 
     hash_algorithm_enum hash_algorithm = hash_algorithm_enum::uniform;
 };

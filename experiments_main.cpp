@@ -25,8 +25,6 @@ DEFINE_uint32(k, 3, "Short hand for --kmer_size");
 //              "The alphabet over which sequences are defined (dna4, dna5, protein)");
 DEFINE_int32(alphabet_size, 4, "size of alphabet for synthetic sequence generation");
 
-DEFINE_bool(fix_len, false, "Force generated sequences length to be equal");
-
 DEFINE_int32(max_num_blocks, 4, "Maximum number of blocks for block permutation");
 
 DEFINE_int32(min_num_blocks, 2, "Minimum number of blocks for block permutation");
@@ -35,11 +33,16 @@ DEFINE_uint32(num_seqs, 200, "Number of sequences to be generated");
 
 DEFINE_uint32(seq_len, 256, "The length of sequence to be generated");
 
-DEFINE_double(mutation_rate, 0.015, "Rate of point mutation rate for sequence generation");
+DEFINE_bool(fix_len, false, "Force generated sequences length to be equal");
 
-DEFINE_double(block_mutation_rate, 0.02, "The probability of having a block permutation");
+DEFINE_double(mutation_rate, 0.3, "Maximum rate of point mutation for sequence generation");
 
-DEFINE_uint32(sequence_seeds, 1, "Number of initial random sequences");
+DEFINE_double(min_mutation_rate, 0.0, "Minimum rate of point mutation for sequence generation");
+
+
+DEFINE_double(block_mutation_rate, 0.00, "The probability of having a block permutation");
+
+DEFINE_uint32(group_size, 2, "Number of sequences in each independent group");
 
 DEFINE_string(o, "/tmp", "Directory where the generated sequence should be written");
 
@@ -63,16 +66,29 @@ DEFINE_int32(
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
 DEFINE_int32(s, 8, "Short hand for --stride");
 
-static bool ValidateMutationPattern(const char *flagname, const std::string &value) {
-    if (value == "linear" || value == "tree" || value == "uniform" || value == "pairs")
+static bool validatePhylogenyShape(const char *flagname, const std::string &value) {
+    if (value == "path" || value == "tree" )
         return true;
     printf("Invalid value for --%s: %s\n", flagname, value.c_str());
     return false;
 }
-DEFINE_string(mutation_pattern,
-              "linear",
-              "the mutational pattern, can be 'linear', 'uniform' or 'tree'");
-DEFINE_validator(mutation_pattern, &ValidateMutationPattern);
+DEFINE_string(phylogeny_shape,
+              "path",
+              "shape of the phylogeny can be 'path', 'tree'");
+DEFINE_validator(phylogeny_shape, &validatePhylogenyShape);
+
+
+static bool validateMutationType(const char *flagname, const std::string &value) {
+    if (value == "rate" || value == "edit" )
+        return true;
+    printf("Invalid value for --%s: %s\n", flagname, value.c_str());
+    return false;
+}
+DEFINE_string(mutation_type,
+              "rate",
+              "basic method used for mutating sequences can be 'rate', 'edit'");
+DEFINE_validator(mutation_type, &validateMutationType);
+
 
 static bool ValidateTransformation(const char *flagname, const std::string &value) {
     if (value == "none" || value == "atan" || value == "disc" )
@@ -134,25 +150,31 @@ struct SeqGenModule {
     Vec2D<kmer_type> omh_sketch;
     Vec2D<embed_type> ten_sketch;
     Vec3D<embed_type> slide_sketch;
-    Vec3D<double> dists;
+    Vec2D<double> dists;
+    std::vector<std::pair<size_t,size_t>> pairs;
+
 
     std::filesystem::path output_dir;
 
     SeqGenModule(const std::string &out_dir) : output_dir(out_dir) {}
 
     void generate_sequences() {
-        ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len, FLAGS_max_num_blocks, FLAGS_min_num_blocks,
-                           FLAGS_num_seqs, FLAGS_seq_len, (float)FLAGS_mutation_rate,
-                           (float)FLAGS_block_mutation_rate);
+        ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len,
+                           FLAGS_max_num_blocks,
+                           FLAGS_min_num_blocks,
+                           FLAGS_num_seqs,
+                           FLAGS_seq_len,
+                           FLAGS_group_size,
+                           (float)FLAGS_mutation_rate,
+                           (float)FLAGS_min_mutation_rate,
+                           (float)FLAGS_block_mutation_rate,
+                           FLAGS_mutation_type);
 
-        if (FLAGS_mutation_pattern == "uniform") {
-            seqs = seq_gen.genseqs_uniform<char_type>();
-        } else if (FLAGS_mutation_pattern == "pairs") {
-            seqs = seq_gen.genseqs_independent_pairs<char_type>();
-        } else if (FLAGS_mutation_pattern == "linear") {
-            seqs = seq_gen.genseqs_linear<char_type>();
-        } else if (FLAGS_mutation_pattern == "tree") {
-            seqs = seq_gen.genseqs_tree<char_type>(FLAGS_sequence_seeds);
+
+        if (FLAGS_phylogeny_shape == "path") {
+            seq_gen.generate_path(seqs);
+        } else if (FLAGS_phylogeny_shape == "tree") {
+            seq_gen.generate_tree(seqs);
         }
 
 
@@ -180,24 +202,24 @@ struct SeqGenModule {
         omin_hash.set_hash_algorithm(FLAGS_hash_alg);
 
 
-        pbar_start(seqs.size());
+        PB_init(seqs.size());
 #pragma omp parallel for
-            for (size_t si = 0; si < seqs.size(); si++) {
-                kmer_seqs[si] = seq2kmer<char_type, kmer_type>(
-                        seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
-                mh_sketch[si] = min_hash.compute(kmer_seqs[si]);
-                wmh_sketch[si] = wmin_hash.compute(kmer_seqs[si]);
-                omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
-                ten_sketch[si] = tensor_sketch.compute(seqs[si]);
-                slide_sketch[si] = tensor_slide.compute(seqs[si]);
-                pbar_inc();
-            }
+        for (size_t si = 0; si < seqs.size(); si++) {
+            kmer_seqs[si] = seq2kmer<char_type, kmer_type>(
+                    seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
+            mh_sketch[si] = min_hash.compute(kmer_seqs[si]);
+            wmh_sketch[si] = wmin_hash.compute(kmer_seqs[si]);
+            omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
+            ten_sketch[si] = tensor_sketch.compute(seqs[si]);
+            slide_sketch[si] = tensor_slide.compute(seqs[si]);
+            PB_iter();
+        }
 
         std::cout << std::endl;
 
     }
 
-    // discretize or scale results
+    // bin or scale sketch output of tensor sketch and tensor slide sketch
     void transform_sketches() {
         if (FLAGS_transform == "disc") {
             discretize<double> disc(FLAGS_num_bins);
@@ -211,75 +233,38 @@ struct SeqGenModule {
     }
 
     void compute_pairwise_dists() {
-        int num_seqs = seqs.size();
-        if (FLAGS_mutation_pattern == "pairs") {
-            dists = new3D<double>(8, num_seqs, 1, -1);
-            pbar_start(seqs.size() / 2);
-#pragma omp parallel for default(shared)
-            for (size_t i = 0; i < seqs.size(); i += 2) {
-                int j = i + 1;
-                dists[0][i][0] = edit_distance(seqs[i], seqs[j]);
-                dists[1][i][0] = hamming_dist(mh_sketch[i], mh_sketch[j]);
-                dists[2][i][0] = hamming_dist(wmh_sketch[i], wmh_sketch[j]);
-                dists[3][i][0] = hamming_dist(omh_sketch[i], omh_sketch[j]);
-                dists[4][i][0] = l1_dist(ten_sketch[i], ten_sketch[j]);
-                dists[5][i][0] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
-                pbar_inc();
-            }
-        } else {
-            dists = new3D<double>(8, num_seqs, num_seqs, 0);
-            pbar_start(seqs.size());
-#pragma omp parallel for default(shared)
-            for (size_t i = 0; i < seqs.size(); i++) {
-                for (size_t j = i + 1; j < seqs.size(); j++) {
-                    dists[0][i][j] = edit_distance(seqs[i], seqs[j]);
-                    dists[1][i][j] = hamming_dist(mh_sketch[i], mh_sketch[j]);
-                    dists[2][i][j] = hamming_dist(wmh_sketch[i], wmh_sketch[j]);
-                    dists[3][i][j] = hamming_dist(omh_sketch[i], omh_sketch[j]);
-                    dists[4][i][j] = l1_dist(ten_sketch[i], ten_sketch[j]);
-                    dists[5][i][j] = l1_dist2D_minlen(slide_sketch[i], slide_sketch[j]);
+        for (size_t g =0; g < seqs.size(); g += FLAGS_group_size ) { // g: group offset
+            for (size_t i = 0; i < FLAGS_group_size ; i++) {
+                for (size_t j = i + 1; j < FLAGS_group_size && g + j < seqs.size(); j++) {
+                    pairs.push_back({ g + i, g + j }); // g+i, g+i -> index i & j in the group
                 }
-                pbar_inc();
             }
         }
+        dists = new2D<double>(6, pairs.size());
+        PB_init(pairs.size());
+#pragma omp parallel for default(shared)
+        for (size_t pi=0; pi< pairs.size(); pi++ ) {
+            size_t si = pairs[pi].first, sj = pairs[pi].second;
+            dists[0][pi]=(edit_distance(seqs[si], seqs[sj]));
+            dists[1][pi]=(hamming_dist(mh_sketch[si], mh_sketch[sj]));
+            dists[2][pi]=(hamming_dist(wmh_sketch[si], wmh_sketch[sj]));
+            dists[3][pi]=(hamming_dist(omh_sketch[si], omh_sketch[sj]));
+            dists[4][pi]=(l1_dist(ten_sketch[si], ten_sketch[sj]));
+            dists[5][pi]=(l1_dist2D_minlen(slide_sketch[si], slide_sketch[sj]));
+            PB_iter();
+        }
+
         std::cout << std::endl;
     }
 
     void print_spearman() {
-        std::vector<double> dists_ed;
-        std::vector<double> dists_mh;
-        std::vector<double> dists_wmh;
-        std::vector<double> dists_omh;
-        std::vector<double> dists_tensor_sketch;
-        std::vector<double> dists_tensor_slide_sketch;
-        if (FLAGS_mutation_pattern != "pairs") {
-            for (size_t i = 0; i < seqs.size(); i++) {
-                dists_ed.insert(dists_ed.end(), dists[0][i].begin()+i+1, dists[0][i].end());
-                dists_mh.insert(dists_mh.end(), dists[1][i].begin()+i+1, dists[1][i].end());
-                dists_wmh.insert(dists_wmh.end(), dists[2][i].begin()+i+1, dists[2][i].end());
-                dists_omh.insert(dists_omh.end(), dists[3][i].begin()+i+1, dists[3][i].end());
-                dists_tensor_sketch.insert(dists_tensor_sketch.end(), dists[4][i].begin()+i+1,
-                                           dists[4][i].end());
-                dists_tensor_slide_sketch.insert(dists_tensor_slide_sketch.end(),
-                                                 dists[5][i].begin()+i+1, dists[5][i].end());
-            }
-        } else {
-            for (size_t i = 0; i < seqs.size(); i+=2) {
-                dists_ed.push_back(dists[0][i][0]);
-                dists_mh.push_back(dists[1][i][0]);
-                dists_wmh.push_back(dists[2][i][0]);
-                dists_omh.push_back(dists[3][i][0]);
-                dists_tensor_sketch.push_back(dists[4][i][0]);
-                dists_tensor_slide_sketch.push_back(dists[5][i][0]);
-            }
-        }
-        std::cout << "Spearman correlation MH: " << spearman(dists_ed, dists_mh) << std::endl;
-        std::cout << "Spearman correlation WMH: " << spearman(dists_ed, dists_wmh) << std::endl;
-        std::cout << "Spearman correlation OMH: " << spearman(dists_ed, dists_omh) << std::endl;
+        std::cout << "Spearman correlation MH: " << spearman(dists[0], dists[1]) << std::endl;
+        std::cout << "Spearman correlation WMH: " << spearman(dists[0], dists[2]) << std::endl;
+        std::cout << "Spearman correlation OMH: " << spearman(dists[0], dists[3]) << std::endl;
         std::cout << "Spearman correlation TensorSketch: "
-                  << spearman(dists_ed, dists_tensor_sketch) << std::endl;
+                  << spearman(dists[0], dists[4]) << std::endl;
         std::cout << "Spearman correlation TensorSlide: "
-                  << spearman(dists_ed, dists_tensor_slide_sketch) << std::endl;
+                  << spearman(dists[0], dists[5]) << std::endl;
     }
 
     void save_output() {
@@ -312,17 +297,8 @@ struct SeqGenModule {
         for (int m = 0; m < 6; m++) {
             fo.open(output_dir / "dists" / (method_names[m] + ".txt"));
             assert(fo.is_open());
-            if (FLAGS_mutation_pattern == "pairs") {
-                for (size_t i = 0; i < num_seqs; i += 2) {
-                    size_t j = i + 1;
-                    fo << i << ", " << j << ", " << dists[m][i][0] << "\n";
-                }
-            } else {
-                for (size_t i = 0; i < num_seqs; i++) {
-                    for (size_t j = i + 1; j < seqs.size(); j++) {
-                        fo << i << ", " << j << ", " << dists[m][i][j] << "\n";
-                    }
-                }
+            for (size_t i=0; i<pairs.size(); i++) {
+                fo << pairs[i].first << ", " << pairs[i].second << ", " << dists[m][i] << "\n";
             }
             fo.close();
         }

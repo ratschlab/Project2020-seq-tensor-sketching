@@ -79,7 +79,7 @@ class TensorSlide : public Tensor<seq_type> {
             }
 
             if (i >= win_len) { // only start deleting from front after reaching #win_len
-                size_t ws = i - win_len; // the element to be removed from the sketch
+                uint64_t ws = i - win_len; // the element to be removed from the sketch
                 for (size_t diff = 0; diff < tup_len; ++diff) {
                     for (size_t p = 1; p <= tup_len - diff; p++) {
                         auto r = hashes[p - 1][seq[ws]];
@@ -102,16 +102,20 @@ class TensorSlide : public Tensor<seq_type> {
                 sketches.push_back(diff(T1[1].back(), T2[1].back()));
             }
         }
-
         return sketches;
     }
 
-    size_t calc_dim(size_t step, size_t seq_len, size_t sketch_dim) {
+    /**
+     * Compute the sketch dimension of tensor slide sketch, such that
+     * the overal sketch size is comparable to the other methods.
+     * It is set to sketch-dim/stride, rounded to the next power of 2.
+     */
+    size_t calc_dim(size_t stride, size_t seq_len, size_t sketch_dim) {
         // if seq_len=0, default behavior: no change in dimension
         if (seq_len == 0) {
             return sketch_dim;
         }
-        size_t dim = (sketch_dim * step + seq_len - 1)/seq_len; // lower dimension
+        size_t dim = (sketch_dim * stride + seq_len - 1)/seq_len; // lower dimension
         dim = pow(2, ceil(log(dim)/log(2))); // find the next power of 2
         return dim;
     }
