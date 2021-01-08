@@ -6,19 +6,12 @@ std::string flag_values(char delimiter) {
     gflags::GetAllFlags(&flags);
     std::string result;
     for (const auto &flag : flags) {
-        result += "--" + flag.name + "=" + flag.current_value + delimiter;
+        if (flag.current_value.size()>0) { // omit empty flags
+            result += "--" + flag.name + "=" + flag.current_value + delimiter;
+        }
     }
     return result;
 }
 
-std::string legacy_config() {
-    std::string str;
-    std::vector<gflags::CommandLineFlagInfo> flags;
-    gflags::GetAllFlags(&flags);
-    for (const auto &flag : flags) {
-        str += " " + flag.name + ",\t" + flag.type + ",\t" + flag.current_value + '\n';
-    }
-    return str;
-}
 
 } // namespace ts
