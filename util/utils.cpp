@@ -1,12 +1,12 @@
 #include "utils.hpp"
 
 namespace ts {
-std::string flag_values() {
+std::string flag_values(char delimiter) {
     std::vector<gflags::CommandLineFlagInfo> flags;
     gflags::GetAllFlags(&flags);
     std::string result;
     for (const auto &flag : flags) {
-        result += flag.name + "=" + flag.current_value + " ";
+        result += "--" + flag.name + "=" + flag.current_value + delimiter;
     }
     return result;
 }

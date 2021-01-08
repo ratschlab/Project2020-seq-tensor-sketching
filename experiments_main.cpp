@@ -18,7 +18,6 @@
 
 
 DEFINE_uint32(kmer_size, 3, "Kmer size for MH, OMH, WMH");
-DEFINE_uint32(k, 3, "Short hand for --kmer_size");
 
 DEFINE_int32(alphabet_size, 4, "size of alphabet for synthetic sequence generation");
 
@@ -48,10 +47,8 @@ DEFINE_int32(embed_dim, 16, "Embedding dimension, used for all sketching methods
 DEFINE_int32(tuple_length,
              3,
              "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
-DEFINE_int32(t, 3, "Short hand for --tuple_length");
 
 DEFINE_int32(window_size, 32, "Window length: the size of sliding window in Tensor Slide Sketch");
-DEFINE_int32(w, 32, "Short hand for --window_size");
 
 DEFINE_int32(
         max_len,
@@ -61,7 +58,6 @@ DEFINE_int32(
         "its value will be set to seq_len (default=-1)");
 
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
-DEFINE_int32(s, 8, "Short hand for --stride");
 
 static bool validatePhylogenyShape(const char *flagname, const std::string &value) {
     if (value == "path" || value == "tree" )
@@ -116,22 +112,6 @@ DEFINE_uint32(num_threads, 1, "number of OpenMP threads, default: 1, "
                               "use --num_threads=0 to use all available cores");
 
 
-void adjust_short_names() {
-    if (!gflags::GetCommandLineFlagInfoOrDie("K").is_default) {
-        FLAGS_kmer_size = FLAGS_k;
-    }
-
-    if (!gflags::GetCommandLineFlagInfoOrDie("T").is_default) {
-        FLAGS_tuple_length = FLAGS_t;
-    }
-
-    if (!gflags::GetCommandLineFlagInfoOrDie("W").is_default) {
-        FLAGS_window_size = FLAGS_w;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("S").is_default) {
-        FLAGS_stride = FLAGS_w;
-    }
-}
 
 namespace fs = std::filesystem;
 using namespace ts;
@@ -272,9 +252,9 @@ struct SeqGenModule {
         fs::create_directories(fs::path(output_dir / "dists"));
         fs::create_directories(fs::path(output_dir / "sketches"));
 
-        fo.open(output_dir / "conf");
+        fo.open(output_dir / "flags");
         assert(fo.is_open());
-        fo << flag_values();
+        fo << flag_values('\n');
         fo.close();
 
         fo.open(output_dir / "timing.csv");
@@ -284,19 +264,23 @@ struct SeqGenModule {
 
         write_fasta(output_dir / "seqs.fa", seqs);
 
-        size_t num_seqs = seqs.size();
-        for (int m = 0; m < 6; m++) {
-            fo.open(output_dir / "dists" / (method_names[m] + ".txt"));
-            assert(fo.is_open());
-            for (size_t i=0; i<pairs.size(); i++) {
-                fo << pairs[i].first << ", " << pairs[i].second << ", " << dists[m][i] << "\n";
+        fo.open(output_dir / "dists.csv");
+        fo << "s1,\ts2";
+        for (int m=0; m<6; m++) {
+            fo << ",\t" << method_names[m];
+        }
+        fo << "\n";
+        for (uint32_t pi=0; pi<pairs.size(); pi++) {
+            fo << pairs[pi].first << ",\t" << pairs[pi].second;
+            for (int m=0; m<6; m++) {
+                fo << ",\t" << dists[m][pi];
             }
-            fo.close();
+            fo << "\n";
         }
 
         fo.open(output_dir / "sketches/mh.txt");
         assert(fo.is_open());
-        for (size_t si = 0; si < num_seqs; si++) {
+        for (uint32_t si = 0; si < mh_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
             for (const auto &e : mh_sketch[si]) {
                 fo << e << ", ";
@@ -307,7 +291,7 @@ struct SeqGenModule {
 
         fo.open(output_dir / "sketches/wmh.txt");
         assert(fo.is_open());
-        for (size_t si = 0; si < num_seqs; si++) {
+        for (uint32_t si = 0; si < wmh_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
             for (const auto &e : wmh_sketch[si]) {
                 fo << e << ", ";
@@ -318,7 +302,7 @@ struct SeqGenModule {
 
         fo.open(output_dir / "sketches/omh.txt");
         assert(fo.is_open());
-        for (size_t si = 0; si < num_seqs; si++) {
+        for (uint32_t si = 0; si < omh_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
             for (const auto &e : omh_sketch[si]) {
                 fo << e << ", ";
@@ -329,7 +313,7 @@ struct SeqGenModule {
 
         fo.open(output_dir / "sketches/ten.txt");
         assert(fo.is_open());
-        for (size_t si = 0; si < seqs.size(); si++) {
+        for (uint32_t si = 0; si < ten_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
             for (const auto &e : ten_sketch[si]) {
                 fo << e << ", ";
@@ -339,9 +323,9 @@ struct SeqGenModule {
         fo.close();
 
         fo.open(output_dir / "sketches/ten_slide.txt");
-        for (size_t si = 0; si < seqs.size(); si++) {
+        for (uint32_t si = 0; si < seqs.size(); si++) {
             auto &sk = slide_sketch[si];
-            for (size_t dim = 0; dim < sk.size(); dim++) {
+            for (uint32_t dim = 0; dim < sk.size(); dim++) {
                 fo << ">> seq: " << si << ", dim: " << dim << "\n";
                 for (auto &item : sk[dim])
                     fo << item << ", ";
