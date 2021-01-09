@@ -93,8 +93,8 @@ TEST(Spearman, AllIdentical) {
 }
 
 TEST(Spearman, SomeValues) {
-    std::vector<double> a = {35, 23, 47, 17, 10, 43, 9, 6, 28};
-    std::vector<double> b = {30, 33, 45, 23, 8, 49, 12, 4, 31};
+    std::vector<double> a = { 35, 23, 47, 17, 10, 43, 9, 6, 28 };
+    std::vector<double> b = { 30, 33, 45, 23, 8, 49, 12, 4, 31 };
     ASSERT_EQ(0.9, spearman(a, b));
 }
 
@@ -118,9 +118,16 @@ TEST(Spearman, LinearRepeats) {
     }
 }
 
+TEST(Spearman, Rankify) {
+    std::vector<double> a = { 1, 1, 2, 2, 3, 3, 4, 5, 5 };
+    std::vector<double> expected_ranks { 1.5, 1.5, 3.5, 3.5, 5.5, 5.5, 7, 8.5, 8.5 };
+    ASSERT_EQ(expected_ranks, rankify(a));
+}
+
 TEST(Spearman, SomeValuesRepeats) {
-    std::vector<double> a = {1,1,2,2,3,3,4,5,5};
-    std::vector<double> b = {7,8,8,19,19,3,3,5,9};
+    std::vector<double> a = { 1, 1, 2, 2, 3, 3, 4, 5, 5 };
+    std::vector<double> b = { 7, 8, 8, 19, 19, 3, 3, 5, 9 };
+
     ASSERT_NEAR(-0.19314, spearman(a, b), 1e-5);
 }
 
