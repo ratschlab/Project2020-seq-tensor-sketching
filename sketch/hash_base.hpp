@@ -57,6 +57,9 @@ class HashBase {
         switch (hash_algorithm) {
             T random_hash;
             case hash_algorithm_enum::uniform:
+                // TODO multiple read Semaphor instead of critical
+#pragma omp critical
+            {
                 if (hashes[index].contains(key)) {
                     random_hash = hashes[index][key];
                 } else {
@@ -71,6 +74,7 @@ class HashBase {
                 }
                 assert(random_hash>=0 && random_hash<hash_size && " Hash values are not in [0,set_size-1] range");
                 val = random_hash;
+            }
                 break;
             case hash_algorithm_enum::crc32:
                 val = _mm_crc32_u32((unsigned int)crc32_base,(unsigned int)key);

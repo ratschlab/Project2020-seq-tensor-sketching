@@ -12,7 +12,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 ")
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
 file(GLOB util_files "util/*.cpp")
-add_library(util ${util_files} util/progress.hpp util/transformer.hpp)
+add_library(util ${util_files} util/progress.hpp util/transformer.hpp util/progress_bar.cpp)
 target_link_libraries(util gflags OpenMP::OpenMP_CXX)
 
 file(GLOB sequence_files "sequence/*.cpp")

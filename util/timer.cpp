@@ -21,7 +21,7 @@ void timer_add_duration(const std::string &func_name, nanoseconds dur) {
     }
 }
 
-std::string timer_summary(uint32_t num_seqs) {
+std::string timer_summary(uint32_t num_seqs, uint32_t num_pairs) {
     std::map<std::string, std::string> trans= {
             { "edit_distance", "ED" },
             { "minhash", "MH" },
@@ -43,13 +43,13 @@ std::string timer_summary(uint32_t num_seqs) {
         }
     }
         for (auto const &[arg_name, arg] : acc) {
-            auto count = arg;
-            // add seq2kmer time to the sketch time of MH* methods
+            double count = (double)arg;
+            // add kmer computation time to the sketch time of MH* methods
             if (arg_name.find("hash") != std::string::npos) {
                 count += acc["seq2kmer"];
             }
             if (arg_name == "edit_distance") {
-                count = count/1e6/num_seqs/(num_seqs-1);
+                count = count/1e6/num_pairs;
             } else if (arg_name == "main_func") {
               count = count/1e6;
             } else {

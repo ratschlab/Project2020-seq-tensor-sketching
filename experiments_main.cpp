@@ -17,7 +17,7 @@
 #include <omp.h>
 
 
-DEFINE_uint32(kmer_size, 3, "Kmer size for MH, OMH, WMH");
+DEFINE_uint32(kmer_size, 4, "Kmer size for MH, OMH, WMH");
 
 DEFINE_int32(alphabet_size, 4, "size of alphabet for synthetic sequence generation");
 
@@ -31,7 +31,7 @@ DEFINE_uint32(seq_len, 256, "The length of sequence to be generated");
 
 DEFINE_bool(fix_len, false, "Force generated sequences length to be equal");
 
-DEFINE_double(mutation_rate, 0.3, "Maximum rate of point mutation for sequence generation");
+DEFINE_double(max_mutation_rate, 0.5, "Maximum rate of point mutation for sequence generation");
 
 DEFINE_double(min_mutation_rate, 0.0, "Minimum rate of point mutation for sequence generation");
 
@@ -60,14 +60,14 @@ DEFINE_int32(
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
 
 static bool validatePhylogenyShape(const char *flagname, const std::string &value) {
-    if (value == "path" || value == "tree" )
+    if (value == "path" || value == "tree" || value == "star" || value == "pair")
         return true;
     printf("Invalid value for --%s: %s\n", flagname, value.c_str());
     return false;
 }
 DEFINE_string(phylogeny_shape,
               "path",
-              "shape of the phylogeny can be 'path', 'tree'");
+              "shape of the phylogeny can be 'path', 'tree', 'star', 'pair'");
 DEFINE_validator(phylogeny_shape, &validatePhylogenyShape);
 
 
@@ -118,22 +118,22 @@ using namespace ts;
 
 template <class char_type, class kmer_type, class embed_type>
 struct SeqGenModule {
-    Vec2D<char_type> seqs;
-    std::vector<std::string> seq_names;
-    std::string test_id;
-    Vec2D<kmer_type> kmer_seqs;
-    Vec2D<kmer_type> mh_sketch;
-    Vec2D<kmer_type> wmh_sketch;
-    Vec2D<kmer_type> omh_sketch;
-    Vec2D<embed_type> ten_sketch;
-    Vec3D<embed_type> slide_sketch;
-    Vec2D<double> dists;
-    std::vector<std::pair<uint32_t,uint32_t>> pairs;
+    SeqGenModule() {}
 
-
-    std::filesystem::path output_dir;
-
-    SeqGenModule(const std::string &out_dir) : output_dir(out_dir) {}
+    void run() {
+        std::cout << "Generating sequences ..." << std::flush;
+        generate_sequences();
+        std::cout << "\nComputing sketches ... " << std::flush;
+        compute_sketches();
+        std::cout << "\nTransform sketches ... " << std::flush;
+        transform_sketches();
+        std::cout << "\nComputing distances ... " << std::flush;
+        compute_pairwise_dists();
+        std::cout << "\nComputing Spearman correlation ... \n" << std::flush;
+        print_spearman();
+        std::cout << "Writing output to ... " << FLAGS_o  <<  std::endl;
+        save_output();
+    }
 
     void generate_sequences() {
         ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len,
@@ -142,17 +142,15 @@ struct SeqGenModule {
                            FLAGS_num_seqs,
                            FLAGS_seq_len,
                            FLAGS_group_size,
-                           (double)FLAGS_mutation_rate,
+                           (double)FLAGS_max_mutation_rate,
                            (double)FLAGS_min_mutation_rate,
                            (double)FLAGS_block_mutation_rate,
-                           FLAGS_mutation_type);
+                           FLAGS_mutation_type,
+                           FLAGS_phylogeny_shape);
 
 
-        if (FLAGS_phylogeny_shape == "path") {
-            seq_gen.generate_path(seqs);
-        } else if (FLAGS_phylogeny_shape == "tree") {
-            seq_gen.generate_tree(seqs);
-        }
+        seq_gen.generate_seqs(seqs);
+        seq_gen.ingroup_pairs(ingroup_pairs);
 
 
         uint32_t num_seqs = seqs.size();
@@ -179,7 +177,7 @@ struct SeqGenModule {
         omin_hash.set_hash_algorithm(FLAGS_hash_alg);
 
 
-        PB_init(seqs.size());
+        progress_bar::init(seqs.size());
 #pragma omp parallel for
         for (uint32_t si = 0; si < seqs.size(); si++) {
             kmer_seqs[si] = seq2kmer<char_type, kmer_type>(
@@ -189,14 +187,12 @@ struct SeqGenModule {
             omh_sketch[si] = omin_hash.compute_flat(kmer_seqs[si]);
             ten_sketch[si] = tensor_sketch.compute(seqs[si]);
             slide_sketch[si] = tensor_slide.compute(seqs[si]);
-            PB_iter();
+            progress_bar::iter();
         }
 
-        std::cout << std::endl;
 
     }
 
-    // bin or scale sketch output of tensor sketch and tensor slide sketch
     void transform_sketches() {
         if (FLAGS_transform == "disc") {
             discretize<double> disc(FLAGS_num_bins);
@@ -210,43 +206,36 @@ struct SeqGenModule {
     }
 
     void compute_pairwise_dists() {
-        for (size_t g =0; g < seqs.size(); g += FLAGS_group_size ) { // g: group offset
-            for (size_t i = 0; i < FLAGS_group_size ; i++) {
-                for (size_t j = i + 1; j < FLAGS_group_size && g + j < seqs.size(); j++) {
-                    pairs.push_back({ g + i, g + j }); // g+i, g+i -> index i & j in the group
-                }
-            }
-        }
-        dists = new2D<double>(6, pairs.size());
-        PB_init(pairs.size());
+        dists = new2D<double>(6, ingroup_pairs.size());
+        progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
-        for (size_t pi=0; pi< pairs.size(); pi++ ) {
-            size_t si = pairs[pi].first, sj = pairs[pi].second;
+        for (size_t pi=0; pi< ingroup_pairs.size(); pi++ ) {
+            size_t si = ingroup_pairs[pi].first, sj = ingroup_pairs[pi].second;
             dists[0][pi]=(edit_distance(seqs[si], seqs[sj]));
             dists[1][pi]=(hamming_dist(mh_sketch[si], mh_sketch[sj]));
             dists[2][pi]=(hamming_dist(wmh_sketch[si], wmh_sketch[sj]));
             dists[3][pi]=(hamming_dist(omh_sketch[si], omh_sketch[sj]));
             dists[4][pi]=(l1_dist(ten_sketch[si], ten_sketch[sj]));
             dists[5][pi]=(l1_dist2D_minlen(slide_sketch[si], slide_sketch[sj]));
-            PB_iter();
+            progress_bar::iter();
         }
 
-        std::cout << std::endl;
+
     }
 
     void print_spearman() {
-        std::cout << "Spearman correlation MH: " << spearman(dists[0], dists[1]) << std::endl;
-        std::cout << "Spearman correlation WMH: " << spearman(dists[0], dists[2]) << std::endl;
-        std::cout << "Spearman correlation OMH: " << spearman(dists[0], dists[3]) << std::endl;
-        std::cout << "Spearman correlation TensorSketch: "
-                  << spearman(dists[0], dists[4]) << std::endl;
-        std::cout << "Spearman correlation TensorSlide: "
-                  << spearman(dists[0], dists[5]) << std::endl;
+        std::cout << "\tMH: " << spearman(dists[0], dists[1]) << std::endl;
+        std::cout << "\tWMH: " << spearman(dists[0], dists[2]) << std::endl;
+        std::cout << "\tOMH: " << spearman(dists[0], dists[3]) << std::endl;
+        std::cout << "\tTensorSketch: " << spearman(dists[0], dists[4]) << std::endl;
+        std::cout << "\tTensorSlide: " << spearman(dists[0], dists[5]) << std::endl;
     }
 
     void save_output() {
+        const std::filesystem::path output_dir(FLAGS_o);
+
         std::vector<std::string> method_names
-                = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide", "Ten2", "Ten2Slide" };
+                = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide"};
         std::ofstream fo;
 
         fs::create_directories(fs::path(output_dir / "dists"));
@@ -254,31 +243,31 @@ struct SeqGenModule {
 
         fo.open(output_dir / "flags");
         assert(fo.is_open());
-        fo << flag_values('\n');
+        fo << flag_values('\n', true);
         fo.close();
 
         fo.open(output_dir / "timing.csv");
         assert(fo.is_open());
-        fo << timer_summary(FLAGS_num_seqs);
+        fo << timer_summary(FLAGS_num_seqs, ingroup_pairs.size());
         fo.close();
 
         write_fasta(output_dir / "seqs.fa", seqs);
 
         fo.open(output_dir / "dists.csv");
         fo << "s1,\ts2";
-        for (int m=0; m<6; m++) {
+        for (int m=0; m<6; m++) { // table header
             fo << ",\t" << method_names[m];
         }
         fo << "\n";
-        for (uint32_t pi=0; pi<pairs.size(); pi++) {
-            fo << pairs[pi].first << ",\t" << pairs[pi].second;
-            for (int m=0; m<6; m++) {
+        for (uint32_t pi=0; pi< ingroup_pairs.size(); pi++) {
+            fo << ingroup_pairs[pi].first << ",\t" << ingroup_pairs[pi].second; // seq 1 & 2 indices
+            for (int m=0; m<6; m++) { // distance based on each method
                 fo << ",\t" << dists[m][pi];
             }
             fo << "\n";
         }
 
-        fo.open(output_dir / "sketches/mh.txt");
+        fo.open(output_dir / "sk_MH.txt");
         assert(fo.is_open());
         for (uint32_t si = 0; si < mh_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
@@ -289,7 +278,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output_dir / "sketches/wmh.txt");
+        fo.open(output_dir / "sk_WMH.txt");
         assert(fo.is_open());
         for (uint32_t si = 0; si < wmh_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
@@ -300,7 +289,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output_dir / "sketches/omh.txt");
+        fo.open(output_dir / "sk_OMH.txt");
         assert(fo.is_open());
         for (uint32_t si = 0; si < omh_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
@@ -311,7 +300,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output_dir / "sketches/ten.txt");
+        fo.open(output_dir / "sk_TenSketch.txt");
         assert(fo.is_open());
         for (uint32_t si = 0; si < ten_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
@@ -322,7 +311,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output_dir / "sketches/ten_slide.txt");
+        fo.open(output_dir / "sk_TenSlide.txt");
         for (uint32_t si = 0; si < seqs.size(); si++) {
             auto &sk = slide_sketch[si];
             for (uint32_t dim = 0; dim < sk.size(); dim++) {
@@ -335,6 +324,21 @@ struct SeqGenModule {
         }
         fo.close();
     }
+
+
+
+  private:
+    Vec2D<char_type> seqs;
+    std::vector<std::string> seq_names;
+    std::string test_id;
+    Vec2D<kmer_type> kmer_seqs;
+    Vec2D<kmer_type> mh_sketch;
+    Vec2D<kmer_type> wmh_sketch;
+    Vec2D<kmer_type> omh_sketch;
+    Vec2D<embed_type> ten_sketch;
+    Vec3D<embed_type> slide_sketch;
+    Vec2D<double> dists;
+    std::vector<std::pair<uint32_t,uint32_t>> ingroup_pairs;
 };
 
 
@@ -344,23 +348,12 @@ int main(int argc, char *argv[]) {
     if (FLAGS_max_len<0) {
         FLAGS_max_len = FLAGS_seq_len;
     }
-    if (FLAGS_num_threads > 0)
+    if (FLAGS_num_threads > 0) {
         omp_set_num_threads(FLAGS_num_threads);
+    }
 
-    SeqGenModule<uint8_t, uint64_t, double> experiment(FLAGS_o);
-    std::cout << "Generating sequences ..." << std::endl;
-    experiment.generate_sequences();
-    std::cout << "Computing sketches ... " << std::endl;
-    experiment.compute_sketches();
-    std::cout << "Transform sketches ... " << std::endl;
-    experiment.transform_sketches();
-    std::cout << "Computing distances ... " << std::endl;
-    experiment.compute_pairwise_dists();
-    experiment.print_spearman();
-
-    std::cout << "Writing output to " << FLAGS_o << std::endl;
-    experiment.save_output();
-
+    SeqGenModule<uint8_t, uint64_t, double> experiment;
+    experiment.run();
 
     return 0;
 }

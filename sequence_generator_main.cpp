@@ -28,14 +28,14 @@ DEFINE_uint32(L, 256, "Short hand for --seq_len");
 DEFINE_uint32(group_size, 2, "The of sequences in each group");
 DEFINE_uint32(G, 2, "Short hand for --group_size");
 
-DEFINE_double(mutation_rate, 0.3, "Maximum rate of point mutation for sequence generation");
-DEFINE_double(r, 0.3, "Short hand for --mutation_rate");
+DEFINE_double(max_mutation_rate, 0.3, "Maximum rate of point mutation for sequence generation");
+DEFINE_double(R, 0.3, "Short hand for --max_mutation_rate");
 
 DEFINE_double(min_mutation_rate, 0.0, "min rate for sequence mutation for sequence generation");
+DEFINE_double(r, 0.00, "Short hand for --min_mutation_rate");
 
 
 DEFINE_double(block_mutation_rate, 0.00, "The probability of having a block permutation");
-DEFINE_double(R, 0.00, "Short hand for --block_mutation_rate");
 
 
 DEFINE_string(output_dir, "/tmp/", "File name where the generated sequence should be written");
@@ -43,14 +43,14 @@ DEFINE_string(o, "./seqs.fa", "Short hand for --output");
 
 
 static bool validatePhylogenyShape(const char *flagname, const std::string &value) {
-    if (value == "path" || value == "tree" )
+    if (value == "path" || value == "tree" || value == "star" || value == "pair")
         return true;
     printf("Invalid value for --%s: %s\n", flagname, value.c_str());
     return false;
 }
 DEFINE_string(phylogeny_shape,
               "path",
-              "shape of the phylogeny can be 'path', 'tree'");
+              "shape of the phylogeny can be 'path', 'tree', 'star', or 'pair'");
 DEFINE_validator(phylogeny_shape, &validatePhylogenyShape);
 
 
@@ -82,11 +82,11 @@ void adjust_short_names() {
     if (!gflags::GetCommandLineFlagInfoOrDie("L").is_default) {
         FLAGS_seq_len = FLAGS_L;
     }
-    if (!gflags::GetCommandLineFlagInfoOrDie("r").is_default) {
-        FLAGS_mutation_rate = FLAGS_r;
-    }
     if (!gflags::GetCommandLineFlagInfoOrDie("R").is_default) {
-        FLAGS_block_mutation_rate = FLAGS_R;
+        FLAGS_max_mutation_rate = FLAGS_R;
+    }
+    if (!gflags::GetCommandLineFlagInfoOrDie("r").is_default) {
+        FLAGS_min_mutation_rate = FLAGS_r;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("o").is_default) {
         FLAGS_output_dir = FLAGS_o;
@@ -111,15 +111,12 @@ int main(int argc, char *argv[]) {
                        FLAGS_num_seqs,
                        FLAGS_seq_len,
                        FLAGS_group_size,
-                       (double)FLAGS_mutation_rate,
+                       (double)FLAGS_max_mutation_rate,
                        (double)FLAGS_min_mutation_rate,
                        (double)FLAGS_block_mutation_rate,
-                       FLAGS_mutation_type);
+                       FLAGS_mutation_type,
+                       FLAGS_phylogeny_shape);
 
-    if (FLAGS_phylogeny_shape == "path") {
-        seq_gen.generate_path(seqs);
-    } else if (FLAGS_phylogeny_shape == "tree") {
-        seq_gen.generate_tree(seqs);
-    }
+    seq_gen.generate_seqs(seqs);
     ts::write_fasta(std::filesystem::path(FLAGS_output_dir)/"seqs.fa", seqs);
 }

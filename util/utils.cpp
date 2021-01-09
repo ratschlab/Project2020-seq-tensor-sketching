@@ -1,14 +1,15 @@
 #include "utils.hpp"
 
 namespace ts {
-std::string flag_values(char delimiter) {
+
+std::string flag_values(char delimeter, bool skip_empty) {
     std::vector<gflags::CommandLineFlagInfo> flags;
     gflags::GetAllFlags(&flags);
     std::string result;
     for (const auto &flag : flags) {
-        if (flag.current_value.size()>0) { // omit empty flags
-            result += "--" + flag.name + "=" + flag.current_value + delimiter;
-        }
+        if (skip_empty && flag.current_value.empty())
+            continue;
+        result += "--" + flag.name + "=" + flag.current_value + delimeter;
     }
     return result;
 }

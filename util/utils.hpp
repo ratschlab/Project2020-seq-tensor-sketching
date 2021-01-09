@@ -166,6 +166,6 @@ T int_pow(T x, T pow) {
     return result;
 }
 
-std::string flag_values(char delimiter);
+std::string flag_values(char delimeter = ' ', bool skip_empty = false);
 
 } // namespace ts

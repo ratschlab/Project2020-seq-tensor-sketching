@@ -22,7 +22,8 @@ class SeqGen {
            double mutation_rate,
            double min_mutation_rate,
            double block_mutation_rate,
-           std::string mutation_type)
+           std::string mutation_type,
+           std::string phylogeny_shape)
         : alphabet_size(alphabet_size),
           fix_len(fix_len),
           max_num_blocks(max_num_blocks),
@@ -30,52 +31,93 @@ class SeqGen {
           num_seqs(num_seqs),
           seq_len(seq_len),
           group_size(group_size),
-          mutation_rate(mutation_rate),
+          max_mutation_rate(mutation_rate),
           min_mutation_rate(min_mutation_rate),
           block_mutate_rate(block_mutation_rate),
-          mutation_type(mutation_type) {}
-
-
-    template <class T>
-    void generate_path(Vec2D<T> &seqs) {
-        seqs.resize(num_seqs + group_size);
-        for (size_t gi=0; gi<num_seqs; gi += group_size) {
-            random_sequence(seqs[gi], seq_len);
-            for (size_t i=0; i<group_size-1; i++) {
-                mutate(seqs[gi+i], seqs[gi+i+1]);
-            }
-        }
-        seqs.resize(num_seqs);
+          mutation_type(mutation_type),
+          phylogeny_shape(phylogeny_shape){
+        assert(group_size>=2 && "group size<=1 leads to completely independent sequences");
+        assert(num_seqs % group_size == 0);
     }
 
 
+    // TODO write tests for sequence generation
+    /**
+     * generate sequences, divided into independent groups of size `group_size`, and store
+     * ingroup_pairs within each group in `ingroup_pairs`
+     * @tparam T : character type
+     * @tparam C : index type
+     * @param seqs : generated sequences
+     * @param pairs : sequence ingroup_pairs within each group
+     */
     template <class T>
-    void generate_tree(Vec2D<T> seqs) {
+    void generate_seqs(Vec2D<T> &seqs) {
+        if (phylogeny_shape == "pair") { // shape=path: implemented as path & group_size=2
+            phylogeny_shape = "path";
+            group_size = 2;
+        }
+
         seqs.reserve(num_seqs);
         while (seqs.size() < num_seqs) {
-            Vec2D<T> group(1), children;
-            random_sequence(group[0], seq_len);
-            while (group.size() < group_size) {
-                children.clear();
-                for (auto &seq : group) {
-                    std::vector<T> ch;
-                    mutate(seq, ch);
-                    children.push_back(seq);
-                    children.push_back(ch);
+            Vec2D<T> group;
+
+            // tree-like: g1->g2, add g2 to pool, g1->g3, g2->g4, add g3, g4 to pool
+            if (phylogeny_shape == "tree") {
+                group = Vec2D<T>(1);
+                random_sequence(group[0], seq_len);
+                Vec2D<T> children;
+                while (group.size() < group_size) {
+                    for (auto &seq : group) {
+                        std::vector<T> ch;
+                        mutate(seq, ch);
+                        children.push_back(seq);
+                        children.push_back(ch);
+                    }
+                    std::swap(group, children);
+                    children.clear();
                 }
-                std::swap(group, children);
             }
+            else if (phylogeny_shape == "path") {     // path-like: g0->g1->g2->g3->...
+                group = Vec2D<T>(group_size);
+                random_sequence(group[0], seq_len);
+                for (size_t i=0; i<group_size-1; i++) {
+                    mutate(group[i], group[i+1]);
+                }
+            }
+            else if (phylogeny_shape == "star") {     // star-like: g0->g1, g0->1,g0->g3 ...
+                group = Vec2D<T>(1);
+                random_sequence(group[0], seq_len);
+                for (size_t i=1; i<group_size; i++) {
+                    mutate(group[0], group[i]);
+                }
+            }
+
             group.resize(group_size);
             seqs.insert(seqs.end(), group.begin(), group.end());
+            if (seqs.size() > num_seqs) {
+                seqs.resize(num_seqs);
+            }
         }
-        seqs.resize(num_seqs);
     }
+
+    // TODO write tests
+    template <class T>
+    void ingroup_pairs(std::vector<std::pair<T,T>> &pairs) {
+        for (size_t go = 0; go < num_seqs; go++) { // group-offset
+            for (size_t i=0; i<group_size && go+i<num_seqs; i++) { // group-member i
+                for (size_t j=i+1; j<group_size && go+j<num_seqs; j++) { // group-member j
+                    pairs.push_back({ go +i, go +j});
+                }
+            }
+        }
+    }
+
 
   private:
 
     template <class T>
     void mutate(const std::vector<T> &ref, std::vector<T> &seq) {
-        std::uniform_real_distribution<double> unif(min_mutation_rate, mutation_rate);
+        std::uniform_real_distribution<double> unif(min_mutation_rate, max_mutation_rate);
         if (mutation_type == "edit") {
             mutate_edits(ref, seq, unif(gen));
         } else if (mutation_type == "rate") {
@@ -261,10 +303,11 @@ class SeqGen {
     uint32_t num_seqs;
     uint32_t seq_len;
     uint32_t group_size;
-    double mutation_rate;
+    double max_mutation_rate;
     double min_mutation_rate;
     double block_mutate_rate;
     std::string mutation_type;
+    std::string phylogeny_shape;
 };
 
 } // namespace ts

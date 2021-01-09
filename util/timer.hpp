@@ -12,11 +12,15 @@ namespace ts { // ts = Tensor Sketch
 
 using namespace std::chrono;
 
+// TODO create a macro to create timer object
+
+// TODO make this static members of Timer
 extern std::vector<std::map<std::string, std::chrono::nanoseconds>> durations_vec;
 
+// TODO make this static members of Timer
 void timer_add_duration(const std::string &func_name, std::chrono::nanoseconds dur) ;
 
-std::string timer_summary(uint32_t num_seqs);
+std::string timer_summary(uint32_t num_seqs, uint32_t num_pairs);
 
 class Timer {
   public:
