@@ -26,12 +26,12 @@ std::string timer_summary(uint32_t num_seqs, uint32_t num_pairs) {
             { "edit_distance", "ED" },
             { "minhash", "MH" },
             { "weighted_minhash", "WMH" },
-            { "ordered_minhash_flat", "OMH" },
+            { "ordered_minhash", "OMH" },
             { "tensor_sketch", "TenSketch" },
             { "tensor_slide_sketch", "TenSlide" },
             {"seq2kmer", "S2K"}
     };
-    std::string str;
+    std::string str = "long name,short name, time\n";
     std::map<std::string, double> acc;
     for (auto &durations : durations_vec) {
         for (auto const &[arg_name, arg] : durations) {
@@ -55,7 +55,7 @@ std::string timer_summary(uint32_t num_seqs, uint32_t num_pairs) {
             } else {
                 count = count/1e6/num_seqs;
             }
-            str += " " + arg_name + ",\t" + trans[arg_name] + ",\t" + std::to_string(count) + '\n';
+            str = str + arg_name + "," + trans[arg_name] + "," + std::to_string(count) + '\n';
         }
     return str;
 }

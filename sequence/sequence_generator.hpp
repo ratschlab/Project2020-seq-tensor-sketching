@@ -37,7 +37,6 @@ class SeqGen {
           mutation_type(mutation_type),
           phylogeny_shape(phylogeny_shape){
         assert(group_size>=2 && "group size<=1 leads to completely independent sequences");
-        assert(num_seqs % group_size == 0);
     }
 
 

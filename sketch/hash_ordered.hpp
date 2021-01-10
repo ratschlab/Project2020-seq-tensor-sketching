@@ -31,7 +31,6 @@ class OrderedMinHash : public HashBase<T> {
           tup_len(tup_len) {}
 
     Vec2D<T> compute(const std::vector<T> &kmers) {
-        Timer timer("ordered_minhash");
         Vec2D<T> sketch(this->sketch_dim);
         if (kmers.size() < tup_len) {
             throw std::invalid_argument("Sequence of kmers must be longer than tuple length");
@@ -63,7 +62,7 @@ class OrderedMinHash : public HashBase<T> {
     }
 
     std::vector<T> compute_flat(const std::vector<T> &kmers) {
-        Timer timer("ordered_minhash_flat");
+        Timer timer("ordered_minhash");
         std::vector<T> sketch;
 
         Vec2D<T> sketch2D = compute(kmers);

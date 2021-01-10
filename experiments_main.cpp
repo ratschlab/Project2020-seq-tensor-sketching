@@ -238,7 +238,6 @@ struct SeqGenModule {
                 = { "ED", "MH", "WMH", "OMH", "TenSketch", "TenSlide"};
         std::ofstream fo;
 
-        fs::create_directories(fs::path(output_dir / "dists"));
         fs::create_directories(fs::path(output_dir / "sketches"));
 
         fo.open(output_dir / "flags");
@@ -254,20 +253,20 @@ struct SeqGenModule {
         write_fasta(output_dir / "seqs.fa", seqs);
 
         fo.open(output_dir / "dists.csv");
-        fo << "s1,\ts2";
+        fo << "s1,s2";
         for (int m=0; m<6; m++) { // table header
-            fo << ",\t" << method_names[m];
+            fo << "," << method_names[m];
         }
         fo << "\n";
         for (uint32_t pi=0; pi< ingroup_pairs.size(); pi++) {
-            fo << ingroup_pairs[pi].first << ",\t" << ingroup_pairs[pi].second; // seq 1 & 2 indices
+            fo << ingroup_pairs[pi].first << "," << ingroup_pairs[pi].second; // seq 1 & 2 indices
             for (int m=0; m<6; m++) { // distance based on each method
-                fo << ",\t" << dists[m][pi];
+                fo << "," << dists[m][pi];
             }
             fo << "\n";
         }
 
-        fo.open(output_dir / "sk_MH.txt");
+        fo.open(output_dir / "sketches" /  "MH.txt");
         assert(fo.is_open());
         for (uint32_t si = 0; si < mh_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
@@ -278,7 +277,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output_dir / "sk_WMH.txt");
+        fo.open(output_dir / "sketches" /  "WMH.txt");
         assert(fo.is_open());
         for (uint32_t si = 0; si < wmh_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
@@ -289,7 +288,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output_dir / "sk_OMH.txt");
+        fo.open(output_dir / "sketches" /  "OMH.txt");
         assert(fo.is_open());
         for (uint32_t si = 0; si < omh_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
@@ -300,7 +299,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output_dir / "sk_TenSketch.txt");
+        fo.open(output_dir / "sketches" /  "TenSketch.txt");
         assert(fo.is_open());
         for (uint32_t si = 0; si < ten_sketch.size(); si++) {
             fo << ">> seq " << si << "\n";
@@ -311,7 +310,7 @@ struct SeqGenModule {
         }
         fo.close();
 
-        fo.open(output_dir / "sk_TenSlide.txt");
+        fo.open(output_dir / "sketches" /  "TenSlide.txt");
         for (uint32_t si = 0; si < seqs.size(); si++) {
             auto &sk = slide_sketch[si];
             for (uint32_t dim = 0; dim < sk.size(); dim++) {
