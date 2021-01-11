@@ -6,6 +6,7 @@
 #include "sketch/hash_ordered.hpp"
 #include "sketch/hash_weighted.hpp"
 #include "sketch/tensor.hpp"
+#include "sketch/tensor_binom.hpp"
 #include "sketch/tensor_slide.hpp"
 #include "sketch/tensor_slide_flat.hpp"
 #include "util/multivec.hpp"
@@ -22,7 +23,6 @@
 #include <memory>
 #include <numeric>
 #include <omp.h>
-#include <sys/types.h>
 
 DEFINE_uint32(kmer_size, 4, "Kmer size for MH, OMH, WMH");
 
