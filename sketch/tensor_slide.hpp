@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <vector>
+#include <bit>
 
 namespace ts {
 /**
@@ -32,15 +33,17 @@ class TensorSlide : public Tensor<seq_type> {
                 size_t tup_len,
                 size_t win_len,
                 size_t stride,
-                size_t max_len = 0)
-        : Tensor<seq_type>(alphabet_size, max_len==0? sketch_dim : (sketch_dim+stride-1)/stride, tup_len),
-                win_len(win_len), stride(stride), flat_dim(sketch_dim) {
+                size_t max_len = 0,
+                size_t inner_dim = 0)
+        : Tensor<seq_type>(alphabet_size, inner_dim>0? inner_dim : sketch_dim, tup_len),
+                win_len(win_len), stride(stride), flat_dim(sketch_dim*16), max_len(max_len) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
+        assert((this->flat_dim) % this->sketch_dim == 0 && "sketch_dim must be divisible by inner_dim");
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::cauchy_distribution<double> distribution(0,1.0);
-        rand_proj = new2D<double>(this->flat_dim, max_len * sketch_dim *2);
+        std::normal_distribution<double> distribution(0,1.0);
+        rand_proj = new2D<double>(this->flat_dim, max_len * sketch_dim *2 / stride);
         for (auto & v : rand_proj) {
             for (double & e : v) {
                 e = distribution(gen);
@@ -123,26 +126,23 @@ class TensorSlide : public Tensor<seq_type> {
     }
 
     std::vector<double> flatten(const Vec2D<double> &sketch) {
-        Timer timer("tensor_slide_flatten");
+        Timer timer("tensor_slide_flat");
+        assert(rand_proj.size()==flat_dim && !rand_proj[0].empty() && " random matrix must be initialized");
         std::vector<double> v(this->flat_dim,0);
         for (size_t s = 0; s < this->flat_dim; s++) {
+            size_t j = s % this->sketch_dim;
             for (size_t i=0; i< sketch.size();i++) {
-                for (size_t j=0; j< sketch[i].size();j++) {
+//                for (size_t j=0; j< sketch[i].size();j++) {
                     v[s] += rand_proj[s][i*this->sketch_dim + j] * sketch[i][j];
-                }
+//                }
             }
             v[s] /=  (double)(sketch.size() * sketch[0].size() ); // divide by number of elements to compute the mean
         }
         return  v;
     }
 
-    std::vector<double> compute_flat(const std::vector<seq_type> &seq) {
-        Timer timer("tensor_slide_sketch_flat");
-        return flatten(compute(seq));
-    }
-
     double dist_flat(const std::vector<double> &v1, const std::vector<double> &v2) {
-        Timer timer("tensor_slide_sketch_flat_dist");
+        Timer timer("tensor_slide_flat_dist");
         assert(v1.size()==v2.size());
         std::vector<double> d(v1.size());
         for (size_t i = 0; i < d.size(); i++) {
@@ -150,6 +150,33 @@ class TensorSlide : public Tensor<seq_type> {
         }
         std::sort(d.begin(), d.end());
         return d[d.size()/2]; // return the median
+    }
+
+    std::vector<uint32_t> flatten_sign(const Vec2D<double> &sketch) {
+        Timer timer("tensor_slide_sign");
+        assert(rand_proj.size()==flat_dim && !rand_proj[0].empty() && " random matrix must be initialized");
+        size_t pitch = (max_len + stride+1)/stride;
+        std::vector<uint32_t> v(this->flat_dim/32,0);
+        for (size_t s = 0; s < this->flat_dim; s++) {
+            size_t j = s % this->sketch_dim;
+            double val = 0;
+            for (size_t i=0; i< sketch.size();i++) {
+                val += rand_proj[s][i+ j * pitch] * sketch[i][j];
+            }
+            v[s >> 5] |= (val>0 ? 1 : 0) << (s & 31); // check the sign
+        }
+        return v;
+    }
+
+    double dist_sign(const std::vector<uint32_t> &v1, const std::vector<uint32_t> &v2) {
+        Timer timer("tensor_slide_sign_dist");
+        assert(v1.size()==v2.size());
+        std::vector<double> d(v1.size());
+        double val = 0;
+        for (size_t i = 0; i < d.size(); i++) {
+            val += std::__popcount(v1[i]^v2[i] );
+        }
+        return val;
     }
 
   private:
@@ -165,6 +192,7 @@ class TensorSlide : public Tensor<seq_type> {
     uint32_t win_len;
     uint32_t stride;
     uint32_t flat_dim;
+    uint32_t max_len;
     Vec2D<double> rand_proj;
 };
 

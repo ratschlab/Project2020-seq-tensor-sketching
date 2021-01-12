@@ -160,6 +160,7 @@ struct SeqGenModule {
         ts_sketch.resize(num_seqs);
         tss_sketch.resize(num_seqs);
         tss_sketch_flat.resize(num_seqs);
+        tss_sketch_sign.resize(num_seqs);
 
         embed_type set_size = int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
         min_hash = MinHash<kmer_type>(set_size, FLAGS_embed_dim);
@@ -168,7 +169,7 @@ struct SeqGenModule {
                                             FLAGS_tuple_length);
         tensor_sketch = Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
         tensor_slide = TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length,
-                                            FLAGS_window_size, FLAGS_stride, FLAGS_seq_len);
+                                            FLAGS_window_size, FLAGS_stride, FLAGS_seq_len, FLAGS_embed_dim/8);
 
     }
 
@@ -189,6 +190,7 @@ struct SeqGenModule {
             ts_sketch[si] = tensor_sketch.compute(seqs[si]);
             tss_sketch[si] = tensor_slide.compute(seqs[si]);
             tss_sketch_flat[si] = tensor_slide.flatten(tss_sketch[si]);
+            tss_sketch_sign[si] = tensor_slide.flatten_sign(tss_sketch[si]);
             progress_bar::iter();
         }
 
@@ -208,7 +210,7 @@ struct SeqGenModule {
     }
 
     void compute_pairwise_dists() {
-        dists = new2D<double>(7, ingroup_pairs.size());
+        dists = new2D<double>(8, ingroup_pairs.size());
         progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
         for (size_t pi=0; pi< ingroup_pairs.size(); pi++ ) {
@@ -220,6 +222,7 @@ struct SeqGenModule {
             dists[4][pi]= tensor_sketch.dist(ts_sketch[si], ts_sketch[sj]);
             dists[5][pi]= tensor_slide.dist(tss_sketch[si], tss_sketch[sj]);
             dists[6][pi]= tensor_slide.dist_flat(tss_sketch_flat[si], tss_sketch_flat[sj]);
+            dists[7][pi]= tensor_slide.dist_sign(tss_sketch_sign[si], tss_sketch_sign[sj]);
             progress_bar::iter();
         }
 
@@ -232,6 +235,7 @@ struct SeqGenModule {
         std::cout << "\tTensorSketch: " << spearman(dists[0], dists[4]) << std::endl;
         std::cout << "\tTensorSlide: " << spearman(dists[0], dists[5]) << std::endl;
         std::cout << "\tTensorSlideFlat: " << spearman(dists[0], dists[6]) << std::endl;
+        std::cout << "\tTensorSlideSign: " << spearman(dists[0], dists[7]) << std::endl;
     }
 
     void save_output() {
@@ -278,6 +282,7 @@ struct SeqGenModule {
     Vec2D<embed_type> ts_sketch;
     Vec3D<embed_type> tss_sketch;
     Vec2D<embed_type> tss_sketch_flat;
+    Vec2D<uint32_t> tss_sketch_sign;
 
     MinHash<kmer_type> min_hash;
     WeightedMinHash<kmer_type> wmin_hash;

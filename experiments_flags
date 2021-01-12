@@ -16,7 +16,7 @@
 --kmer_size=4
 --tuple_length=3
 --window_size=500
---stride=8
+--stride=32
 --max_len=1000
 --hash_alg=crc32
 --transform=none
