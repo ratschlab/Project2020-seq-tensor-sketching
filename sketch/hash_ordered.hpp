@@ -92,6 +92,11 @@ class OrderedMinHash : public HashBase<T> {
         sketch = compute(kmers);
     }
 
+    static T dist(const std::vector<T> &a, const std::vector<T> &b) {
+        Timer timer("ordered_minhash_dist");
+        return hamming_dist(a, b);
+    }
+
   private:
     size_t max_len;
     size_t tup_len;

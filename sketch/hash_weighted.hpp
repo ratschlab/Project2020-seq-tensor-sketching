@@ -86,6 +86,11 @@ class WeightedMinHash : public HashBase<T> {
         return sketch;
     }
 
+    static T dist(const std::vector<T> &a, const std::vector<T> &b) {
+        Timer timer("weighted_minhash_dist");
+        return hamming_dist(a, b);
+    }
+
   private:
     size_t max_len;
 };

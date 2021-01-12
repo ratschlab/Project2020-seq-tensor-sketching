@@ -102,7 +102,7 @@ class SeqGen {
     // TODO write tests
     template <class T>
     void ingroup_pairs(std::vector<std::pair<T,T>> &pairs) {
-        for (size_t go = 0; go < num_seqs; go++) { // group-offset
+        for (size_t go = 0; go < num_seqs; go += group_size) { // group-offset
             for (size_t i=0; i<group_size && go+i<num_seqs; i++) { // group-member i
                 for (size_t j=i+1; j<group_size && go+j<num_seqs; j++) { // group-member j
                     pairs.push_back({ go +i, go +j});

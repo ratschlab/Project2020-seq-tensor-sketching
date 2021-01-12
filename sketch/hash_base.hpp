@@ -60,12 +60,12 @@ class HashBase {
                 // TODO multiple read Semaphor instead of critical
 #pragma omp critical
             {
-                if (hashes[index].contains(key)) {
+                if (hashes[index].find(key) != hashes[index].end()) {
                     random_hash = hashes[index][key];
                 } else {
                     while (true) {
                         random_hash = rand(rng);
-                        if (!hash_values[index].contains(random_hash)) {
+                        if (hash_values[index].find(random_hash) == hash_values[index].end()) {
                             hashes[index][key] = random_hash;
                             hash_values[index].insert(random_hash);
                             break;
@@ -93,7 +93,7 @@ class HashBase {
     std::vector<std::unordered_set<T>> hash_values;
     std::uniform_int_distribution<T> rand;
     std::mt19937 rng;
-    uint32_t crc32_base;
+    uint32_t crc32_base = 341234;
 
     hash_algorithm_enum hash_algorithm = hash_algorithm_enum::uniform;
 };

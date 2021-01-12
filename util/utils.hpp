@@ -61,6 +61,18 @@ T l1_dist(const std::vector<T> &a, const std::vector<T> &b) {
 
 
 template <class T>
+T l2_dist(const std::vector<T> &a, const std::vector<T> &b) {
+    assert(a.size() == b.size());
+    T res = 0;
+    for (size_t i = 0; i < a.size(); i++) {
+        auto el = std::abs(a[i] - b[i]);
+        res += el * el;
+    }
+    return res;
+}
+
+
+template <class T>
 T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
     auto len = std::min(a.size(), b.size());
     T val = 0;

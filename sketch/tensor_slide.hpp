@@ -16,44 +16,56 @@ namespace ts {
 template <class seq_type>
 class TensorSlide : public Tensor<seq_type> {
   public:
+    TensorSlide() {}
+
     /**
      * @param alphabet_size the number of elements in the alphabet S over which sequences are
      * defined (e.g. 4 for DNA)
-     * @param sketch_size the dimension of the embedded (sketched) space, denoted by D in the paper
+     * @param sketch_dim the dimension of the embedded (sketched) space, denoted by D in the paper
      * @param subsequence_len the length of the subsequences considered for sketching, denoted by t
      * in the paper
      * @param win_len sliding sketches are computed for substrings of size win_len
      * @param stride sliding sketches are computed every stride characters
      */
     TensorSlide(seq_type alphabet_size,
-                size_t sketch_size,
+                size_t sketch_dim,
                 size_t tup_len,
                 size_t win_len,
                 size_t stride,
-                size_t seq_len = 0)
-        : Tensor<seq_type>(alphabet_size, calc_dim(stride,seq_len,sketch_size), tup_len), win_len(win_len), stride(stride) {
+                size_t max_len = 0)
+        : Tensor<seq_type>(alphabet_size, max_len==0? sketch_dim : (sketch_dim+stride-1)/stride, tup_len),
+                win_len(win_len), stride(stride), flat_dim(sketch_dim) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::cauchy_distribution<double> distribution(0,1.0);
+        rand_proj = new2D<double>(this->flat_dim, max_len * sketch_dim *2);
+        for (auto & v : rand_proj) {
+            for (double & e : v) {
+                e = distribution(gen);
+            }
+        }
     }
 
     /**
      * Computes sliding sketches for the given sequence.
      * A sketch is computed every #stride characters on substrings of length #window.
-     * @return seq.size()/stride sketches of size #sketch_size
+     * @return seq.size()/stride sketches of size #sketch_dim
      */
     Vec2D<double> compute(const std::vector<seq_type> &seq) {
         Timer timer("tensor_slide_sketch");
         Vec2D<double> sketches;
         if (seq.size() < this->subsequence_len) {
-            return new2D<double>(seq.size() / this->stride, this->sketch_size, double(0));
+            return new2D<double>(seq.size() / this->stride, this->sketch_dim, double(0));
         }
         auto &hashes = this->hashes;
         auto &signs = this->signs;
         auto tup_len = this->subsequence_len;
         // first index: p; second index: q; third index: r
         // p,q go from 1 to tup_len; p==0 and p==tup_len+1 are sentinels for termination condition
-        auto T1 = new3D<double>(tup_len + 2, tup_len + 1, this->sketch_size, 0);
-        auto T2 = new3D<double>(tup_len + 2, tup_len + 1, this->sketch_size, 0);
+        auto T1 = new3D<double>(tup_len + 2, tup_len + 1, this->sketch_dim, 0);
+        auto T2 = new3D<double>(tup_len + 2, tup_len + 1, this->sketch_dim, 0);
 
         for (uint32_t p = 0; p <= tup_len; p++) {
             T1[p + 1][p][0] = 1;
@@ -105,19 +117,39 @@ class TensorSlide : public Tensor<seq_type> {
         return sketches;
     }
 
-    /**
-     * Compute the sketch dimension of tensor slide sketch, such that
-     * the overal sketch size is comparable to the other methods.
-     * It is set to sketch-dim/stride, rounded to the next power of 2.
-     */
-    uint32_t calc_dim(uint32_t stride, uint32_t seq_len, uint32_t sketch_dim) {
-        // if seq_len=0, default behavior: no change in dimension
-        if (seq_len == 0) {
-            return sketch_dim;
+    double dist(const Vec2D<double> &a, const Vec2D<double> &b) {
+        Timer timer("tensor_slide_sketch_dist");
+        return l1_dist2D_minlen(a, b);
+    }
+
+    std::vector<double> flatten(const Vec2D<double> &sketch) {
+        Timer timer("tensor_slide_flatten");
+        std::vector<double> v(this->flat_dim,0);
+        for (size_t s = 0; s < this->flat_dim; s++) {
+            for (size_t i=0; i< sketch.size();i++) {
+                for (size_t j=0; j< sketch[i].size();j++) {
+                    v[s] += rand_proj[s][i*this->sketch_dim + j] * sketch[i][j];
+                }
+            }
+            v[s] /=  (double)(sketch.size() * sketch[0].size() ); // divide by number of elements to compute the mean
         }
-        uint32_t dim = (sketch_dim * stride + seq_len - 1)/seq_len; // lower dimension
-        dim = pow(2, ceil(log(dim)/log(2))); // find the next power of 2
-        return dim;
+        return  v;
+    }
+
+    std::vector<double> compute_flat(const std::vector<seq_type> &seq) {
+        Timer timer("tensor_slide_sketch_flat");
+        return flatten(compute(seq));
+    }
+
+    double dist_flat(const std::vector<double> &v1, const std::vector<double> &v2) {
+        Timer timer("tensor_slide_sketch_flat_dist");
+        assert(v1.size()==v2.size());
+        std::vector<double> d(v1.size());
+        for (size_t i = 0; i < d.size(); i++) {
+            d[i] = abs(v1[i] - v2[i]);
+        }
+        std::sort(d.begin(), d.end());
+        return d[d.size()/2]; // return the median
     }
 
   private:
@@ -132,6 +164,8 @@ class TensorSlide : public Tensor<seq_type> {
 
     uint32_t win_len;
     uint32_t stride;
+    uint32_t flat_dim;
+    Vec2D<double> rand_proj;
 };
 
 } // namespace ts

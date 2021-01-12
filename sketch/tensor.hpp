@@ -7,6 +7,7 @@
 #include <random>
 #include <cmath>
 #include "util/timer.hpp"
+#include "util/utils.hpp"
 #include "nmmintrin.h" // for SSE4.2
 #include "immintrin.h" // for AVX
 
@@ -20,22 +21,23 @@ namespace ts { // ts = Tensor Sketch
 template <class seq_type>
 class Tensor {
   public:
+    Tensor() {}
     /**
      * @param alphabet_size the number of elements in the alphabet S over which sequences are
      * defined (e.g. 4 for DNA)
-     * @param sketch_size the dimension of the embedded (sketched) space, denoted by D in the paper
+     * @param sketch_dim the dimension of the embedded (sketched) space, denoted by D in the paper
      * @param subsequence_len the length of the subsequences considered for sketching, denoted by t
      * in the paper
      */
-    Tensor(seq_type alphabet_size, size_t sketch_size, size_t subsequence_len)
+    Tensor(seq_type alphabet_size, size_t sketch_dim, size_t subsequence_len)
         : alphabet_size(alphabet_size),
-          sketch_size(sketch_size),
+          sketch_dim(sketch_dim),
           subsequence_len(subsequence_len),
           hashes(new2D<seq_type>(subsequence_len, alphabet_size)),
           signs(new2D<bool>(subsequence_len, alphabet_size)) {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<seq_type> rand_hash2(0, sketch_size - 1);
+        std::uniform_int_distribution<seq_type> rand_hash2(0, sketch_dim - 1);
         std::uniform_int_distribution<seq_type> rand_bool(0, 1);
 
         for (size_t h = 0; h < subsequence_len; h++) {
@@ -49,7 +51,7 @@ class Tensor {
     /**
      * Computes the sketch of the given sequence.
      * @param seq the sequence to be sketched
-     * @return an array of size #sketch_size containing the sequence's sketch
+     * @return an array of size #sketch_dim containing the sequence's sketch
      */
     std::vector<double> compute(const std::vector<seq_type> &seq) {
         Timer timer("tensor_sketch");
@@ -57,8 +59,8 @@ class Tensor {
         // initial condition for empty strings; Tp[p], Tm[p] represent the partial sketch when
         // considering hashes h1...hp, over the prefix x1...xi. The final result is then
         // Tp[t]-Tm[t], where t is #sequence_len
-        auto Tp = new2D<double>(subsequence_len + 1, sketch_size, 0);
-        auto Tm = new2D<double>(subsequence_len + 1, sketch_size, 0);
+        auto Tp = new2D<double>(subsequence_len + 1, sketch_dim, 0);
+        auto Tm = new2D<double>(subsequence_len + 1, sketch_dim, 0);
 
         // the initial condition states that the sketch for the empty string is (1,0,..)
         Tp[0][0] = 1;
@@ -78,8 +80,8 @@ class Tensor {
                 }
             }
         }
-        std::vector<double> sketch(sketch_size, 0);
-        for (uint32_t m = 0; m < sketch_size; m++) {
+        std::vector<double> sketch(sketch_dim, 0);
+        for (uint32_t m = 0; m < sketch_dim; m++) {
             sketch[m] = Tp[subsequence_len][m] - Tm[subsequence_len][m];
         }
 
@@ -90,6 +92,11 @@ class Tensor {
     void set_hashes_for_testing(const Vec2D<seq_type> &h, const Vec2D<bool> &s) {
         hashes = h;
         signs = s;
+    }
+
+    static double dist(const std::vector<double> &a, const std::vector<double> &b) {
+        Timer timer("tensor_sketch_dist");
+        return l1_dist(a, b);
     }
 
   protected:
@@ -124,13 +131,13 @@ class Tensor {
     /** Size of the alphabet over which sequences to be sketched are defined, e.g. 4 for DNA */
     seq_type alphabet_size;
     /** Number of elements in the sketch, denoted by D in the paper */
-    uint32_t sketch_size;
+    uint32_t sketch_dim;
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
     uint8_t subsequence_len;
 
     /**
      * Denotes the hash functions h1,....ht:A->{1....D}, where t is #subsequence_len and D is
-     * #sketch_size
+     * #sketch_dim
      */
     Vec2D<seq_type> hashes;
 

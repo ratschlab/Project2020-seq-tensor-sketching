@@ -72,5 +72,10 @@ class MinHash : public HashBase<T> {
         std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
         return compute(kmers);
     }
+
+    static T dist(const std::vector<T> &a, const std::vector<T> &b) {
+        Timer timer("minhash_dist");
+        return hamming_dist(a, b);
+    }
 };
 } // namespace ts
