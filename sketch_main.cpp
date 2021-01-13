@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
     } else if (FLAGS_sketch_method.starts_with("Tensor")) {
         Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length);
         TensorSlide<uint64_t> tensor_slide(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
-                                           FLAGS_window_size, FLAGS_stride, FLAGS_seq_len);
+                                           FLAGS_window_size, FLAGS_stride);
         std::function<std::vector<double>(const std::vector<uint64_t> &)> sketcher
                 = [&](const std::vector<uint64_t> &seq) { return tensor_sketch.compute(seq); };
         std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher
