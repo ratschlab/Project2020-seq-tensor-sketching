@@ -175,7 +175,7 @@ class ExperimentRunner {
 
             apply_tuple(
                     [&](auto &sketch, auto &alg) {
-                        if constexpr (alg.kmer_input) {
+                        if constexpr (std::remove_reference_t<decltype(alg)>::kmer_input) {
                             sketch[si] = alg.compute(kmer_seq);
                         } else {
                             sketch[si] = alg.compute(seqs[si]);
