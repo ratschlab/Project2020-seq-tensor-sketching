@@ -185,8 +185,8 @@ class SeqGen {
     uint32_t num_seqs;
     uint32_t seq_len;
     uint32_t group_size;
-    uint32_t max_mutation_rate;
-    uint32_t min_mutation_rate;
+    double max_mutation_rate;
+    double min_mutation_rate;
     std::string phylogeny_shape;
 };
 
