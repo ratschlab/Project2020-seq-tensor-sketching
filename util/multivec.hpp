@@ -21,11 +21,11 @@ using Vec4D = std::vector<Vec3D<T>>;
 
 
 template <class T>
-auto new2D(int d1, int d2, T val = 0) {
+auto new2D(size_t d1, size_t d2, T val = 0) {
     return Vec2D<T>(d1, std::vector<T>(d2, val));
 }
 template <class T>
-auto new3D(int d1, int d2, int d3, T val = 0) {
+auto new3D(size_t d1, size_t d2, size_t d3, T val = 0) {
     return Vec3D<T>(d1, new2D(d2, d3, val));
 }
 

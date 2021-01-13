@@ -18,7 +18,6 @@ constexpr uint32_t sketch_dim = 2;
 constexpr uint32_t tuple_length = 3;
 constexpr uint32_t window_length = 32;
 constexpr uint32_t stride = 8;
-constexpr uint32_t seq_len = 128;
 
 
 template <typename set_type>
@@ -37,7 +36,7 @@ void rand_init(uint32_t sketch_size, Vec2D<set_type> *hashes, Vec2D<bool> *signs
 
 TEST(TensorSlide, Empty) {
     TensorSlide<uint8_t> under_test(set_size, sketch_dim, tuple_length, window_length,
-                                             stride, seq_len);
+                                             stride);
     Vec2D<double> sketch = under_test.compute(std::vector<uint8_t>());
     ASSERT_EQ(0, sketch.size());
 }

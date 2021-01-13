@@ -5,6 +5,7 @@
 #include "sketch/hash_weighted.hpp"
 #include "sketch/tensor.hpp"
 #include "sketch/tensor_slide.hpp"
+#include "sketch/dim_reduce.h"
 #include "util/multivec.hpp"
 #include "util/spearman.hpp"
 #include "util/timer.hpp"
@@ -142,9 +143,9 @@ struct SeqGenModule {
                            FLAGS_num_seqs,
                            FLAGS_seq_len,
                            FLAGS_group_size,
-                           (double)FLAGS_max_mutation_rate,
-                           (double)FLAGS_min_mutation_rate,
-                           (double)FLAGS_block_mutation_rate,
+                           FLAGS_max_mutation_rate,
+                           FLAGS_min_mutation_rate,
+                           FLAGS_block_mutation_rate,
                            FLAGS_mutation_type,
                            FLAGS_phylogeny_shape);
 
@@ -160,7 +161,7 @@ struct SeqGenModule {
         ts_sketch.resize(num_seqs);
         tss_sketch.resize(num_seqs);
         tss_sketch_flat.resize(num_seqs);
-        tss_sketch_sign.resize(num_seqs);
+        tss_sketch_binary.resize(num_seqs);
 
         embed_type set_size = int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
         min_hash = MinHash<kmer_type>(set_size, FLAGS_embed_dim);
@@ -168,8 +169,11 @@ struct SeqGenModule {
         omin_hash = OrderedMinHash<kmer_type>(set_size, FLAGS_embed_dim, FLAGS_max_len,
                                             FLAGS_tuple_length);
         tensor_sketch = Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
-        tensor_slide = TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length,
-                                            FLAGS_window_size, FLAGS_stride, FLAGS_seq_len, FLAGS_embed_dim/8);
+        auto inner_dim = ceil(sqrt(FLAGS_embed_dim));
+        tensor_slide = TensorSlide<char_type>(FLAGS_alphabet_size, inner_dim, FLAGS_tuple_length,
+                                            FLAGS_window_size, FLAGS_stride);
+        l1SketchBin32 = flatten_int32(FLAGS_embed_dim, inner_dim, FLAGS_seq_len);
+        l1Sketch = flatten_double(FLAGS_embed_dim, inner_dim, FLAGS_seq_len);
 
     }
 
@@ -178,9 +182,8 @@ struct SeqGenModule {
         wmin_hash.set_hash_algorithm(FLAGS_hash_alg);
         omin_hash.set_hash_algorithm(FLAGS_hash_alg);
 
-
         progress_bar::init(seqs.size());
-#pragma omp parallel for
+#pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
             auto kmer_seq = seq2kmer<char_type, kmer_type>(
                     seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
@@ -189,8 +192,8 @@ struct SeqGenModule {
             omh_sketch[si] = omin_hash.compute_flat(kmer_seq);
             ts_sketch[si] = tensor_sketch.compute(seqs[si]);
             tss_sketch[si] = tensor_slide.compute(seqs[si]);
-            tss_sketch_flat[si] = tensor_slide.flatten(tss_sketch[si]);
-            tss_sketch_sign[si] = tensor_slide.flatten_sign(tss_sketch[si]);
+            tss_sketch_flat[si] = l1Sketch.flatten(tss_sketch[si]);
+            tss_sketch_binary[si] = l1SketchBin32.flatten(tss_sketch[si]);
             progress_bar::iter();
         }
 
@@ -221,8 +224,8 @@ struct SeqGenModule {
             dists[3][pi]= omin_hash.dist(omh_sketch[si], omh_sketch[sj]);
             dists[4][pi]= tensor_sketch.dist(ts_sketch[si], ts_sketch[sj]);
             dists[5][pi]= tensor_slide.dist(tss_sketch[si], tss_sketch[sj]);
-            dists[6][pi]= tensor_slide.dist_flat(tss_sketch_flat[si], tss_sketch_flat[sj]);
-            dists[7][pi]= tensor_slide.dist_sign(tss_sketch_sign[si], tss_sketch_sign[sj]);
+            dists[6][pi]= l1Sketch.dist(tss_sketch_flat[si], tss_sketch_flat[sj]);
+            dists[7][pi]= l1SketchBin32.dist(tss_sketch_binary[si], tss_sketch_binary[sj]);
             progress_bar::iter();
         }
 
@@ -235,7 +238,7 @@ struct SeqGenModule {
         std::cout << "\tTensorSketch: " << spearman(dists[0], dists[4]) << std::endl;
         std::cout << "\tTensorSlide: " << spearman(dists[0], dists[5]) << std::endl;
         std::cout << "\tTensorSlideFlat: " << spearman(dists[0], dists[6]) << std::endl;
-        std::cout << "\tTensorSlideSign: " << spearman(dists[0], dists[7]) << std::endl;
+        std::cout << "\tTensorSlideFlat32: " << spearman(dists[0], dists[7]) << std::endl;
     }
 
     void save_output() {
@@ -282,13 +285,15 @@ struct SeqGenModule {
     Vec2D<embed_type> ts_sketch;
     Vec3D<embed_type> tss_sketch;
     Vec2D<embed_type> tss_sketch_flat;
-    Vec2D<uint32_t> tss_sketch_sign;
+    Vec2D<uint32_t> tss_sketch_binary;
 
     MinHash<kmer_type> min_hash;
     WeightedMinHash<kmer_type> wmin_hash;
     OrderedMinHash<kmer_type> omin_hash;
     Tensor<char_type> tensor_sketch;
     TensorSlide<char_type> tensor_slide;
+    flatten_int32 l1SketchBin32;
+    flatten_double l1Sketch;
 
     Vec2D<double> dists;
     std::vector<std::pair<uint32_t,uint32_t>> ingroup_pairs;

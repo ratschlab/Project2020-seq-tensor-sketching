@@ -30,6 +30,7 @@ std::string timer_summary(uint32_t num_seqs, uint32_t num_pairs) {
             { "tensor_sketch", "TS" },
             { "tensor_slide_sketch", "TSS" },
             {"tensor_slide_flat", "TSF"},
+            {"tensor_slide_binary", "TSB"},
             {"seq2kmer", "S2K"}
     };
     std::string str = "long name,short name, time, time sketch, time dist\n";
