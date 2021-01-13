@@ -27,7 +27,7 @@ std::vector<double> rankify(const std::vector<T> &v) {
 
 /* Compute the Pearson correlation coefficient of a and b */
 template <typename T>
-double pearson(std::vector<T> &a, std::vector<T> &b) {
+double pearson(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     T sum_a = 0, sum_b = 0, sum_ab = 0;
     T square_sum_a = 0, square_sum_b = 0;
@@ -55,7 +55,7 @@ double pearson(std::vector<T> &a, std::vector<T> &b) {
 }
 
 template <typename T>
-double spearman(std::vector<T> &a, std::vector<T> &b) {
+double spearman(const std::vector<T> &a, const std::vector<T> &b) {
     std::vector<double> rank1 = rankify(a);
     std::vector<double> rank2 = rankify(b);
     return pearson(rank1, rank2);

@@ -34,10 +34,10 @@ inline uint32_t char2int_dna(uint8_t c) {
     return char2int_tab_dna[c];
 }
 
-constexpr uint8_t alphabet_size_dna4 = 5;
+constexpr uint8_t alphabet_size_dna4 = 4;
 constexpr char alphabet_dna4[] = "ACGTN";
 constexpr uint8_t bits_per_char_dna4 = 2;
-constexpr uint8_t char2int_tab_dna4[128] // A=1,C=2,G=3,T=4,N=0,invalid=5
+constexpr uint8_t char2int_tab_dna4[128] // A=0,C=1,G=2,T=3, invalid=5
         = { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, //  0=25
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 26-50
             5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 5, 1, 5, 5, 5, 2, 5, 5, 5, 5, 5, 5, // 51-75
