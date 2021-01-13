@@ -18,7 +18,7 @@ class SeqGen {
            uint32_t min_num_blocks,
            uint32_t num_seqs,
            uint32_t seq_len,
-           uint32_t  group_size,
+           uint32_t group_size,
            double mutation_rate,
            double min_mutation_rate,
            double block_mutation_rate,
@@ -35,27 +35,27 @@ class SeqGen {
           min_mutation_rate(min_mutation_rate),
           block_mutate_rate(block_mutation_rate),
           mutation_type(mutation_type),
-          phylogeny_shape(phylogeny_shape){
-        assert(group_size>=2 && "group size<=1 leads to completely independent sequences");
+          phylogeny_shape(phylogeny_shape) {
+        assert(group_size >= 2 && "group size<=1 leads to completely independent sequences");
     }
 
 
     // TODO write tests for sequence generation
     /**
-     * generate sequences, divided into independent groups of size `group_size`, and store
+     * Generate sequences divided into independent groups of size `group_size`, and store
      * ingroup_pairs within each group in `ingroup_pairs`
-     * @tparam T : character type
-     * @tparam C : index type
-     * @param seqs : generated sequences
-     * @param pairs : sequence ingroup_pairs within each group
+     * @tparam T character type
+     * @tparam C index type
+     * @param seqs generated sequences
+     * @param pairs sequence ingroup_pairs within each group
      */
     template <class T>
-    void generate_seqs(Vec2D<T> &seqs) {
+    Vec2D<T> generate_seqs() {
         if (phylogeny_shape == "pair") { // shape=path: implemented as path & group_size=2
             phylogeny_shape = "path";
             group_size = 2;
         }
-
+        Vec2D<T> seqs;
         seqs.reserve(num_seqs);
         while (seqs.size() < num_seqs) {
             Vec2D<T> group;
@@ -75,18 +75,16 @@ class SeqGen {
                     std::swap(group, children);
                     children.clear();
                 }
-            }
-            else if (phylogeny_shape == "path") {     // path-like: g0->g1->g2->g3->...
+            } else if (phylogeny_shape == "path") { // path-like: g0->g1->g2->g3->...
                 group = Vec2D<T>(group_size);
                 random_sequence(group[0], seq_len);
-                for (size_t i=0; i<group_size-1; i++) {
-                    mutate(group[i], group[i+1]);
+                for (size_t i = 0; i < group_size - 1; i++) {
+                    mutate(group[i], group[i + 1]);
                 }
-            }
-            else if (phylogeny_shape == "star") {     // star-like: g0->g1, g0->1,g0->g3 ...
+            } else if (phylogeny_shape == "star") { // star-like: g0->g1, g0->g2,g0->g3 ...
                 group = Vec2D<T>(1);
                 random_sequence(group[0], seq_len);
-                for (size_t i=1; i<group_size; i++) {
+                for (size_t i = 1; i < group_size; i++) {
                     mutate(group[0], group[i]);
                 }
             }
@@ -97,15 +95,16 @@ class SeqGen {
                 seqs.resize(num_seqs);
             }
         }
+        return seqs;
     }
 
     // TODO write tests
     template <class T>
-    void ingroup_pairs(std::vector<std::pair<T,T>> &pairs) {
+    void ingroup_pairs(std::vector<std::pair<T, T>> &pairs) {
         for (size_t go = 0; go < num_seqs; go += group_size) { // group-offset
-            for (size_t i=0; i<group_size && go+i<num_seqs; i++) { // group-member i
-                for (size_t j=i+1; j<group_size && go+j<num_seqs; j++) { // group-member j
-                    pairs.push_back({ go +i, go +j});
+            for (size_t i = 0; i < group_size && go + i < num_seqs; i++) { // group-member i
+                for (size_t j = i + 1; j < group_size && go + j < num_seqs; j++) { // group-member j
+                    pairs.push_back({ go + i, go + j });
                 }
             }
         }
@@ -113,7 +112,6 @@ class SeqGen {
 
 
   private:
-
     template <class T>
     void mutate(const std::vector<T> &ref, std::vector<T> &seq) {
         std::uniform_real_distribution<double> unif(min_mutation_rate, max_mutation_rate);
@@ -131,15 +129,15 @@ class SeqGen {
 
 
     /**
-     * mutate seq from ref, by mutating each position with the probability = `rate`
-     * @tparam T : character type
-     * @param ref : reference
-     * @param seq : mutated sequence
-     * @param rate : probability of mutation at each index
+     * Mutate seq from ref, by mutating each position with the probability = `rate`
+     * @tparam T element type in the sequence
+     * @param ref
+     * @param seq mutated sequence
+     * @param rate probability of mutation at each index
      */
     template <class T>
     void mutate_rate(const std::vector<T> &ref, std::vector<T> &seq, double rate) {
-        assert((rate>=0.0) && (rate<= 1.0) && " rate must be strictly in the range [0,1]");
+        assert((rate >= 0.0) && (rate <= 1.0) && " rate must be strictly in the range [0,1]");
         // probabilities for each index position: no mutation, insert, delete, substitute
         std::discrete_distribution<int> mut { 1 - rate, rate / 3, rate / 3, rate / 3 };
         // the range chosen such that (sub_char+ref % alphabet_size) will different from ref
@@ -161,7 +159,7 @@ class SeqGen {
                     break;
                 }
                 case 3: { // substitute
-                    seq.push_back( (sub_char(gen) + ref[i]) % alphabet_size);
+                    seq.push_back((sub_char(gen) + ref[i]) % alphabet_size);
                     break;
                 }
             }
@@ -172,41 +170,46 @@ class SeqGen {
     /**
      * generate seq by mutating it from ref with `ed_norm * seq_len` random edit operations,
      * with number of insert, substitute, and deletes chosen randomly to sum to 'edit'
-     * @tparam T : char type
-     * @param ref : reference
-     * @param seq : mutated sequence
-     * @param ed_norm : normalized edit operations
+     * @tparam T element type in the sequence
+     * @param ref
+     * @param seq mutated sequence
+     * @param ed_norm normalized edit operations
      */
     template <class T>
     void mutate_edits(const std::vector<T> &ref, std::vector<T> &seq, double ed_norm) {
-        assert(ed_norm>=0 && ed_norm<=1 && "ed_norm argument must be always in [0,1] range");
-        std::uniform_real_distribution<double> r(0.0,1.0);
-        double ins = r(gen), del =r(gen), sub = r(gen), S = (ins + del + sub)/(ed_norm *seq_len);
+        assert(ed_norm >= 0 && ed_norm <= 1 && "ed_norm argument must be always in [0,1] range");
+        std::uniform_real_distribution<double> r(0.0, 1.0);
+        double ins = r(gen), del = r(gen), sub = r(gen),
+               S = (ins + del + sub) / (ed_norm * seq_len);
         ins = (size_t)ins / S;
-        del = (size_t) del / S;
-        sub = (ed_norm *seq_len)- ins - del;
+        del = (size_t)del / S;
+        sub = (ed_norm * seq_len) - ins - del;
         random_edits(ref, seq, (size_t)ins, (size_t)del, (size_t)sub);
     }
 
 
     /**
-     * generate seq based on ref by mutating it with random edit operations, number of each edit
+     * Generate #seq based on ref by mutating it with random edit operations, number of each edit
      * is given bby the input arguments ins, del, sub
-     * @tparam T : char type
-     * @param ref : reference sequence
-     * @param seq : sequence to be generated by mutation from ref
-     * @param ins : number of insert operation
-     * @param del : number of delete operations
-     * @param sub : number of substitute operations
+     * @tparam T element type in the sequence
+     * @param ref reference sequence
+     * @param seq sequence to be generated by mutation from ref
+     * @param ins number of insert operation
+     * @param del number of delete operations
+     * @param sub number of substitute operations
      */
     template <class T>
-    void random_edits(const std::vector<T> &ref, std::vector<T> &seq, size_t ins, size_t del, size_t sub) {
+    void random_edits(const std::vector<T> &ref,
+                      std::vector<T> &seq,
+                      size_t ins,
+                      size_t del,
+                      size_t sub) {
         assert(ref.size() + ins >= del && " can't delete more than ref len + inserted chars");
-        random_sequence(seq, ref.size() + ins - del);   // calc. length of the resulting sequence
+        random_sequence(seq, ref.size() + ins - del); // calc. length of the resulting sequence
 
         // generate random indices not part of deleted nor inserted indices
         auto idx1 = rand_n_choose_k<size_t>(ref.size(), ref.size() - del),
-             idx2 = rand_n_choose_k<size_t>(seq.size(), seq.size() - ins );
+             idx2 = rand_n_choose_k<size_t>(seq.size(), seq.size() - ins);
         for (size_t i = 0; i < idx2.size(); i++) {
             seq[idx2[i]] = ref[idx1[i]];
         }
@@ -214,8 +217,8 @@ class SeqGen {
         // generate substituted indices randomly
         std::uniform_int_distribution<T> sub_char(1, alphabet_size - 1);
         auto sub_idx = rand_n_choose_k<size_t>(idx2.size(), sub);
-        for (auto & i : sub_idx) {
-            seq[idx2[i]] = (seq[idx2[i]] + sub_char(gen) ) % alphabet_size;
+        for (auto &i : sub_idx) {
+            seq[idx2[i]] = (seq[idx2[i]] + sub_char(gen)) % alphabet_size;
         }
     }
 
@@ -282,7 +285,7 @@ class SeqGen {
      * @return the set containing the randomly selected indices, sorted
      */
     template <class T>
-    std::vector<T> rand_n_choose_k( size_t n, size_t k) {
+    std::vector<T> rand_n_choose_k(size_t n, size_t k) {
         assert(k <= n);
         std::vector<T> idx(n);
         std::iota(idx.begin(), idx.end(), 0);

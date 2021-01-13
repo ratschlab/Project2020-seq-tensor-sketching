@@ -1,7 +1,4 @@
 #pragma once
-//
-// Created by amir on 23/12/2020.
-//
 
 #include <vector>
 #include <cmath>

@@ -11,8 +11,8 @@ std::vector<std::map<std::string, nanoseconds>> durations_vec(100);
 
 
 void timer_add_duration(const std::string &func_name, nanoseconds dur) {
-    auto tid = omp_get_thread_num();
-    auto &durations = durations_vec[tid];
+    int tid = omp_get_thread_num();
+    std::map<std::string, std::chrono::nanoseconds> &durations = durations_vec[tid];
 
     if (durations.find(func_name) != durations.end()) {
         durations[func_name] += dur;

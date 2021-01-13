@@ -25,7 +25,7 @@ DEFINE_uint32(N, 200, "Short hand for --num_seqs");
 DEFINE_uint32(seq_len, 256, "The length of sequence to be generated");
 DEFINE_uint32(L, 256, "Short hand for --seq_len");
 
-DEFINE_uint32(group_size, 2, "The of sequences in each group");
+DEFINE_uint32(group_size, 2, "The number of sequences in each group");
 DEFINE_uint32(G, 2, "Short hand for --group_size");
 
 DEFINE_double(max_mutation_rate, 0.3, "Maximum rate of point mutation for sequence generation");
@@ -55,7 +55,7 @@ DEFINE_validator(phylogeny_shape, &validatePhylogenyShape);
 
 
 static bool validateMutationType(const char *flagname, const std::string &value) {
-    if (value == "rate" || value == "edit" )
+    if (value == "rate" || value == "edit")
         return true;
     printf("Invalid value for --%s: %s\n", flagname, value.c_str());
     return false;
@@ -104,19 +104,11 @@ int main(int argc, char *argv[]) {
     std::vector<std::string> seq_names;
     std::string test_id;
 
-    ts::SeqGen seq_gen(FLAGS_alphabet_size,
-                       FLAGS_fix_len,
-                       FLAGS_max_num_blocks,
-                       FLAGS_min_num_blocks,
-                       FLAGS_num_seqs,
-                       FLAGS_seq_len,
-                       FLAGS_group_size,
-                       (double)FLAGS_max_mutation_rate,
-                       (double)FLAGS_min_mutation_rate,
-                       (double)FLAGS_block_mutation_rate,
-                       FLAGS_mutation_type,
-                       FLAGS_phylogeny_shape);
+    ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len, FLAGS_max_num_blocks,
+                       FLAGS_min_num_blocks, FLAGS_num_seqs, FLAGS_seq_len, FLAGS_group_size,
+                       FLAGS_max_mutation_rate, FLAGS_min_mutation_rate, FLAGS_block_mutation_rate,
+                       FLAGS_mutation_type, FLAGS_phylogeny_shape);
 
-    seq_gen.generate_seqs(seqs);
-    ts::write_fasta(std::filesystem::path(FLAGS_output_dir)/"seqs.fa", seqs);
+    seqs = seq_gen.generate_seqs<uint8_t>();
+    ts::write_fasta(std::filesystem::path(FLAGS_output_dir) / "seqs.fa", seqs);
 }

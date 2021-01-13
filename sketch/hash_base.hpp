@@ -3,11 +3,11 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
+#include <algorithm>
+#include <immintrin.h>
 #include <random>
 #include <unordered_map>
 #include <unordered_set>
-#include <algorithm>
-#include <immintrin.h>
 
 namespace ts {
 

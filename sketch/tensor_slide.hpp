@@ -82,7 +82,7 @@ class TensorSlide : public Tensor<seq_type> {
             }
 
             if (i >= win_len) { // only start deleting from front after reaching #win_len
-                uint64_t ws = i - win_len; // the element to be removed from the sketch
+                uint32_t ws = i - win_len; // the element to be removed from the sketch
                 for (uint32_t diff = 0; diff < tup_len; ++diff) {
                     for (uint32_t p = 1; p <= tup_len - diff; p++) {
                         auto r = hashes[p - 1][seq[ws]];

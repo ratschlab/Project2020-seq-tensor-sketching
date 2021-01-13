@@ -152,7 +152,7 @@ struct SeqGenModule {
                            FLAGS_phylogeny_shape);
 
 
-        seq_gen.generate_seqs(seqs);
+        seqs = seq_gen.generate_seqs<char_type>();
         seq_gen.ingroup_pairs(ingroup_pairs);
 
 
