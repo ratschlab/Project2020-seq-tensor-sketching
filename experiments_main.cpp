@@ -72,18 +72,6 @@ DEFINE_string(phylogeny_shape,
 DEFINE_validator(phylogeny_shape, &validatePhylogenyShape);
 
 
-static bool validateMutationType(const char *flagname, const std::string &value) {
-    if (value == "rate" || value == "edit" )
-        return true;
-    printf("Invalid value for --%s: %s\n", flagname, value.c_str());
-    return false;
-}
-DEFINE_string(mutation_type,
-              "rate",
-              "basic method used for mutating sequences can be 'rate', 'edit'");
-DEFINE_validator(mutation_type, &validateMutationType);
-
-
 static bool ValidateTransformation(const char *flagname, const std::string &value) {
     if (value == "none" || value == "atan" || value == "disc" )
         return true;
@@ -140,17 +128,12 @@ struct SeqGenModule {
 
     void generate_sequences() {
         ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len,
-                           FLAGS_max_num_blocks,
-                           FLAGS_min_num_blocks,
                            FLAGS_num_seqs,
                            FLAGS_seq_len,
                            FLAGS_group_size,
                            FLAGS_max_mutation_rate,
                            FLAGS_min_mutation_rate,
-                           FLAGS_block_mutation_rate,
-                           FLAGS_mutation_type,
                            FLAGS_phylogeny_shape);
-
 
         seqs = seq_gen.generate_seqs<char_type>();
         seq_gen.ingroup_pairs(ingroup_pairs);
@@ -235,8 +218,8 @@ struct SeqGenModule {
         std::cout << "\tOMH: " << spearman(dists[0], dists[3]) << std::endl;
         std::cout << "\tTensorSketch: " << spearman(dists[0], dists[4]) << std::endl;
         std::cout << "\tTensorSlide: " << spearman(dists[0], dists[5]) << std::endl;
-        std::cout << "\tTensorSlideFlat: " << spearman(dists[0], dists[6]) << std::endl;
-        std::cout << "\tTensorSlideFlat32: " << spearman(dists[0], dists[7]) << std::endl;
+        std::cout << "\tDoubleFlattener: " << spearman(dists[0], dists[6]) << std::endl;
+        std::cout << "\tInt32Flattener: " << spearman(dists[0], dists[7]) << std::endl;
     }
 
     void save_output() {
