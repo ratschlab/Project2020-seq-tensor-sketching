@@ -18,7 +18,6 @@ namespace ts { // ts = Tensor Sketch
 template <class T>
 class OrderedMinHash : public HashBase<T> {
   public:
-    OrderedMinHash() {}
     /**
      * @param set_size the number of elements in S
      * @param sketch_dim the number of components (elements) in the sketch vector.
@@ -29,7 +28,7 @@ class OrderedMinHash : public HashBase<T> {
                    size_t sketch_dim,
                    size_t max_len,
                    size_t tup_len,
-                   std::string hash_algorithm)
+                   HashAlgorithm hash_algorithm)
         : HashBase<T>(set_size, sketch_dim, set_size * max_len, hash_algorithm),
           max_len(max_len),
           tup_len(tup_len) {}

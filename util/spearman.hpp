@@ -1,9 +1,9 @@
 #include <algorithm>
+#include <cassert>
+#include <cmath>
 #include <iostream>
 #include <vector>
 
-#include <cassert>
-#include <cmath>
 using namespace std;
 
 // Function returns the 1-based rank vector of a set of observations v

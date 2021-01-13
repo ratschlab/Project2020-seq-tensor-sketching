@@ -25,8 +25,6 @@ namespace ts { // ts = Tensor Sketch
 template <class T>
 class WeightedMinHash : public HashBase<T> {
   public:
-    WeightedMinHash() {}
-
     /**
      * Constructs a weighted min-hasher for the given alphabet size which constructs sketches of the
      * given set size, dimension and maximum length.
@@ -34,7 +32,7 @@ class WeightedMinHash : public HashBase<T> {
      * @param sketch_dim the number of components (elements) in the sketch vector.
      * @param max_len maximum sequence length to be hashed.
      */
-    WeightedMinHash(T set_size, size_t sketch_dim, size_t max_len, std::string hash_algorithm)
+    WeightedMinHash(T set_size, size_t sketch_dim, size_t max_len, HashAlgorithm hash_algorithm)
         : HashBase<T>(set_size, sketch_dim, max_len * set_size, hash_algorithm), max_len(max_len) {}
 
     std::vector<T> compute(const std::vector<T> &kmers) {

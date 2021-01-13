@@ -1,17 +1,18 @@
 #include "sequence/fasta_io.hpp"
 #include "sequence/sequence_generator.hpp"
+#include "sketch/dim_reduce.h"
+#include "sketch/hash_base.hpp"
 #include "sketch/hash_min.hpp"
 #include "sketch/hash_ordered.hpp"
 #include "sketch/hash_weighted.hpp"
 #include "sketch/tensor.hpp"
 #include "sketch/tensor_slide.hpp"
-#include "sketch/dim_reduce.h"
 #include "util/multivec.hpp"
+#include "util/progress.hpp"
 #include "util/spearman.hpp"
 #include "util/timer.hpp"
-#include "util/progress.hpp"
-#include "util/utils.hpp"
 #include "util/transformer.hpp"
+#include "util/utils.hpp"
 
 #include <filesystem>
 #include <memory>
@@ -73,19 +74,17 @@ DEFINE_validator(phylogeny_shape, &validatePhylogenyShape);
 
 
 static bool ValidateTransformation(const char *flagname, const std::string &value) {
-    if (value == "none" || value == "atan" || value == "disc" )
+    if (value == "none" || value == "atan" || value == "disc")
         return true;
     printf("Invalid value for --%s: %s\n", flagname, value.c_str());
     return false;
 }
-DEFINE_string(transform,
-              "none",
-              "transform TS and TSS output, can be 'none', 'atan' or 'disc'");
+DEFINE_string(transform, "none", "transform TS and TSS output, can be 'none', 'atan' or 'disc'");
 DEFINE_validator(transform, &ValidateTransformation);
 
 
 static bool ValidateHashAlg(const char *flagname, const std::string &value) {
-    if (value == "uniform" || value == "crc32" )
+    if (value == "uniform" || value == "crc32")
         return true;
     printf("Invalid value for --%s: %s\n", flagname, value.c_str());
     return false;
@@ -99,17 +98,37 @@ DEFINE_validator(hash_alg, &ValidateHashAlg);
 
 DEFINE_uint32(num_bins, 256, "Number of bins used to discretize, if --transform=disc");
 
-DEFINE_uint32(num_threads, 1, "number of OpenMP threads, default: 1, "
-                              "use --num_threads=0 to use all available cores");
+DEFINE_uint32(num_threads,
+              1,
+              "number of OpenMP threads, default: 1, "
+              "use --num_threads=0 to use all available cores");
 
 
-
-namespace fs = std::filesystem;
 using namespace ts;
 
 template <class char_type, class kmer_type, class embed_type>
 struct SeqGenModule {
-    SeqGenModule() {}
+    SeqGenModule()
+        : min_hash(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
+                   FLAGS_embed_dim,
+                   parse_hash_algorithm(FLAGS_hash_alg)),
+          wmin_hash(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
+                    FLAGS_embed_dim,
+                    FLAGS_max_len,
+                    parse_hash_algorithm(FLAGS_hash_alg)),
+          omin_hash(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
+                    FLAGS_embed_dim,
+                    FLAGS_max_len,
+                    FLAGS_tuple_length,
+                    parse_hash_algorithm(FLAGS_hash_alg)),
+          tensor_sketch(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length),
+          tensor_slide(FLAGS_alphabet_size,
+                       ceil(sqrt(FLAGS_embed_dim)),
+                       FLAGS_tuple_length,
+                       FLAGS_window_size,
+                       FLAGS_stride),
+          l1SketchBin32(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len),
+          l1Sketch(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len) {}
 
     void run() {
         std::cout << "Generating sequences ..." << std::flush;
@@ -122,17 +141,13 @@ struct SeqGenModule {
         compute_pairwise_dists();
         std::cout << "\nComputing Spearman correlation ... \n" << std::flush;
         print_summary();
-        std::cout << "Writing output to ... " << FLAGS_o  <<  std::endl;
+        std::cout << "Writing output to ... " << FLAGS_o << std::endl;
         save_output();
     }
 
     void generate_sequences() {
-        ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len,
-                           FLAGS_num_seqs,
-                           FLAGS_seq_len,
-                           FLAGS_group_size,
-                           FLAGS_max_mutation_rate,
-                           FLAGS_min_mutation_rate,
+        ts::SeqGen seq_gen(FLAGS_alphabet_size, FLAGS_fix_len, FLAGS_num_seqs, FLAGS_seq_len,
+                           FLAGS_group_size, FLAGS_max_mutation_rate, FLAGS_min_mutation_rate,
                            FLAGS_phylogeny_shape);
 
         seqs = seq_gen.generate_seqs<char_type>();
@@ -147,27 +162,14 @@ struct SeqGenModule {
         tss_sketch.resize(num_seqs);
         tss_sketch_flat.resize(num_seqs);
         tss_sketch_binary.resize(num_seqs);
-
-        embed_type set_size = int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
-        min_hash = MinHash<kmer_type>(set_size, FLAGS_embed_dim, FLAGS_hash_alg);
-        wmin_hash = WeightedMinHash<kmer_type>(set_size, FLAGS_embed_dim, FLAGS_max_len, FLAGS_hash_alg);
-        omin_hash = OrderedMinHash<kmer_type>(set_size, FLAGS_embed_dim, FLAGS_max_len,
-                                            FLAGS_tuple_length, FLAGS_hash_alg);
-        tensor_sketch = Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
-        auto inner_dim = ceil(sqrt(FLAGS_embed_dim));
-        tensor_slide = TensorSlide<char_type>(FLAGS_alphabet_size, inner_dim, FLAGS_tuple_length,
-                                            FLAGS_window_size, FLAGS_stride);
-        l1SketchBin32 = Int32Flattener(FLAGS_embed_dim, inner_dim, FLAGS_seq_len);
-        l1Sketch = DoubleFlattener(FLAGS_embed_dim, inner_dim, FLAGS_seq_len);
-
     }
 
     void compute_sketches() {
         progress_bar::init(seqs.size());
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
-            auto kmer_seq = seq2kmer<char_type, kmer_type>(
-                    seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
+            auto kmer_seq = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size,
+                                                           FLAGS_alphabet_size);
             mh_sketch[si] = min_hash.compute(kmer_seq);
             wmh_sketch[si] = wmin_hash.compute(kmer_seq);
             omh_sketch[si] = omin_hash.compute_flat(kmer_seq);
@@ -177,8 +179,6 @@ struct SeqGenModule {
             tss_sketch_binary[si] = l1SketchBin32.flatten(tss_sketch[si]);
             progress_bar::iter();
         }
-
-
     }
 
     void transform_sketches() {
@@ -197,19 +197,18 @@ struct SeqGenModule {
         dists = new2D<double>(8, ingroup_pairs.size());
         progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
-        for (size_t pi=0; pi< ingroup_pairs.size(); pi++ ) {
+        for (size_t pi = 0; pi < ingroup_pairs.size(); pi++) {
             size_t si = ingroup_pairs[pi].first, sj = ingroup_pairs[pi].second;
-            dists[0][pi]=(edit_distance(seqs[si], seqs[sj]));
-            dists[1][pi]= min_hash.dist(mh_sketch[si], mh_sketch[sj]);
-            dists[2][pi]= wmin_hash.dist(wmh_sketch[si], wmh_sketch[sj]);
-            dists[3][pi]= omin_hash.dist(omh_sketch[si], omh_sketch[sj]);
-            dists[4][pi]= tensor_sketch.dist(ts_sketch[si], ts_sketch[sj]);
-            dists[5][pi]= tensor_slide.dist(tss_sketch[si], tss_sketch[sj]);
-            dists[6][pi]= l1Sketch.dist(tss_sketch_flat[si], tss_sketch_flat[sj]);
-            dists[7][pi]= l1SketchBin32.dist(tss_sketch_binary[si], tss_sketch_binary[sj]);
+            dists[0][pi] = (edit_distance(seqs[si], seqs[sj]));
+            dists[1][pi] = min_hash.dist(mh_sketch[si], mh_sketch[sj]);
+            dists[2][pi] = wmin_hash.dist(wmh_sketch[si], wmh_sketch[sj]);
+            dists[3][pi] = omin_hash.dist(omh_sketch[si], omh_sketch[sj]);
+            dists[4][pi] = tensor_sketch.dist(ts_sketch[si], ts_sketch[sj]);
+            dists[5][pi] = tensor_slide.dist(tss_sketch[si], tss_sketch[sj]);
+            dists[6][pi] = l1Sketch.dist(tss_sketch_flat[si], tss_sketch_flat[sj]);
+            dists[7][pi] = l1SketchBin32.dist(tss_sketch_binary[si], tss_sketch_binary[sj]);
             progress_bar::iter();
         }
-
     }
 
     void print_summary() {
@@ -238,23 +237,21 @@ struct SeqGenModule {
 
         write_fasta(output_dir / "seqs.fa", seqs);
 
-        std::vector<std::string> method_names = { "ED", "MH", "WMH", "OMH", "TS", "TSS", "TSS2"};
+        std::vector<std::string> method_names = { "ED", "MH", "WMH", "OMH", "TS", "TSS", "TSS2" };
         fo.open(output_dir / "dists.csv");
         fo << "s1,s2";
-        for (size_t m=0; m < method_names.size(); m++) { // table header
+        for (size_t m = 0; m < method_names.size(); m++) { // table header
             fo << "," << method_names[m];
         }
         fo << "\n";
-        for (uint32_t pi=0; pi< ingroup_pairs.size(); pi++) {
+        for (uint32_t pi = 0; pi < ingroup_pairs.size(); pi++) {
             fo << ingroup_pairs[pi].first << "," << ingroup_pairs[pi].second; // seq 1 & 2 indices
-            for (int m=0; m<6; m++) { // distance based on each method
+            for (int m = 0; m < 6; m++) { // distance based on each method
                 fo << "," << dists[m][pi];
             }
             fo << "\n";
         }
-
     }
-
 
 
   private:
@@ -277,14 +274,13 @@ struct SeqGenModule {
     DoubleFlattener l1Sketch;
 
     Vec2D<double> dists;
-    std::vector<std::pair<uint32_t,uint32_t>> ingroup_pairs;
+    std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
 };
 
 
 int main(int argc, char *argv[]) {
-
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    if (FLAGS_max_len==0) { // 0: automatic computation, based on seq_len
+    if (FLAGS_max_len == 0) { // 0: automatic computation, based on seq_len
         FLAGS_max_len = FLAGS_seq_len * 2;
     }
     if (FLAGS_num_threads > 0) { // 0: default: use all threads
