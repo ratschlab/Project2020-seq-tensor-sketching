@@ -1,48 +1,70 @@
+#include <omp.h>
+#include <utility>
+#include <vector>
 #include "timer.hpp"
 
 namespace ts {
-namespace Timer {
 
 using namespace std::chrono;
 
-std::string last_func;
-auto last_time = std::chrono::high_resolution_clock::now();
+std::vector<std::map<std::string, nanoseconds>> durations_vec(100);
 
-std::map<std::string, std::chrono::nanoseconds> durations;
 
-void start(std::string func_name) {
-//    assert(last_func.empty());
-//    last_time = high_resolution_clock::now();
-//    last_func = std::move(func_name);
-    func_name = "";
-}
+void timer_add_duration(const std::string &func_name, nanoseconds dur) {
+    int tid = omp_get_thread_num();
+    std::map<std::string, std::chrono::nanoseconds> &durations = durations_vec[tid];
 
-void stop() {
-//    auto curr_time = high_resolution_clock::now();
-//    if (durations.find(last_func) != durations.end()) {
-//        durations[last_func] += duration_cast<nanoseconds>(curr_time - last_time);
-//    } else {
-//        durations[last_func] = duration_cast<nanoseconds>(curr_time - last_time);
-//    }
-//    last_func = "";
-}
-
-std::string summary() {
-    start("edit_distance");
-    std::map<std::string, std::string> trans
-            = { { "edit_distance", "ED" },        { "minhash", "MH" },
-                { "weighted_minhash", "WMH" },    { "ordered_minhash_flat", "OMH" },
-                { "tensor_sketch", "TenSketch" }, { "tensor_slide_sketch", "TenSlide" } };
-    std::string str;
-    for (auto const &[arg_name, arg] : durations) {
-        auto count = arg.count();
-        if (arg_name.find("hash") != std::string::npos) {
-            count += durations["seq2kmer"].count();
-        }
-        str += " " + arg_name + ",\t" + trans[arg_name] + ",\t" + std::to_string(count) + '\n';
+    if (durations.find(func_name) != durations.end()) {
+        durations[func_name] += dur;
+    } else {
+        durations[func_name] = dur;
     }
+}
+
+std::string timer_summary(uint32_t num_seqs, uint32_t num_pairs) {
+    std::map<std::string, std::string> trans= {
+            { "edit_distance", "ED" },
+            { "minhash", "MH" },
+            { "weighted_minhash", "WMH" },
+            { "ordered_minhash", "OMH" },
+            { "tensor_sketch", "TS" },
+            { "tensor_slide_sketch", "TSS" },
+            {"tensor_slide_flat", "TSF"},
+            {"tensor_slide_binary", "TSB"},
+            {"seq2kmer", "S2K"}
+    };
+    std::string str = "long name,short name, time, time sketch, time dist\n";
+    std::map<std::string, double> acc;
+    for (auto &durations : durations_vec) {
+        for (auto const &[arg_name, arg] : durations) {
+            if (acc.find(arg_name) != acc.end()) {
+                acc[arg_name] += arg.count();
+            } else {
+                acc[arg_name] = arg.count();
+            }
+        }
+    }
+        for (auto const &[arg_name, arg] : acc) {
+            double count = (double)arg, count2;
+            // add kmer computation time to the sketch time of MH* methods
+            if (arg_name.find("hash") != std::string::npos && // contains *hash*
+                arg_name.find("dist") == std::string::npos) { // doesn't contain *dist*
+                count += acc["seq2kmer"];
+            }
+            if (arg_name == "edit_distance") {
+                count = count/1e6/num_pairs;
+                str = str + arg_name + "," + trans[arg_name] + "," + std::to_string(count) + ",0,0\n";
+            } else if (arg_name.find("dist") == std::string::npos && arg_name!="seq2kmer") {
+                // average sketching time + average distance computation time in milliseonds
+                count = count/1e6/num_seqs ;
+                count2 = acc[arg_name + "_dist"]/1e6/num_pairs;
+                str = str + arg_name + "," + trans[arg_name] +
+                        "," + std::to_string(count+count2) +
+                        "," + std::to_string(count) +
+                        "," + std::to_string(count2) + '\n';
+            }
+        }
     return str;
 }
 
-} // namespace Timer
 } // namespace ts

@@ -64,7 +64,7 @@ template <class seq_type>
 void write_fasta(const std::string &file_name, const Vec2D<seq_type> &sequences, bool Abc = false) {
     std::ofstream fo(file_name);
     fo << "#" + std::to_string(random()) << std::endl;
-    fo << "# " << flag_values() << std::endl;
+    fo << "# " << flag_values(' ') << std::endl;
     for (uint32_t si = 0; si < sequences.size(); si++) {
         fo << ">s" << si << "\n";
         auto &seq = sequences[si];

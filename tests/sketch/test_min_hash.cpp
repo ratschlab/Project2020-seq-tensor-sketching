@@ -11,13 +11,13 @@ using namespace ts;
 using namespace ::testing;
 
 TEST(MinHash, Empty) {
-    MinHash<uint8_t> under_test(4 * 4 * 4, 3);
+    MinHash<uint8_t> under_test(4 * 4 * 4, 3, "uniform");
     std::vector<uint8_t> sketch = under_test.compute(std::vector<uint8_t>());
     ASSERT_THAT(sketch, ElementsAre(0, 0, 0));
 }
 
 TEST(MinHash, Repeat) {
-    MinHash<uint8_t> under_test(4 * 4 * 4, 3);
+    MinHash<uint8_t> under_test(4 * 4 * 4, 3, "uniform");
     std::vector<uint8_t> sequence = { 0, 1, 2, 3, 4, 5 };
     std::vector<uint8_t> sketch1 = under_test.compute(sequence);
     std::vector<uint8_t> sketch2 = under_test.compute(sequence);
@@ -25,7 +25,7 @@ TEST(MinHash, Repeat) {
 }
 
 TEST(MinHash, Permute) {
-    MinHash<uint8_t> under_test(4 * 4 * 4, 3);
+    MinHash<uint8_t> under_test(4 * 4 * 4, 3, "uniform");
     std::vector<uint8_t> sequence1 = { 0, 1, 2, 3, 4, 5 };
     std::vector<uint8_t> sequence2 = { 5, 4, 3, 2, 1, 0 };
     std::vector<uint8_t> sketch1 = under_test.compute(sequence1);
@@ -34,7 +34,7 @@ TEST(MinHash, Permute) {
 }
 
 TEST(MinHash, PermuteAndRepeat) {
-    MinHash<uint8_t> under_test(4 * 4 * 4, 3);
+    MinHash<uint8_t> under_test(4 * 4 * 4, 3, "uniform");
     std::vector<uint8_t> sequence1 = { 0, 1, 2, 3, 4, 5 };
     std::vector<uint8_t> sequence2 = { 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0 };
     std::vector<uint8_t> sketch1 = under_test.compute(sequence1);
@@ -53,7 +53,7 @@ std::vector<std::unordered_map<uint8_t, uint8_t>> hash_init(uint32_t set_sz, uin
 }
 
 TEST(MinHash, PresetHash) {
-    MinHash<uint8_t> under_test(4 * 4, 3);
+    MinHash<uint8_t> under_test(4 * 4, 3, "uniform");
     under_test.set_hashes_for_testing(hash_init(4 * 4, 3));
     for (uint32_t i = 0; i < 4 * 4; ++i) {
         std::vector<uint8_t> sequence(4 * 4 - i);

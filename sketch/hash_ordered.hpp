@@ -25,13 +25,17 @@ class OrderedMinHash : public HashBase<T> {
      * @param max_len maximum sequence length to be hashed.
      * @param tup_len the sketching will select the tup_len lowest values for each hash function
      */
-    OrderedMinHash(T set_size, size_t sketch_dim, size_t max_len, size_t tup_len)
-        : HashBase<T>(set_size, sketch_dim, set_size * max_len),
+    OrderedMinHash(T set_size,
+                   size_t sketch_dim,
+                   size_t max_len,
+                   size_t tup_len,
+                   std::string hash_algorithm)
+        : HashBase<T>(set_size, sketch_dim, set_size * max_len, hash_algorithm),
           max_len(max_len),
           tup_len(tup_len) {}
 
     Vec2D<T> compute(const std::vector<T> &kmers) {
-        Vec2D<T> sketch;
+        Vec2D<T> sketch(this->sketch_dim);
         if (kmers.size() < tup_len) {
             throw std::invalid_argument("Sequence of kmers must be longer than tuple length");
         }
@@ -56,14 +60,15 @@ class OrderedMinHash : public HashBase<T> {
                  pair++) {
                 tup.push_back(pair->second);
             }
-            sketch.push_back(tup);
+            sketch[pi] = tup;
         }
         return sketch;
     }
 
     std::vector<T> compute_flat(const std::vector<T> &kmers) {
+        Timer timer("ordered_minhash");
         std::vector<T> sketch;
-        Timer::start("ordered_minhash_flat");
+
         Vec2D<T> sketch2D = compute(kmers);
         for (const auto &tuple : sketch2D) {
             T sum = 0;
@@ -72,7 +77,6 @@ class OrderedMinHash : public HashBase<T> {
             }
             sketch.push_back(sum);
         }
-        Timer::stop();
 
         return sketch;
     }
@@ -88,11 +92,12 @@ class OrderedMinHash : public HashBase<T> {
      */
     template <typename C>
     Vec2D<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
-        Timer::start("compute_sequence");
-        std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
-        Vec2D<T> sketch = compute(kmers);
-        Timer::stop();
-        return sketch;
+        return compute(seq2kmer<C, T>(sequence, k, alphabet_size));
+    }
+
+    static T dist(const std::vector<T> &a, const std::vector<T> &b) {
+        Timer timer("ordered_minhash_dist");
+        return hamming_dist(a, b);
     }
 
   private:

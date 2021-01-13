@@ -34,16 +34,16 @@ class WeightedMinHash : public HashBase<T> {
      * @param sketch_dim the number of components (elements) in the sketch vector.
      * @param max_len maximum sequence length to be hashed.
      */
-    WeightedMinHash(T set_size, size_t sketch_dim, size_t max_len)
-        : HashBase<T>(set_size, sketch_dim, max_len * set_size), max_len(max_len) {}
+    WeightedMinHash(T set_size, size_t sketch_dim, size_t max_len, std::string hash_algorithm)
+        : HashBase<T>(set_size, sketch_dim, max_len * set_size, hash_algorithm), max_len(max_len) {}
 
     std::vector<T> compute(const std::vector<T> &kmers) {
-        Timer::start("weighted_minhash");
+        Timer timer("weighted_minhash");
         std::vector<T> sketch = std::vector<T>(this->sketch_dim);
         if (kmers.empty()) {
-            Timer::stop();
             return sketch;
         }
+
         for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char = T(0);
             size_t min_rank = this->hash_size + 1;
@@ -67,8 +67,6 @@ class WeightedMinHash : public HashBase<T> {
             }
             sketch[si] = min_char;
         }
-        Timer::stop();
-
         return sketch;
     }
 
@@ -83,11 +81,14 @@ class WeightedMinHash : public HashBase<T> {
      */
     template <typename C>
     std::vector<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
-        Timer::start("compute_sequence");
         std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
         std::vector<T> sketch = compute(kmers);
-        Timer::stop();
         return sketch;
+    }
+
+    static T dist(const std::vector<T> &a, const std::vector<T> &b) {
+        Timer timer("weighted_minhash_dist");
+        return hamming_dist(a, b);
     }
 
   private:

@@ -34,7 +34,7 @@ class TensorSlideOld : public Tensor<set_type, sketch_type> {
         Timer::start("tensor_slide_sketch");
         sketch = Vec2D<sketch_type>(this->sketch_count, std::vector<sketch_type>());
         for (size_t m = 0; m < this->sketch_count; m++) {
-            auto cnt = new3D<float>(this->tup_len, this->tup_len, this->embedded_dim, 0);
+            auto cnt = new3D<double>(this->tup_len, this->tup_len, this->embedded_dim, 0);
             for (size_t i = 0; i < seq.size(); i++) {
                 if (i >= win_len) {
                     size_t j = i - win_len;

@@ -18,7 +18,7 @@ constexpr uint8_t HASH_SIZE = MAX_LEN * SET_SIZE;
 
 class Hash : public HashBase<uint8_t>, public testing::Test {
   public:
-    Hash() : HashBase<uint8_t>(SET_SIZE, SKETCH_DIM, HASH_SIZE) {}
+    Hash() : HashBase<uint8_t>(SET_SIZE, SKETCH_DIM, HASH_SIZE, "uniform") {}
 };
 
 // test that the hash function bijective, i.e. it is in effect a permutation:
@@ -27,7 +27,7 @@ TEST_F(Hash, HashesDistinct) {
         std::unordered_set<uint8_t> seen(SKETCH_DIM);
         for (uint32_t i = 0; i < hash_size; ++i) {
             uint8_t v = this->hash(s, i);
-            ASSERT_FALSE(seen.contains(v));
+            ASSERT_FALSE(seen.find(v) != seen.end());
             seen.insert(v);
         }
         ASSERT_EQ(hash_size, seen.size());
@@ -40,7 +40,7 @@ TEST_F(Hash, HashesConsistent) {
     for (uint32_t s = 0; s < SKETCH_DIM; ++s) {
         for (uint32_t i = 0; i < hash_size; ++i) {
             uint8_t v = this->hash(s, i);
-            ASSERT_FALSE(hashes[s].contains(i));
+            ASSERT_FALSE(hashes[s].find(i) != hashes[s].end());
             hashes[s][i] = v;
         }
         ASSERT_EQ(hash_size, hashes[s].size());

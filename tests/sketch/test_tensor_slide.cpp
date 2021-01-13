@@ -19,6 +19,7 @@ constexpr uint32_t tuple_length = 3;
 constexpr uint32_t window_length = 32;
 constexpr uint32_t stride = 8;
 
+
 template <typename set_type>
 void rand_init(uint32_t sketch_size, Vec2D<set_type> *hashes, Vec2D<bool> *signs) {
     std::mt19937 gen(3412343);
