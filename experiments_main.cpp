@@ -14,10 +14,11 @@
 #include "util/transformer.hpp"
 #include "util/utils.hpp"
 
+#include <gflags/gflags.h>
+
 #include <filesystem>
 #include <memory>
 #include <omp.h>
-
 
 DEFINE_uint32(kmer_size, 4, "Kmer size for MH, OMH, WMH");
 
