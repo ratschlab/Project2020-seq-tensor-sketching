@@ -3,6 +3,7 @@
 #include "util/utils.hpp"
 
 #include <cstddef>
+#include <random>
 #include <vector>
 
 
@@ -50,7 +51,7 @@ class Int32Flattener {
         std::vector<double> d(v1.size());
         double val = 0;
         for (size_t i = 0; i < d.size(); i++) {
-            val += std::__popcount(v1[i] ^ v2[i]);
+            val += __builtin_popcount(v1[i] ^ v2[i]);
         }
         return val;
     }

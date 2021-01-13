@@ -3,8 +3,6 @@
 #include "util/multivec.hpp"
 #include "util/timer.hpp"
 
-#include <gflags/gflags.h>
-
 #include <algorithm>
 #include <cassert>
 #include <cmath>

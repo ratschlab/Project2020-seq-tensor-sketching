@@ -36,8 +36,8 @@ class HashBase {
 
   protected:
     T set_size;
-    size_t sketch_dim {};
-    size_t hash_size {};
+    size_t sketch_dim;
+    size_t hash_size;
 
     /**
      * Returns the hash value for the index-th hash function.
