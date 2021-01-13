@@ -174,8 +174,8 @@ struct SeqGenModule {
         auto inner_dim = ceil(sqrt(FLAGS_embed_dim));
         tensor_slide = TensorSlide<char_type>(FLAGS_alphabet_size, inner_dim, FLAGS_tuple_length,
                                             FLAGS_window_size, FLAGS_stride);
-        l1SketchBin32 = flatten_int32(FLAGS_embed_dim, inner_dim, FLAGS_seq_len);
-        l1Sketch = flatten_double(FLAGS_embed_dim, inner_dim, FLAGS_seq_len);
+        l1SketchBin32 = Int32Flattener(FLAGS_embed_dim, inner_dim, FLAGS_seq_len);
+        l1Sketch = DoubleFlattener(FLAGS_embed_dim, inner_dim, FLAGS_seq_len);
 
     }
 
@@ -290,8 +290,8 @@ struct SeqGenModule {
     OrderedMinHash<kmer_type> omin_hash;
     Tensor<char_type> tensor_sketch;
     TensorSlide<char_type> tensor_slide;
-    flatten_int32 l1SketchBin32;
-    flatten_double l1Sketch;
+    Int32Flattener l1SketchBin32;
+    DoubleFlattener l1Sketch;
 
     Vec2D<double> dists;
     std::vector<std::pair<uint32_t,uint32_t>> ingroup_pairs;
