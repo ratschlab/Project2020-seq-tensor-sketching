@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
 
     uint64_t kmer_word_size = int_pow<uint64_t>(alphabet_size, FLAGS_kmer_length);
 
-    if (FLAGS_sketch_method.ends_with("MH")) {
+    if (FLAGS_sketch_method.substr(FLAGS_sketch_method.size() - 2, 2) == "MH") {
         std::function<std::vector<uint64_t>(const std::vector<uint64_t> &)> sketcher;
         MinHash<uint64_t> min_hash;
         WeightedMinHash<uint64_t> wmin_hash;
@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
         sketch_helper.read_input();
         sketch_helper.compute_sketches();
         sketch_helper.save_output();
-    } else if (FLAGS_sketch_method.starts_with("Tensor")) {
+    } else if (FLAGS_sketch_method.rfind("Tensor",0) == 0) {
         Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length);
         TensorSlide<uint64_t> tensor_slide(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
                                            FLAGS_window_size, FLAGS_stride);
