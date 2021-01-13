@@ -178,22 +178,27 @@ int main(int argc, char *argv[]) {
         std::function<std::vector<uint64_t>(const std::vector<uint64_t> &)> sketcher;
 
         if (FLAGS_sketch_method == "MH") {
-            sketcher = [&](const std::vector<uint64_t> &seq) {
-                MinHash<uint64_t> min_hash(kmer_word_size, FLAGS_embed_dim, HashAlgorithm::uniform);
+            // The hash function is part of the lambda state.
+            sketcher = [&,
+                        min_hash = MinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim,
+                                                     HashAlgorithm::uniform)](
+                               const std::vector<uint64_t> &seq) mutable {
                 return min_hash.compute(seq);
             };
         } else if (FLAGS_sketch_method == "WMH") {
-            sketcher = [&](const std::vector<uint64_t> &seq) {
-                WeightedMinHash<uint64_t> wmin_hash(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                                    HashAlgorithm::uniform);
-
+            sketcher = [&,
+                        wmin_hash
+                        = WeightedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
+                                                    HashAlgorithm::uniform)](
+                               const std::vector<uint64_t> &seq) mutable {
                 return wmin_hash.compute(seq);
             };
         } else if (FLAGS_sketch_method == "OMH") {
-            sketcher = [&](const std::vector<uint64_t> &seq) {
-                OrderedMinHash<uint64_t> omin_hash(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                                   FLAGS_tuple_length, HashAlgorithm::uniform);
-
+            sketcher = [&,
+                        omin_hash
+                        = OrderedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
+                                                   FLAGS_tuple_length, HashAlgorithm::uniform)](
+                               const std::vector<uint64_t> &seq) mutable {
                 return omin_hash.compute_flat(seq);
             };
         }
@@ -203,7 +208,7 @@ int main(int argc, char *argv[]) {
         sketch_helper.read_input();
         sketch_helper.compute_sketches();
         sketch_helper.save_output();
-    } else if (FLAGS_sketch_method.rfind("Tensor",0) == 0) {
+    } else if (FLAGS_sketch_method.rfind("Tensor", 0) == 0) {
         Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length);
         TensorSlide<uint64_t> tensor_slide(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
                                            FLAGS_window_size, FLAGS_stride);
