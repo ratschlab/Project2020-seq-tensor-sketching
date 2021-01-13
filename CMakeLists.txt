@@ -23,7 +23,6 @@ target_link_libraries(sequence gflags OpenMP::OpenMP_CXX)
 add_executable(experiments experiments_main.cpp )
 target_link_libraries(experiments sequence util)
 
-
 add_executable(sketch sketch_main.cpp)
 target_link_libraries(sketch sequence util)
 
