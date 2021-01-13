@@ -178,4 +178,33 @@ T int_pow(T x, T pow) {
 
 std::string flag_values(char delimiter = ' ', bool skip_empty = false);
 
+template <typename F, typename T>
+void apply_tuple(F &&f, T &tuple_t) {
+    std::apply([&](auto &...t) { (f(t), ...); }, tuple_t);
+}
+
+
+template <typename F, typename... Ts, typename... Us>
+void apply_tuple(F &&f, std::tuple<Ts...> &tuple_t, std::tuple<Us...> &tuple_u) {
+    std::apply([&](auto &...ts) { std::apply([&](auto &...us) { (f(ts, us), ...); }, tuple_u); },
+               tuple_t);
+}
+
+template <typename F, typename... Ts, typename... Us, typename... Vs>
+void apply_tuple(F &&f,
+                 std::tuple<Ts...> &tuple_t,
+                 std::tuple<Us...> &tuple_u,
+                 std::tuple<Vs...> &tuple_v) {
+    std::apply(
+            [&](auto &...ts) {
+                std::apply(
+                        [&](auto &...us) {
+                            std::apply([&](auto &...vs) { (f(ts, us, vs), ...); }, tuple_v);
+                        },
+                        tuple_u);
+            },
+            tuple_t);
+}
+
+
 } // namespace ts

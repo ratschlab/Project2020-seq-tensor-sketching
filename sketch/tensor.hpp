@@ -1,15 +1,14 @@
 #pragma once
 
+#include "immintrin.h" // for AVX
+#include "nmmintrin.h" // for SSE4.2
 #include "util/multivec.hpp"
-
-#include <cassert>
-#include <iostream> //todo: remove
-#include <random>
-#include <cmath>
 #include "util/timer.hpp"
 #include "util/utils.hpp"
-#include "nmmintrin.h" // for SSE4.2
-#include "immintrin.h" // for AVX
+
+#include <cassert>
+#include <cmath>
+#include <random>
 
 namespace ts { // ts = Tensor Sketch
 
@@ -21,6 +20,8 @@ namespace ts { // ts = Tensor Sketch
 template <class seq_type>
 class Tensor {
   public:
+    using sketch_type = std::vector<double>;
+
     Tensor() {}
     /**
      * @param alphabet_size the number of elements in the alphabet S over which sequences are
@@ -102,9 +103,9 @@ class Tensor {
   protected:
     /** Computes (1-z)*a + z*b_shift */
     inline std::vector<double> shift_sum(const std::vector<double> &a,
-                                  const std::vector<double> &b,
-                                  seq_type shift,
-                                  double z) {
+                                         const std::vector<double> &b,
+                                         seq_type shift,
+                                         double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
         std::vector<double> result(a.size());
@@ -117,9 +118,9 @@ class Tensor {
 
     /** Computes (1-z)*a + z*b_shift */
     void shift_sum_inplace(std::vector<double> &a,
-                                         const std::vector<double> &b,
-                                         seq_type shift,
-                                         double z) {
+                           const std::vector<double> &b,
+                           seq_type shift,
+                           double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
         for (uint32_t i = 0; i < len; i++) {

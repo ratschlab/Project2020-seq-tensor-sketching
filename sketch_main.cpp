@@ -199,7 +199,7 @@ int main(int argc, char *argv[]) {
                         = OrderedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
                                                    FLAGS_tuple_length, HashAlgorithm::uniform)](
                                const std::vector<uint64_t> &seq) mutable {
-                return omin_hash.compute_flat(seq);
+                return omin_hash.compute(seq);
             };
         }
         std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher

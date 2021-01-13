@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sketch/sketch_base.hpp"
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
@@ -16,10 +17,15 @@ enum class HashAlgorithm { uniform, crc32 };
 HashAlgorithm parse_hash_algorithm(const std::string &name);
 
 template <typename T>
-class HashBase {
+class HashBase : public SketchBase<std::vector<T>, true> {
   public:
-    HashBase(T set_size, size_t sketch_dim, size_t hash_size, HashAlgorithm hash_algorithm)
-        : set_size(set_size),
+    HashBase(T set_size,
+             size_t sketch_dim,
+             size_t hash_size,
+             HashAlgorithm hash_algorithm,
+             const std::string &name = "HashBash")
+        : SketchBase<std::vector<T>, true>(name),
+          set_size(set_size),
           sketch_dim(sketch_dim),
           hash_size(2 * hash_size),
           hash_algorithm(hash_algorithm),

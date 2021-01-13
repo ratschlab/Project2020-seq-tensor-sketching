@@ -6,8 +6,8 @@ find_package(OpenMP REQUIRED)
 
 include_directories(.)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g ")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 ")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -Wfatal-errors")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wfatal-errors")
 
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)

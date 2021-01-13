@@ -29,8 +29,11 @@ class MinHash : public HashBase<T> {
      * @param set_size the number of elements in S,
      * @param sketch_dim the number of components (elements) in the sketch vector.
      */
-    MinHash(T set_size, size_t sketch_dim, HashAlgorithm hash_algorithm)
-        : HashBase<T>(set_size, sketch_dim, set_size, hash_algorithm) {}
+    MinHash(T set_size,
+            size_t sketch_dim,
+            HashAlgorithm hash_algorithm,
+            const std::string &name = "MH")
+        : HashBase<T>(set_size, sketch_dim, set_size, hash_algorithm, name) {}
 
     /**
      * Computes the min-hash sketch for the given kmers.

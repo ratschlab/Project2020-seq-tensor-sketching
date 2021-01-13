@@ -19,6 +19,8 @@
 #include <filesystem>
 #include <memory>
 #include <omp.h>
+#include <sys/types.h>
+#include <type_traits>
 
 DEFINE_uint32(kmer_size, 4, "Kmer size for MH, OMH, WMH");
 
@@ -107,27 +109,32 @@ DEFINE_uint32(num_threads,
 
 using namespace ts;
 
-template <class char_type, class kmer_type, class embed_type>
-struct SeqGenModule {
-    SeqGenModule()
-        : min_hash(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
-                   FLAGS_embed_dim,
-                   parse_hash_algorithm(FLAGS_hash_alg)),
-          wmin_hash(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
-                    FLAGS_embed_dim,
-                    FLAGS_max_len,
-                    parse_hash_algorithm(FLAGS_hash_alg)),
-          omin_hash(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
-                    FLAGS_embed_dim,
-                    FLAGS_max_len,
-                    FLAGS_tuple_length,
-                    parse_hash_algorithm(FLAGS_hash_alg)),
-          tensor_sketch(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length),
-          tensor_slide(FLAGS_alphabet_size,
-                       ceil(sqrt(FLAGS_embed_dim)),
-                       FLAGS_tuple_length,
-                       FLAGS_window_size,
-                       FLAGS_stride),
+template <class char_type, class kmer_type, class embed_type, class... SketchAlgorithms>
+class ExperimentRunner {
+    static constexpr size_t NumAlgorithms = sizeof...(SketchAlgorithms);
+    std::tuple<SketchAlgorithms...> algorithms_;
+    using Sketches = std::tuple<std::vector<typename SketchAlgorithms::sketch_type>...>;
+    Sketches sketches_;
+
+    Vec2D<char_type> seqs;
+    Vec2D<embed_type> tss_sketch_flat;
+    Vec2D<uint32_t> tss_sketch_binary;
+
+    Int32Flattener l1SketchBin32;
+    DoubleFlattener l1Sketch;
+
+    std::vector<embed_type> edit_dists;
+    using Distances = std::tuple<std::conditional_t<true, std::vector<double>, SketchAlgorithms>...>;
+    Distances dists;
+
+    std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
+
+    ExperimentRunner() = delete;
+    ExperimentRunner(ExperimentRunner &) = delete;
+
+  public:
+    explicit ExperimentRunner(SketchAlgorithms... algorithms)
+        : algorithms_(algorithms...),
           l1SketchBin32(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len),
           l1Sketch(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len) {}
 
@@ -136,8 +143,8 @@ struct SeqGenModule {
         generate_sequences();
         std::cout << "\nComputing sketches ... " << std::flush;
         compute_sketches();
-        std::cout << "\nTransform sketches ... " << std::flush;
-        transform_sketches();
+        // std::cout << "\nTransform sketches ... " << std::flush;
+        // transform_sketches();
         std::cout << "\nComputing distances ... " << std::flush;
         compute_pairwise_dists();
         std::cout << "\nComputing Spearman correlation ... \n" << std::flush;
@@ -156,13 +163,7 @@ struct SeqGenModule {
 
 
         size_t num_seqs = seqs.size();
-        wmh_sketch.resize(num_seqs);
-        mh_sketch.resize(num_seqs);
-        omh_sketch.resize(num_seqs);
-        ts_sketch.resize(num_seqs);
-        tss_sketch.resize(num_seqs);
-        tss_sketch_flat.resize(num_seqs);
-        tss_sketch_binary.resize(num_seqs);
+        apply_tuple([&](auto &sketch) { sketch.resize(num_seqs); }, sketches_);
     }
 
     void compute_sketches() {
@@ -171,18 +172,26 @@ struct SeqGenModule {
         for (uint32_t si = 0; si < seqs.size(); si++) {
             auto kmer_seq = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size,
                                                            FLAGS_alphabet_size);
-            mh_sketch[si] = min_hash.compute(kmer_seq);
-            wmh_sketch[si] = wmin_hash.compute(kmer_seq);
-            omh_sketch[si] = omin_hash.compute_flat(kmer_seq);
-            ts_sketch[si] = tensor_sketch.compute(seqs[si]);
-            tss_sketch[si] = tensor_slide.compute(seqs[si]);
-            tss_sketch_flat[si] = l1Sketch.flatten(tss_sketch[si]);
-            tss_sketch_binary[si] = l1SketchBin32.flatten(tss_sketch[si]);
+
+            apply_tuple(
+                    [&](auto &sketch, auto &alg) {
+                        if constexpr (alg.kmer_input) {
+                            sketch[si] = alg.compute(kmer_seq);
+                        } else {
+                            sketch[si] = alg.compute(seqs[si]);
+                        }
+                    },
+                    sketches_, algorithms_);
+
+            // tss_sketch_flat[si] = l1Sketch.flatten(tss_sketch[si]);
+            // tss_sketch_binary[si] = l1SketchBin32.flatten(tss_sketch[si]);
             progress_bar::iter();
         }
     }
 
+    /*
     void transform_sketches() {
+        // TODO: Why do we need/want this?
         if (FLAGS_transform == "disc") {
             discretize<double> disc(FLAGS_num_bins);
             apply2D(ts_sketch, disc);
@@ -193,33 +202,35 @@ struct SeqGenModule {
             apply3D(tss_sketch, atan);
         }
     }
+    */
 
     void compute_pairwise_dists() {
-        dists = new2D<double>(8, ingroup_pairs.size());
+        apply_tuple([&](auto &dist) { dist.resize(ingroup_pairs.size()); }, dists);
         progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
-        for (size_t pi = 0; pi < ingroup_pairs.size(); pi++) {
-            size_t si = ingroup_pairs[pi].first, sj = ingroup_pairs[pi].second;
-            dists[0][pi] = (edit_distance(seqs[si], seqs[sj]));
-            dists[1][pi] = min_hash.dist(mh_sketch[si], mh_sketch[sj]);
-            dists[2][pi] = wmin_hash.dist(wmh_sketch[si], wmh_sketch[sj]);
-            dists[3][pi] = omin_hash.dist(omh_sketch[si], omh_sketch[sj]);
-            dists[4][pi] = tensor_sketch.dist(ts_sketch[si], ts_sketch[sj]);
-            dists[5][pi] = tensor_slide.dist(tss_sketch[si], tss_sketch[sj]);
-            dists[6][pi] = l1Sketch.dist(tss_sketch_flat[si], tss_sketch_flat[sj]);
-            dists[7][pi] = l1SketchBin32.dist(tss_sketch_binary[si], tss_sketch_binary[sj]);
+        for (size_t i = 0; i < ingroup_pairs.size(); i++) {
+            size_t si = ingroup_pairs[i].first, sj = ingroup_pairs[i].second;
+            edit_dists[i] = edit_distance(seqs[si], seqs[sj]);
+
+            apply_tuple([&](auto &alg, auto &sketch,
+                            auto &dist) { dist[i] = alg.dist(sketch[si], sketch[sj]); },
+                        algorithms_, sketches_, dists);
+
+            // dists[6][i] = l1Sketch.dist(tss_sketch_flat[si], tss_sketch_flat[sj]);
+            // dists[7][i] = l1SketchBin32.dist(tss_sketch_binary[si], tss_sketch_binary[sj]);
             progress_bar::iter();
         }
     }
 
     void print_summary() {
-        std::cout << "\tMH: " << spearman(dists[0], dists[1]) << std::endl;
-        std::cout << "\tWMH: " << spearman(dists[0], dists[2]) << std::endl;
-        std::cout << "\tOMH: " << spearman(dists[0], dists[3]) << std::endl;
-        std::cout << "\tTensorSketch: " << spearman(dists[0], dists[4]) << std::endl;
-        std::cout << "\tTensorSlide: " << spearman(dists[0], dists[5]) << std::endl;
-        std::cout << "\tDoubleFlattener: " << spearman(dists[0], dists[6]) << std::endl;
-        std::cout << "\tInt32Flattener: " << spearman(dists[0], dists[7]) << std::endl;
+        apply_tuple(
+                [&](const auto &algo, const auto &dist) {
+                    std::cout << "\t" << setw(20) << algo.name
+                              << "\t: " << spearman(edit_dists, dist) << std::endl;
+                },
+                algorithms_, dists);
+        // std::cout << "\tDoubleFlattener: " << spearman(dists[0], dists[6]) << std::endl;
+        // std::cout << "\tInt32Flattener: " << spearman(dists[0], dists[7]) << std::endl;
     }
 
     void save_output() {
@@ -241,42 +252,24 @@ struct SeqGenModule {
         std::vector<std::string> method_names = { "ED", "MH", "WMH", "OMH", "TS", "TSS", "TSS2" };
         fo.open(output_dir / "dists.csv");
         fo << "s1,s2";
-        for (size_t m = 0; m < method_names.size(); m++) { // table header
-            fo << "," << method_names[m];
+        for (auto &method_name : method_names) { // table header
+            fo << "," << method_name;
         }
         fo << "\n";
         for (uint32_t pi = 0; pi < ingroup_pairs.size(); pi++) {
             fo << ingroup_pairs[pi].first << "," << ingroup_pairs[pi].second; // seq 1 & 2 indices
-            for (int m = 0; m < 6; m++) { // distance based on each method
-                fo << "," << dists[m][pi];
-            }
+
+            apply_tuple([&](const auto &dist) { fo << "," << dist[pi]; }, dists);
             fo << "\n";
         }
     }
-
-
-  private:
-    Vec2D<char_type> seqs;
-    std::vector<std::string> seq_names;
-    Vec2D<kmer_type> mh_sketch;
-    Vec2D<kmer_type> wmh_sketch;
-    Vec2D<kmer_type> omh_sketch;
-    Vec2D<embed_type> ts_sketch;
-    Vec3D<embed_type> tss_sketch;
-    Vec2D<embed_type> tss_sketch_flat;
-    Vec2D<uint32_t> tss_sketch_binary;
-
-    MinHash<kmer_type> min_hash;
-    WeightedMinHash<kmer_type> wmin_hash;
-    OrderedMinHash<kmer_type> omin_hash;
-    Tensor<char_type> tensor_sketch;
-    TensorSlide<char_type> tensor_slide;
-    Int32Flattener l1SketchBin32;
-    DoubleFlattener l1Sketch;
-
-    Vec2D<double> dists;
-    std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
 };
+
+template <class char_type, class kmer_type, class embed_type, class... SketchAlgorithms>
+ExperimentRunner<char_type, kmer_type, embed_type, SketchAlgorithms...>
+MakeExperimentRunner(SketchAlgorithms... algorithms) {
+    return ExperimentRunner<char_type, kmer_type, embed_type, SketchAlgorithms...>(algorithms...);
+}
 
 
 int main(int argc, char *argv[]) {
@@ -288,7 +281,24 @@ int main(int argc, char *argv[]) {
         omp_set_num_threads(FLAGS_num_threads);
     }
 
-    SeqGenModule<uint8_t, uint64_t, double> experiment;
+    using char_type = uint8_t;
+    using kmer_type = uint64_t;
+    using embed_type = double;
+    auto experiment = MakeExperimentRunner<char_type, kmer_type, embed_type>(
+            MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size), FLAGS_embed_dim,
+                               parse_hash_algorithm(FLAGS_hash_alg), "MH"),
+            WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
+                                       FLAGS_embed_dim,
+                                       FLAGS_max_len, parse_hash_algorithm(FLAGS_hash_alg),
+                                       "WMH"),
+            OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
+                                      FLAGS_embed_dim,
+                                      FLAGS_max_len, FLAGS_tuple_length, parse_hash_algorithm(FLAGS_hash_alg),
+                                      "OMH")
+            // Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length),
+            // TensorSlide<char_type>(FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)),
+            // FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride)
+    );
     experiment.run();
 
     return 0;
