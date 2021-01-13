@@ -102,6 +102,8 @@ static bool ValidateHashAlg(const char *flagname, const std::string &value) {
     printf("Invalid value for --%s: %s\n", flagname, value.c_str());
     return false;
 }
+// Use CRC32 only for comparing speed
+// TODO: implement a proper iterative permutation generation for hash*
 DEFINE_string(hash_alg,
               "uniform",
               "hash algorithm to be used as basis, can be 'uniform', or 'crc32'");
@@ -154,7 +156,7 @@ struct SeqGenModule {
         seq_gen.ingroup_pairs(ingroup_pairs);
 
 
-        uint32_t num_seqs = seqs.size();
+        size_t num_seqs = seqs.size();
         wmh_sketch.resize(num_seqs);
         mh_sketch.resize(num_seqs);
         omh_sketch.resize(num_seqs);
@@ -164,10 +166,10 @@ struct SeqGenModule {
         tss_sketch_binary.resize(num_seqs);
 
         embed_type set_size = int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size);
-        min_hash = MinHash<kmer_type>(set_size, FLAGS_embed_dim);
-        wmin_hash = WeightedMinHash<kmer_type>(set_size, FLAGS_embed_dim, FLAGS_max_len);
+        min_hash = MinHash<kmer_type>(set_size, FLAGS_embed_dim, FLAGS_hash_alg);
+        wmin_hash = WeightedMinHash<kmer_type>(set_size, FLAGS_embed_dim, FLAGS_max_len, FLAGS_hash_alg);
         omin_hash = OrderedMinHash<kmer_type>(set_size, FLAGS_embed_dim, FLAGS_max_len,
-                                            FLAGS_tuple_length);
+                                            FLAGS_tuple_length, FLAGS_hash_alg);
         tensor_sketch = Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length);
         auto inner_dim = ceil(sqrt(FLAGS_embed_dim));
         tensor_slide = TensorSlide<char_type>(FLAGS_alphabet_size, inner_dim, FLAGS_tuple_length,
@@ -178,10 +180,6 @@ struct SeqGenModule {
     }
 
     void compute_sketches() {
-        min_hash.set_hash_algorithm(FLAGS_hash_alg);
-        wmin_hash.set_hash_algorithm(FLAGS_hash_alg);
-        omin_hash.set_hash_algorithm(FLAGS_hash_alg);
-
         progress_bar::init(seqs.size());
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {

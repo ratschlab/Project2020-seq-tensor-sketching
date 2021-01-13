@@ -17,12 +17,14 @@ constexpr uint32_t tuple_length = 3;
 constexpr uint32_t max_sequence_len = 200;
 
 TEST(OrderedMinHash, Empty) {
-    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length);
+    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length,
+                                       "uniform");
     ASSERT_THROW(under_test.compute(std::vector<uint8_t>()), std::invalid_argument);
 }
 
 TEST(OrderedMinHash, Repeat) {
-    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length);
+    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length,
+                                       "uniform");
     std::vector<uint8_t> sequence = { 0, 1, 2, 3, 4, 5 };
     Vec2D<uint8_t> sketch1 = under_test.compute(sequence);
     Vec2D<uint8_t> sketch2 = under_test.compute(sequence);
@@ -34,7 +36,8 @@ TEST(OrderedMinHash, Repeat) {
 }
 
 TEST(OrderedMinHash, Permute) {
-    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length);
+    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length,
+                                       "uniform");
     std::vector<uint8_t> sequence1 = { 0, 1, 2, 3, 4, 5 };
     std::vector<uint8_t> sequence2 = { 5, 4, 3, 2, 1, 0 };
     Vec2D<uint8_t> sketch1 = under_test.compute(sequence1);
@@ -58,7 +61,8 @@ hash_init(uint32_t set_sz, uint32_t sketch_size, uint32_t max_seq_len) {
 }
 
 TEST(OrderedMinHash, PresetHash) {
-    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length);
+    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length,
+                                       "uniform");
     under_test.set_hashes_for_testing(hash_init(set_size, sketch_dim, max_sequence_len));
     for (uint32_t i = 0; i < set_size - tuple_length; ++i) {
         std::vector<uint8_t> sequence(set_size - i);
@@ -71,7 +75,8 @@ TEST(OrderedMinHash, PresetHash) {
 }
 
 TEST(OrderedMinHash, PresetHashRepeat) {
-    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length);
+    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length,
+                                       "uniform");
     under_test.set_hashes_for_testing(hash_init(set_size, sketch_dim, max_sequence_len));
     for (uint32_t i = 0; i < set_size - tuple_length; ++i) {
         std::vector<uint8_t> sequence(2 * (set_size - i));
@@ -86,7 +91,8 @@ TEST(OrderedMinHash, PresetHashRepeat) {
 
 #ifndef NDEBUG
 TEST(OrderedMinhash, SequenceTooLong) {
-    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length);
+    OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length,
+                                       "uniform");
     std::vector<uint8_t> sequence(max_sequence_len + 1);
     ASSERT_THROW(under_test.compute(sequence), std::invalid_argument);
 }

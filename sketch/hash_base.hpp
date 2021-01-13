@@ -11,19 +11,18 @@
 
 namespace ts {
 
-enum hash_algorithm_enum { uniform, crc32};
-
-
+enum class HashAlgorithm { uniform, crc32};
 
 template <typename T>
 class HashBase {
   public:
     HashBase() {}
 
-    HashBase(T set_size, size_t sketch_dim, size_t hash_size)
+    HashBase(T set_size, size_t sketch_dim, size_t hash_size, std::string hash_algorithm)
         : set_size(set_size),
           sketch_dim(sketch_dim),
           hash_size(2 * hash_size),
+          hash_algorithm(to_hash_algorithm(hash_algorithm)),
           hashes(std::vector<std::unordered_map<T, T>>(sketch_dim)),
           hash_values(std::vector<std::unordered_set<T>>(sketch_dim)) {
         std::random_device rd;
@@ -34,12 +33,13 @@ class HashBase {
 
     void set_hashes_for_testing(const std::vector<std::unordered_map<T, T>> &h) { hashes = h; }
 
-    void set_hash_algorithm(std::string name) {
+    HashAlgorithm to_hash_algorithm(std::string name) {
         if (name == "uniform") {
-            hash_algorithm = hash_algorithm_enum::uniform;
+            hash_algorithm = HashAlgorithm::uniform;
         } else if (name == "crc32") {
-            hash_algorithm = hash_algorithm_enum::crc32;
+            hash_algorithm = HashAlgorithm::crc32;
         }
+        return hash_algorithm;
     }
 
 
@@ -56,7 +56,7 @@ class HashBase {
         T val = -1;
         switch (hash_algorithm) {
             T random_hash;
-            case hash_algorithm_enum::uniform:
+            case HashAlgorithm::uniform:
                 // TODO multiple read Semaphor instead of critical
 #pragma omp critical
             {
@@ -76,7 +76,7 @@ class HashBase {
                 val = random_hash;
             }
                 break;
-            case hash_algorithm_enum::crc32:
+            case HashAlgorithm::crc32:
                 val = _mm_crc32_u32((unsigned int)crc32_base,(unsigned int)key);
                 val = _mm_crc32_u32((unsigned int)val,(unsigned int)index);
                 return val;
@@ -87,6 +87,8 @@ class HashBase {
     }
 
   private:
+    HashAlgorithm hash_algorithm;
+
     /** Contains the sketch_dim permutations (hashes) that are used to compute the min-hash */
     std::vector<std::unordered_map<T, T>> hashes;
     /** Contains the values used so far for each on-demand permutation */
@@ -94,8 +96,6 @@ class HashBase {
     std::uniform_int_distribution<T> rand;
     std::mt19937 rng;
     uint32_t crc32_base = 341234;
-
-    hash_algorithm_enum hash_algorithm = hash_algorithm_enum::uniform;
 };
 
 

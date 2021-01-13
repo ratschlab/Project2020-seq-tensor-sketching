@@ -25,8 +25,12 @@ class OrderedMinHash : public HashBase<T> {
      * @param max_len maximum sequence length to be hashed.
      * @param tup_len the sketching will select the tup_len lowest values for each hash function
      */
-    OrderedMinHash(T set_size, size_t sketch_dim, size_t max_len, size_t tup_len)
-        : HashBase<T>(set_size, sketch_dim, set_size * max_len),
+    OrderedMinHash(T set_size,
+                   size_t sketch_dim,
+                   size_t max_len,
+                   size_t tup_len,
+                   std::string hash_algorithm)
+        : HashBase<T>(set_size, sketch_dim, set_size * max_len, hash_algorithm),
           max_len(max_len),
           tup_len(tup_len) {}
 
@@ -87,7 +91,8 @@ class OrderedMinHash : public HashBase<T> {
      * @tparam C the type of characters in the sequence
      */
     template <typename C>
-    void compute(Vec2D<T> &sketch, const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
+    void
+    compute(Vec2D<T> &sketch, const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
         std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
         sketch = compute(kmers);
     }
