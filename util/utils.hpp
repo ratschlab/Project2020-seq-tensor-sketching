@@ -7,9 +7,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <numeric>
 #include <vector>
-#include <cmath>
 
 namespace ts { // ts = Tensor Sketch
 
@@ -78,7 +78,7 @@ T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
     T val = 0;
     for (size_t i = 0; i < len; i++) {
         for (size_t j = 0; j < a[i].size() and j < b[i].size(); j++) {
-            auto el  = std::abs(a[i][j] - b[i][j]);
+            auto el = std::abs(a[i][j] - b[i][j]);
             val += el;
         }
     }

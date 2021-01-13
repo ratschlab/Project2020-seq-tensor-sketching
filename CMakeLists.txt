@@ -20,15 +20,19 @@ file(GLOB sequence_files "sequence/*.cpp")
 add_library(sequence ${sequence_files})
 target_link_libraries(sequence gflags OpenMP::OpenMP_CXX)
 
+file(GLOB sketch_files "sketch/*.cpp")
+add_library(sketch_lib ${sketch_files})
+target_link_libraries(sketch_lib OpenMP::OpenMP_CXX)
+
 
 add_executable(experiments experiments_main.cpp )
-target_link_libraries(experiments sequence util)
+target_link_libraries(experiments sequence util sketch_lib)
 
 add_executable(sketch sketch_main.cpp)
-target_link_libraries(sketch sequence util)
+target_link_libraries(sketch sequence util sketch_lib)
 
 add_executable(seqgen sequence_generator_main.cpp)
-target_link_libraries(seqgen sequence util)
+target_link_libraries(seqgen sequence util sketch_lib)
 
 # TESTS
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Werror  -msse4")
@@ -44,7 +48,7 @@ target_compile_options(gtest PRIVATE -w)
 file(GLOB test_files "tests/**/*.cpp")
 
 add_executable(tests ${test_files})
-target_link_libraries(tests gtest_main gtest gmock util)
+target_link_libraries(tests gtest_main gtest gmock util sketch_lib)
 target_include_directories(tests PRIVATE "include")
 
 gtest_discover_tests(tests)

@@ -18,7 +18,7 @@ constexpr uint8_t HASH_SIZE = MAX_LEN * SET_SIZE;
 
 class Hash : public HashBase<uint8_t>, public testing::Test {
   public:
-    Hash() : HashBase<uint8_t>(SET_SIZE, SKETCH_DIM, HASH_SIZE, "uniform") {}
+    Hash() : HashBase<uint8_t>(SET_SIZE, SKETCH_DIM, HASH_SIZE, HashAlgorithm::uniform) {}
 };
 
 // test that the hash function bijective, i.e. it is in effect a permutation:

@@ -22,14 +22,13 @@ namespace ts { // ts = Tensor Sketch
 template <class T>
 class MinHash : public HashBase<T> {
   public:
-    MinHash() {}
     /**
      * Constructs a min-hasher for the given alphabet size which constructs sketches of the set size
      * and sketch dimension.
      * @param set_size the number of elements in S,
      * @param sketch_dim the number of components (elements) in the sketch vector.
      */
-    MinHash(T set_size, size_t sketch_dim, std::string hash_algorithm)
+    MinHash(T set_size, size_t sketch_dim, HashAlgorithm hash_algorithm)
         : HashBase<T>(set_size, sketch_dim, set_size, hash_algorithm) {}
 
     /**

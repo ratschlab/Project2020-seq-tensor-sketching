@@ -1,5 +1,6 @@
 #include "sequence/fasta_io.hpp"
 
+#include "sketch/hash_base.hpp"
 #include "sketch/hash_min.hpp"
 #include "sketch/hash_ordered.hpp"
 #include "sketch/hash_weighted.hpp"
@@ -175,22 +176,26 @@ int main(int argc, char *argv[]) {
 
     if (FLAGS_sketch_method.substr(FLAGS_sketch_method.size() - 2, 2) == "MH") {
         std::function<std::vector<uint64_t>(const std::vector<uint64_t> &)> sketcher;
-        MinHash<uint64_t> min_hash;
-        WeightedMinHash<uint64_t> wmin_hash;
-        OrderedMinHash<uint64_t> omin_hash;
 
         if (FLAGS_sketch_method == "MH") {
-            min_hash = MinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, "uniform");
-            sketcher = [&](const std::vector<uint64_t> &seq) { return min_hash.compute(seq); };
+            sketcher = [&](const std::vector<uint64_t> &seq) {
+                MinHash<uint64_t> min_hash(kmer_word_size, FLAGS_embed_dim, HashAlgorithm::uniform);
+                return min_hash.compute(seq);
+            };
         } else if (FLAGS_sketch_method == "WMH") {
-            wmin_hash = WeightedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                                  "uniform");
-            sketcher = [&](const std::vector<uint64_t> &seq) { return wmin_hash.compute(seq); };
+            sketcher = [&](const std::vector<uint64_t> &seq) {
+                WeightedMinHash<uint64_t> wmin_hash(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
+                                                    HashAlgorithm::uniform);
+
+                return wmin_hash.compute(seq);
+            };
         } else if (FLAGS_sketch_method == "OMH") {
-            omin_hash = OrderedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                                 FLAGS_tuple_length, "uniform");
-            sketcher
-                    = [&](const std::vector<uint64_t> &seq) { return omin_hash.compute_flat(seq); };
+            sketcher = [&](const std::vector<uint64_t> &seq) {
+                OrderedMinHash<uint64_t> omin_hash(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
+                                                   FLAGS_tuple_length, HashAlgorithm::uniform);
+
+                return omin_hash.compute_flat(seq);
+            };
         }
         std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher
                 = [&](const std::vector<uint64_t> &) { return new2D<double>(0, 0); };
