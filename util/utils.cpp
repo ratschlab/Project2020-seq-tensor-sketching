@@ -1,5 +1,7 @@
 #include "utils.hpp"
 
+#include <gflags/gflags.h>
+
 namespace ts {
 
 std::string flag_values(char delimiter, bool skip_empty) {
