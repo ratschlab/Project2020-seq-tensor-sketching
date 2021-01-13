@@ -7,9 +7,11 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <random>
+#include <set>
 
 namespace ts { // ts = Tensor Sketch
 
@@ -37,12 +39,16 @@ class Tensor : public SketchBase<std::vector<double>, false> {
            size_t sketch_dim,
            size_t subsequence_len,
            uint32_t seed,
+           bool injective_hash = false,
+           bool permutation_hash = false,
            const std::string &name = "TS")
         : SketchBase<std::vector<double>, false>(name),
           alphabet_size(alphabet_size),
           sketch_dim(sketch_dim),
           subsequence_len(subsequence_len),
-          rng(seed) {
+          rng(seed),
+          injective_hash(injective_hash),
+          permutation_hash(permutation_hash) {
         init();
     }
 
@@ -53,10 +59,37 @@ class Tensor : public SketchBase<std::vector<double>, false> {
         std::uniform_int_distribution<seq_type> rand_hash2(0, sketch_dim - 1);
         std::uniform_int_distribution<seq_type> rand_bool(0, 1);
 
-        for (size_t h = 0; h < subsequence_len; h++) {
-            for (size_t c = 0; c < alphabet_size; c++) {
-                hashes[h][c] = rand_hash2(rng);
-                signs[h][c] = rand_bool(rng);
+        if (permutation_hash) {
+            for (size_t h = 0; h < subsequence_len; h++) {
+                for (size_t c = 0; c < alphabet_size; c++) {
+                    auto &p = permutation_hashes[h][c];
+                    std::iota(begin(p), end(p), 0);
+                    std::shuffle(begin(p), end(p), rng);
+                    signs[h][c] = rand_bool(rng);
+                }
+            }
+        } else if (injective_hash) {
+            // Make sure that there are plenty of dimensions to find an injective hash function.
+            assert(alphabet_size <= sketch_dim / 2);
+
+            for (size_t h = 0; h < subsequence_len; h++) {
+                std::set<int> done;
+                for (size_t c = 0; c < alphabet_size; c++) {
+                    int r;
+                    do {
+                        r = rand_hash2(rng);
+                    } while (not done.insert(r).second);
+                    hashes[h][c] = r;
+                    signs[h][c] = rand_bool(rng);
+                }
+            }
+
+        } else {
+            for (size_t h = 0; h < subsequence_len; h++) {
+                for (size_t c = 0; c < alphabet_size; c++) {
+                    hashes[h][c] = rand_hash2(rng);
+                    signs[h][c] = rand_bool(rng);
+                }
             }
         }
     }
@@ -83,13 +116,25 @@ class Tensor : public SketchBase<std::vector<double>, false> {
             for (uint32_t p = std::min(i + 1, (uint32_t)subsequence_len); p >= 1; --p) {
                 double z = p / (i + 1.0); // probability that the last index is i
                 seq_type r = hashes[p - 1][seq[i]];
+                // std::cerr << "Index: " << p-1 << " " << int(seq[i]) << std::endl;
+                const auto &perm = permutation_hashes[p - 1][seq[i]];
                 bool s = signs[p - 1][seq[i]];
-                if (s) {
-                    this->shift_sum_inplace(Tp[p], Tp[p - 1], r, z);
-                    this->shift_sum_inplace(Tm[p], Tm[p - 1], r, z);
+                if (permutation_hash) {
+                    if (s) {
+                        Tp[p] = perm_sum(Tp[p], Tp[p - 1], perm, z);
+                        Tm[p] = perm_sum(Tm[p], Tm[p - 1], perm, z);
+                    } else {
+                        Tp[p] = perm_sum(Tp[p], Tm[p - 1], perm, z);
+                        Tm[p] = perm_sum(Tm[p], Tp[p - 1], perm, z);
+                    }
                 } else {
-                    this->shift_sum_inplace(Tp[p], Tm[p - 1], r, z);
-                    this->shift_sum_inplace(Tm[p], Tp[p - 1], r, z);
+                    if (s) {
+                        Tp[p] = shift_sum(Tp[p], Tp[p - 1], r, z);
+                        Tm[p] = shift_sum(Tm[p], Tm[p - 1], r, z);
+                    } else {
+                        Tp[p] = shift_sum(Tp[p], Tm[p - 1], r, z);
+                        Tm[p] = shift_sum(Tm[p], Tp[p - 1], r, z);
+                    }
                 }
             }
         }
@@ -141,6 +186,27 @@ class Tensor : public SketchBase<std::vector<double>, false> {
         }
     }
 
+    std::vector<double> perm_sum(const std::vector<double> &a,
+                                 const std::vector<double> &b,
+                                 const std::vector<seq_type> &perm,
+                                 double z) {
+        // std::cerr << "Start perm sum" << std::endl;
+        assert(a.size() == b.size());
+        if (perm.size() != sketch_dim) {
+            // std::cerr << "SIZE: " << perm.size() << std::endl;
+            // std::cerr << "SKETCH SIZE: " << int(sketch_size) << std::endl;
+            assert(false);
+        }
+
+        std::vector<double> result(a.size());
+        for (uint32_t i = 0; i < a.size(); i++) {
+            result[i] = (1 - z) * a[i] + z * b[perm[i]];
+            assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
+        }
+        // std::cerr << "done" << std::endl;
+        return result;
+    }
+
     /** Size of the alphabet over which sequences to be sketched are defined, e.g. 4 for DNA */
     seq_type alphabet_size;
     /** Number of elements in the sketch, denoted by D in the paper */
@@ -158,6 +224,10 @@ class Tensor : public SketchBase<std::vector<double>, false> {
     Vec2D<bool> signs;
 
     std::mt19937 rng;
+
+    bool injective_hash;
+    bool permutation_hash;
+    Vec3D<seq_type> permutation_hashes;
 };
 
 } // namespace ts

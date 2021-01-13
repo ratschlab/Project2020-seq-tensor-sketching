@@ -23,11 +23,12 @@ class TensorBinom {
      * @param subsequence_len the length of the subsequences considered for sketching, denoted by t
      * in the paper
      */
-    TensorBinom(seq_type alphabet_size,
+    TensorBinom(seq_type alphabet_size_arg,
                 size_t sketch_size,
                 size_t subsequence_len,
                 bool use_permutation)
-        : alphabet_size(alphabet_size),
+        // TODO: Remove this +1.
+        : alphabet_size(alphabet_size_arg + 1),
           sketch_size(sketch_size),
           subsequence_len(subsequence_len),
           hashes(alphabet_size),
@@ -40,7 +41,7 @@ class TensorBinom {
 
         for (size_t c = 0; c < alphabet_size; c++) {
             hashes[c] = rand_hash2(gen);
-            signs[c] = 1; // rand_bool(gen);
+            signs[c] = rand_bool(gen);
         }
 
         permutations = new2D<int>(alphabet_size, sketch_size);
@@ -87,7 +88,7 @@ class TensorBinom {
     }
 
     /** Sets the hash and sign functions to predetermined values for testing */
-    void set_hashes_for_testing(const Vec2D<seq_type> &h, const Vec2D<bool> &s) {
+    void set_hashes_for_testing(const std::vector<seq_type> &h, const std::vector<bool> &s) {
         hashes = h;
         signs = s;
     }
