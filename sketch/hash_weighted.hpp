@@ -5,7 +5,6 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
-#include <bits/stdint-uintn.h>
 #include <iostream>
 #include <limits>
 #include <random>
