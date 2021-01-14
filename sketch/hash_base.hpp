@@ -47,24 +47,21 @@ class HashBase {
         switch (hash_algorithm) {
             case HashAlgorithm::uniform: {
                 T val;
-                // TODO multiple read Semaphor instead of critical
+                // TODO multiple read Semaphore instead of critical
 #pragma omp critical
                 {
-                    if (hashes[index].find(key) != hashes[index].end()) {
-                        val = hashes[index][key];
+                    auto [it, inserted] = hashes[index].insert({ key, -1 });
+                    if (!inserted) {
+                        val = it->second;
                     } else {
-                        while (true) {
+                        do {
                             val = rand(rng);
-                            if (hash_values[index].find(val) == hash_values[index].end()) {
-                                hashes[index][key] = val;
-                                hash_values[index].insert(val);
-                                break;
-                            }
-                        }
+                        } while (!hash_values[index].insert(val).second);
+                        it->second = val;
                     }
-                    assert(val >= 0 && val < hash_size
-                           && " Hash values are not in [0,set_size-1] range");
                 }
+                assert(val >= 0 && val < hash_size
+                       && " Hash values are not in [0,set_size-1] range");
                 return val;
             }
             case HashAlgorithm::crc32: {
