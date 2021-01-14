@@ -4,9 +4,9 @@
 
 #include "util/utils.hpp"
 
+#include <bit>
 #include <cstddef>
 #include <vector>
-#include <bit>
 
 namespace ts {
 /**
@@ -17,7 +17,7 @@ namespace ts {
 template <class seq_type>
 class TensorSlide : public Tensor<seq_type> {
   public:
-    TensorSlide() {}
+    using sketch_type = Vec2D<double>;
 
     /**
      * @param alphabet_size the number of elements in the alphabet S over which sequences are
@@ -32,9 +32,11 @@ class TensorSlide : public Tensor<seq_type> {
                 size_t sketch_dim,
                 size_t tup_len,
                 size_t win_len,
-                size_t stride)
-        : Tensor<seq_type>(alphabet_size, sketch_dim, tup_len),
-                win_len(win_len), stride(stride) {
+                size_t stride,
+                const std::string &name = "TSS")
+        : Tensor<seq_type>(alphabet_size, sketch_dim, tup_len, name),
+          win_len(win_len),
+          stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
         assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
     }

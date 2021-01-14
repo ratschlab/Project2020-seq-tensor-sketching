@@ -95,7 +95,7 @@ class OrderedMinHash : public HashBase<T> {
      * @tparam C the type of characters in the sequence
      */
     template <typename C>
-    Vec2D<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
+    std::vector<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
         return compute(seq2kmer<C, T>(sequence, k, alphabet_size));
     }
 

@@ -7,6 +7,7 @@
 #include "sketch/hash_weighted.hpp"
 #include "sketch/tensor.hpp"
 #include "sketch/tensor_slide.hpp"
+#include "sketch/tensor_slide_flat.hpp"
 #include "util/multivec.hpp"
 #include "util/progress.hpp"
 #include "util/spearman.hpp"
@@ -114,35 +115,25 @@ template <class char_type, class kmer_type, class embed_type, class... SketchAlg
 class ExperimentRunner {
     static constexpr size_t NumAlgorithms = sizeof...(SketchAlgorithms);
     std::tuple<SketchAlgorithms...> algorithms_;
-    using Sketches = std::tuple<std::vector<typename SketchAlgorithms::sketch_type>...>;
-    Sketches sketches_;
 
     Vec2D<char_type> seqs;
-    Vec2D<embed_type> tss_sketch_flat;
-    Vec2D<uint32_t> tss_sketch_binary;
-
-    Int32Flattener l1SketchBin32;
-    DoubleFlattener l1Sketch;
+    std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
 
     std::vector<embed_type> edit_dists;
     using Distances
             = std::tuple<std::conditional_t<true, std::vector<double>, SketchAlgorithms>...>;
     Distances dists;
 
-    std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
-
   public:
     ExperimentRunner() = delete;
     ExperimentRunner(ExperimentRunner &) = delete;
 
-    explicit ExperimentRunner(SketchAlgorithms... algorithms)
-        : algorithms_(algorithms...),
-          l1SketchBin32(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len),
-          l1Sketch(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len) {}
+    explicit ExperimentRunner(SketchAlgorithms... algorithms) : algorithms_(algorithms...) {}
 
 
+    // Return the Spearman coefficient.
     template <class SketchAlgorithm>
-    void run_sketch_algorithm(SketchAlgorithm &algorithm) {
+    double run_sketch_algorithm(SketchAlgorithm &algorithm) {
         std::cout << "Running " << algorithm.name << std::endl;
 
         std::vector<typename SketchAlgorithm::sketch_type> sketch(seqs.size());
@@ -150,22 +141,18 @@ class ExperimentRunner {
         // Compute sketches.
         std::cout << "Compute sketches ... " << std::endl;
         progress_bar::init(seqs.size());
-        #pragma omp parallel for default(shared)
+#pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
-            auto kmer_seq = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size,
-                                                           FLAGS_alphabet_size);
-
             if constexpr (SketchAlgorithm::kmer_input) {
-                sketch[si] = algorithm.compute(kmer_seq);
+                sketch[si] = algorithm.compute(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
             } else {
                 sketch[si] = algorithm.compute(seqs[si]);
             }
-
-            // tss_sketch_flat[si] = l1Sketch.flatten(tss_sketch[si]);
-            // tss_sketch_binary[si] = l1SketchBin32.flatten(tss_sketch[si]);
             progress_bar::iter();
         }
         std::cout << std::endl;
+
+        // TODO: Transform sketches???
 
         // Compute pairwise distances.
         std::cout << "Compute distances ... " << std::endl;
@@ -176,45 +163,30 @@ class ExperimentRunner {
             auto [si, sj] = ingroup_pairs[i];
 
             dist[i] = algorithm.dist(sketch[si], sketch[sj]);
-
-            // dists[6][i] = l1Sketch.dist(tss_sketch_flat[si], tss_sketch_flat[sj]);
-            // dists[7][i] = l1SketchBin32.dist(tss_sketch_binary[si], tss_sketch_binary[sj]);
             progress_bar::iter();
         }
         std::cout << std::endl;
 
+
         // Print summary.
-        std::cout << "\t" << setw(20) << algorithm.name << "\t: " << spearman(edit_dists, dist)
+        auto spearman_coefficient = spearman(edit_dists, dist);
+        std::cout << "\t" << setw(20) << algorithm.name << "\t: " << spearman_coefficient
                   << std::endl;
 
         // TODO: Save output.
+        return spearman_coefficient;
     }
 
 
-    void new_run() {
+    void run() {
         std::cout << "Generating sequences ..." << std::endl;
         generate_sequences();
         std::cout << "Computing edit distances ..." << std::endl;
         compute_edit_distance();
         std::cout << "Computing sketches ... " << std::endl;
         apply_tuple([&](auto &algorithm) { run_sketch_algorithm(algorithm); }, algorithms_);
-        // save_output();
-    }
-
-    void run() {
-        std::cout << "Generating sequences ..." << std::endl;
-        generate_sequences();
-        std::cout << "Computing sketches ... " << std::endl;
-        compute_sketches();
-        // std::cout << "Transform sketches ... " << std::endl;
-        // transform_sketches();
-        compute_edit_distance();
-        std::cout << "Computing distances ... " << std::endl;
-        compute_pairwise_dists();
-        std::cout << "Computing Spearman correlation ... " << std::endl;
-        print_summary();
         std::cout << "Writing output to ... " << FLAGS_o << std::endl;
-        save_output();
+        // save_output();
     }
 
     void generate_sequences() {
@@ -238,32 +210,6 @@ class ExperimentRunner {
         std::cout << endl;
     }
 
-    void compute_sketches() {
-        size_t num_seqs = seqs.size();
-        apply_tuple([&](auto &sketch) { sketch.resize(num_seqs); }, sketches_);
-        progress_bar::init(seqs.size());
-#pragma omp parallel for default(shared)
-        for (uint32_t si = 0; si < seqs.size(); si++) {
-            auto kmer_seq = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size,
-                                                           FLAGS_alphabet_size);
-
-            apply_tuple(
-                    [&](auto &sketch, auto &alg) {
-                        if constexpr (std::remove_reference_t<decltype(alg)>::kmer_input) {
-                            sketch[si] = alg.compute(kmer_seq);
-                        } else {
-                            sketch[si] = alg.compute(seqs[si]);
-                        }
-                    },
-                    sketches_, algorithms_);
-
-            // tss_sketch_flat[si] = l1Sketch.flatten(tss_sketch[si]);
-            // tss_sketch_binary[si] = l1SketchBin32.flatten(tss_sketch[si]);
-            progress_bar::iter();
-        }
-        std::cout << endl;
-    }
-
     /*
     void transform_sketches() {
         // TODO: Why do we need/want this?
@@ -279,35 +225,6 @@ class ExperimentRunner {
     }
     */
 
-    void compute_pairwise_dists() {
-        apply_tuple([&](auto &dist) { dist.resize(ingroup_pairs.size()); }, dists);
-        progress_bar::init(ingroup_pairs.size());
-#pragma omp parallel for default(shared)
-        for (size_t i = 0; i < ingroup_pairs.size(); i++) {
-            size_t si = ingroup_pairs[i].first, sj = ingroup_pairs[i].second;
-            edit_dists[i] = edit_distance(seqs[si], seqs[sj]);
-
-            apply_tuple([&](auto &alg, auto &sketch,
-                            auto &dist) { dist[i] = alg.dist(sketch[si], sketch[sj]); },
-                        algorithms_, sketches_, dists);
-
-            // dists[6][i] = l1Sketch.dist(tss_sketch_flat[si], tss_sketch_flat[sj]);
-            // dists[7][i] = l1SketchBin32.dist(tss_sketch_binary[si], tss_sketch_binary[sj]);
-            progress_bar::iter();
-        }
-        std::cout << endl;
-    }
-
-    void print_summary() {
-        apply_tuple(
-                [&](const auto &algo, const auto &dist) {
-                    std::cout << "\t" << setw(20) << algo.name
-                              << "\t: " << spearman(edit_dists, dist) << std::endl;
-                },
-                algorithms_, dists);
-        // std::cout << "\tDoubleFlattener: " << spearman(dists[0], dists[6]) << std::endl;
-        // std::cout << "\tInt32Flattener: " << spearman(dists[0], dists[7]) << std::endl;
-    }
 
     void save_output() {
         const std::filesystem::path output_dir(FLAGS_o);
@@ -365,12 +282,21 @@ int main(int argc, char *argv[]) {
                                        parse_hash_algorithm(FLAGS_hash_alg), "WMH"),
             OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
                                       FLAGS_embed_dim, FLAGS_max_len, FLAGS_tuple_length,
-                                      parse_hash_algorithm(FLAGS_hash_alg), "OMH")
-            // Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length),
-            // TensorSlide<char_type>(FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)),
-            // FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride)
-    );
-    experiment.new_run();
+                                      parse_hash_algorithm(FLAGS_hash_alg), "OMH"),
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, "TS"),
+            TensorSlide<char_type>(FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)),
+                                   FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride, "TSS"),
+            TensorSlideFlat<char_type, Int32Flattener>(
+                    FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)), FLAGS_tuple_length,
+                    FLAGS_window_size, FLAGS_stride,
+                    Int32Flattener(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len),
+                    "TSS_flat_int32"),
+            TensorSlideFlat<char_type, DoubleFlattener>(
+                    FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)), FLAGS_tuple_length,
+                    FLAGS_window_size, FLAGS_stride,
+                    DoubleFlattener(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len),
+                    "TSS_flat_double"));
+    experiment.run();
 
     return 0;
 }
