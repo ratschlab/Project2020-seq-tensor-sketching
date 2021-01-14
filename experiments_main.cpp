@@ -124,7 +124,8 @@ class ExperimentRunner {
     DoubleFlattener l1Sketch;
 
     std::vector<embed_type> edit_dists;
-    using Distances = std::tuple<std::conditional_t<true, std::vector<double>, SketchAlgorithms>...>;
+    using Distances
+            = std::tuple<std::conditional_t<true, std::vector<double>, SketchAlgorithms>...>;
     Distances dists;
 
     std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
@@ -251,10 +252,8 @@ class ExperimentRunner {
 
         std::vector<std::string> method_names = { "ED", "MH", "WMH", "OMH", "TS", "TSS", "TSS2" };
         fo.open(output_dir / "dists.csv");
-        fo << "s1,s2";
-        for (auto &method_name : method_names) { // table header
-            fo << "," << method_name;
-        }
+        fo << "s1,s2,ED";
+        apply_tuple([&](const auto &algo) { fo << "," << algo.name; }, algorithms_);
         fo << "\n";
         for (uint32_t pi = 0; pi < ingroup_pairs.size(); pi++) {
             fo << ingroup_pairs[pi].first << "," << ingroup_pairs[pi].second; // seq 1 & 2 indices
@@ -285,16 +284,14 @@ int main(int argc, char *argv[]) {
     using kmer_type = uint64_t;
     using embed_type = double;
     auto experiment = MakeExperimentRunner<char_type, kmer_type, embed_type>(
-            MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size), FLAGS_embed_dim,
-                               parse_hash_algorithm(FLAGS_hash_alg), "MH"),
+            MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
+                               FLAGS_embed_dim, parse_hash_algorithm(FLAGS_hash_alg), "MH"),
             WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
-                                       FLAGS_embed_dim,
-                                       FLAGS_max_len, parse_hash_algorithm(FLAGS_hash_alg),
-                                       "WMH"),
+                                       FLAGS_embed_dim, FLAGS_max_len,
+                                       parse_hash_algorithm(FLAGS_hash_alg), "WMH"),
             OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
-                                      FLAGS_embed_dim,
-                                      FLAGS_max_len, FLAGS_tuple_length, parse_hash_algorithm(FLAGS_hash_alg),
-                                      "OMH")
+                                      FLAGS_embed_dim, FLAGS_max_len, FLAGS_tuple_length,
+                                      parse_hash_algorithm(FLAGS_hash_alg), "OMH")
             // Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length),
             // TensorSlide<char_type>(FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)),
             // FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride)
