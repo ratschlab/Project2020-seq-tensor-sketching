@@ -40,9 +40,10 @@ class OrderedMinHash : public HashBase<T> {
         }
         for (size_t pi = 0; pi < this->sketch_dim; pi++) {
             std::unordered_map<size_t, uint32_t> counts;
-            std::vector<std::pair<T, T>> ranks;
-            for (auto s : kmers) {
-                ranks.push_back({ this->hash(pi, s + this->set_size * counts[s]), s });
+            std::vector<std::pair<T, size_t>> ranks;
+            for (size_t i=0; i<kmers.size(); i++) {
+                auto s = kmers[i];
+                ranks.push_back({ this->hash(pi, s + this->set_size * counts[s]), i });
                 counts[s]++;
 #ifndef NDEBUG
                 assert(counts[s] != 0); // no overflow
@@ -54,12 +55,14 @@ class OrderedMinHash : public HashBase<T> {
 #endif
             }
             std::sort(ranks.begin(), ranks.end());
-            std::vector<T> tup;
+            std::vector<size_t> tup;
             for (auto pair = ranks.begin(); pair != ranks.end() && pair != ranks.begin() + tup_len;
                  pair++) {
                 tup.push_back(pair->second);
             }
-            sketch[pi] = tup;
+            std::sort(tup.begin(), tup.end()); // sort indices of kmers
+            for (auto idx : tup)
+                sketch[pi].push_back(kmers[idx]);
         }
         return sketch;
     }

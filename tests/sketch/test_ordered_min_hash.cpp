@@ -35,7 +35,7 @@ TEST(OrderedMinHash, Repeat) {
     }
 }
 
-TEST(OrderedMinHash, Permute) {
+TEST(OrderedMinHash, ReverseOrder) {
     OrderedMinHash<uint8_t> under_test(set_size, sketch_dim, max_sequence_len, tuple_length,
                                        HashAlgorithm::uniform);
     std::vector<uint8_t> sequence1 = { 0, 1, 2, 3, 4, 5 };
@@ -45,6 +45,7 @@ TEST(OrderedMinHash, Permute) {
     ASSERT_EQ(sketch_dim, sketch1.size());
     ASSERT_EQ(sketch_dim, sketch2.size());
     for (uint32_t i = 0; i < sketch_dim; ++i) {
+        std::reverse(sketch1[i].begin(), sketch1[i].end()); // reversed order of appearance
         ASSERT_THAT(sketch1[i], ElementsAreArray(sketch2[i]));
     }
 }
