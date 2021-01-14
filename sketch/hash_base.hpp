@@ -39,7 +39,6 @@ class HashBase : public SketchBase<std::vector<T>, true> {
 
     void set_hashes_for_testing(const std::vector<std::unordered_map<T, T>> &h) { hashes = h; }
 
-
   protected:
     T set_size;
     size_t sketch_dim;

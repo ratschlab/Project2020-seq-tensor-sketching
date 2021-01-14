@@ -21,6 +21,9 @@ namespace ts { // ts = Tensor Sketch
 template <class seq_type>
 class Tensor : public SketchBase<std::vector<double>, false> {
   public:
+    // Tensor sketch output should be transformed if the command line flag is set.
+    constexpr static bool transform_sketches = false;
+
     /**
      * @param alphabet_size the number of elements in the alphabet S over which sequences are
      * defined (e.g. 4 for DNA)

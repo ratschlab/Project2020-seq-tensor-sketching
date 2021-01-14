@@ -152,7 +152,18 @@ class ExperimentRunner {
         }
         std::cout << std::endl;
 
-        // TODO: Transform sketches???
+        // If needed, transform the sketch output.
+        // Currently this is only done for TensorSketch variants when the command line flag is set.
+        if constexpr (SketchAlgorithm::transform_sketches) {
+            if (FLAGS_transform == "disc") {
+                discretize<double> disc(FLAGS_num_bins);
+                apply(sketch, disc);
+            } else if (FLAGS_transform == "atan") {
+                atan_scaler<double> atan;
+                apply(sketch, atan);
+            }
+        }
+
 
         // Compute pairwise distances.
         std::cout << "Compute distances ... " << std::endl;
@@ -209,22 +220,6 @@ class ExperimentRunner {
         }
         std::cout << endl;
     }
-
-    /*
-    void transform_sketches() {
-        // TODO: Why do we need/want this?
-        if (FLAGS_transform == "disc") {
-            discretize<double> disc(FLAGS_num_bins);
-            apply2D(ts_sketch, disc);
-            apply3D(tss_sketch, disc);
-        } else if (FLAGS_transform == "atan") {
-            atan_scaler<double> atan;
-            apply2D(ts_sketch, atan);
-            apply3D(tss_sketch, atan);
-        }
-    }
-    */
-
 
     void save_output() {
         const std::filesystem::path output_dir(FLAGS_o);

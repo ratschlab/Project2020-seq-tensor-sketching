@@ -1,9 +1,10 @@
 #pragma once
 
+#include "util/transformer.hpp"
+
+#include <functional>
 #include <type_traits>
 #include <vector>
-#include <functional>
-#include "util/transformer.hpp"
 
 namespace ts { // ts = Tensor Sketch
 
@@ -30,23 +31,23 @@ auto new3D(size_t d1, size_t d2, size_t d3, T val = 0) {
 }
 
 template <class T>
-void apply1D(std::vector<T> &vec, const transformer<T> &tr) {
+void apply(std::vector<T> &vec, const transformer<T> &tr) {
     for (auto &v : vec) {
         v = tr.transform(v);
     }
 }
 
 template <class T>
-void apply2D(Vec2D<T> &vec2D, const transformer<T> &tr) {
-    for (auto & vec : vec2D) {
-        apply1D(vec, tr);
+void apply(Vec2D<T> &vec2D, const transformer<T> &tr) {
+    for (auto &vec : vec2D) {
+        apply(vec, tr);
     }
 }
 
 template <class T>
-void apply3D(Vec3D<double> &vec3D, const transformer<T> &tr) {
+void apply(Vec3D<double> &vec3D, const transformer<T> &tr) {
     for (auto &vec2D : vec3D) {
-       apply2D(vec2D, tr);
+        apply(vec2D, tr);
     }
 }
 

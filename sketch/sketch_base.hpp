@@ -14,6 +14,9 @@ class SketchBase {
     // Whether the compute function takes a list of kmers.
     constexpr static bool kmer_input = kmer_input_;
 
+    // Whether transformations should be applied to the sketch output of this algorithm.
+    constexpr static bool transform_sketches = false;
+
     // The name of the sketching algorithm.
     const std::string name;
 
