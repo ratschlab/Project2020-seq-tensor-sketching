@@ -5,6 +5,7 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
+#include <bits/stdint-uintn.h>
 #include <iostream>
 #include <limits>
 #include <random>
@@ -45,7 +46,7 @@ class WeightedMinHash : public HashBase<T> {
 
         for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char = T(0);
-            auto min_rank = std::numeric_limits<decltype(this->hash(0, 0))>::max();
+            uint32_t min_rank = std::numeric_limits<uint32_t>::max();
             std::unordered_map<size_t, uint32_t> cnts;
             for (const auto s : kmers) {
                 auto r = this->hash(si, s + cnts[s] * this->set_size);

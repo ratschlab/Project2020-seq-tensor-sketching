@@ -5,6 +5,7 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
+#include <bits/stdint-uintn.h>
 #include <cstdint>
 #include <limits>
 #include <random>
@@ -46,7 +47,7 @@ class MinHash : public HashBase<T> {
 
         for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char = T(0);
-            auto min_rank = std::numeric_limits<decltype(this->hash(0, 0))>::max();
+            uint32_t min_rank = std::numeric_limits<uint32_t>::max();
             for (auto s : kmers) {
                 T hash = this->hash(si, s);
                 if (hash < min_rank) {

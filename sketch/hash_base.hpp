@@ -51,12 +51,12 @@ class HashBase {
 #pragma omp critical
                 {
                     auto [it, inserted] = hashes[index].insert({ key, -1 });
-                    if (not inserted) {
+                    if (!inserted) {
                         val = it->second;
                     } else {
                         do {
                             val = rand(rng);
-                        } while (not hash_values[index].insert(val).second);
+                        } while (!hash_values[index].insert(val).second);
                         it->second = val;
                     }
                 }
