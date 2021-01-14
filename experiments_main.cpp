@@ -18,6 +18,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <numeric>
 #include <omp.h>
 #include <sys/types.h>
 #include <type_traits>
@@ -130,25 +131,87 @@ class ExperimentRunner {
 
     std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
 
+  public:
     ExperimentRunner() = delete;
     ExperimentRunner(ExperimentRunner &) = delete;
 
-  public:
     explicit ExperimentRunner(SketchAlgorithms... algorithms)
         : algorithms_(algorithms...),
           l1SketchBin32(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len),
           l1Sketch(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len) {}
 
-    void run() {
-        std::cout << "Generating sequences ..." << std::flush;
+
+    template <class SketchAlgorithm>
+    void run_sketch_algorithm(SketchAlgorithm &algorithm) {
+        std::cout << "Running " << algorithm.name << std::endl;
+
+        std::vector<typename SketchAlgorithm::sketch_type> sketch(seqs.size());
+
+        // Compute sketches.
+        std::cout << "Compute sketches ... " << std::endl;
+        progress_bar::init(seqs.size());
+        #pragma omp parallel for default(shared)
+        for (uint32_t si = 0; si < seqs.size(); si++) {
+            auto kmer_seq = seq2kmer<char_type, kmer_type>(seqs[si], FLAGS_kmer_size,
+                                                           FLAGS_alphabet_size);
+
+            if constexpr (SketchAlgorithm::kmer_input) {
+                sketch[si] = algorithm.compute(kmer_seq);
+            } else {
+                sketch[si] = algorithm.compute(seqs[si]);
+            }
+
+            // tss_sketch_flat[si] = l1Sketch.flatten(tss_sketch[si]);
+            // tss_sketch_binary[si] = l1SketchBin32.flatten(tss_sketch[si]);
+            progress_bar::iter();
+        }
+        std::cout << std::endl;
+
+        // Compute pairwise distances.
+        std::cout << "Compute distances ... " << std::endl;
+        std::vector<double> dist(ingroup_pairs.size());
+        progress_bar::init(ingroup_pairs.size());
+#pragma omp parallel for default(shared)
+        for (size_t i = 0; i < ingroup_pairs.size(); i++) {
+            auto [si, sj] = ingroup_pairs[i];
+
+            dist[i] = algorithm.dist(sketch[si], sketch[sj]);
+
+            // dists[6][i] = l1Sketch.dist(tss_sketch_flat[si], tss_sketch_flat[sj]);
+            // dists[7][i] = l1SketchBin32.dist(tss_sketch_binary[si], tss_sketch_binary[sj]);
+            progress_bar::iter();
+        }
+        std::cout << std::endl;
+
+        // Print summary.
+        std::cout << "\t" << setw(20) << algorithm.name << "\t: " << spearman(edit_dists, dist)
+                  << std::endl;
+
+        // TODO: Save output.
+    }
+
+
+    void new_run() {
+        std::cout << "Generating sequences ..." << std::endl;
         generate_sequences();
-        std::cout << "\nComputing sketches ... " << std::flush;
+        std::cout << "Computing edit distances ..." << std::endl;
+        compute_edit_distance();
+        std::cout << "Computing sketches ... " << std::endl;
+        apply_tuple([&](auto &algorithm) { run_sketch_algorithm(algorithm); }, algorithms_);
+        // save_output();
+    }
+
+    void run() {
+        std::cout << "Generating sequences ..." << std::endl;
+        generate_sequences();
+        std::cout << "Computing sketches ... " << std::endl;
         compute_sketches();
-        // std::cout << "\nTransform sketches ... " << std::flush;
+        // std::cout << "Transform sketches ... " << std::endl;
         // transform_sketches();
-        std::cout << "\nComputing distances ... " << std::flush;
+        compute_edit_distance();
+        std::cout << "Computing distances ... " << std::endl;
         compute_pairwise_dists();
-        std::cout << "\nComputing Spearman correlation ... \n" << std::flush;
+        std::cout << "Computing Spearman correlation ... " << std::endl;
         print_summary();
         std::cout << "Writing output to ... " << FLAGS_o << std::endl;
         save_output();
@@ -161,13 +224,23 @@ class ExperimentRunner {
 
         seqs = seq_gen.generate_seqs<char_type>();
         seq_gen.ingroup_pairs(ingroup_pairs);
+    }
 
-
-        size_t num_seqs = seqs.size();
-        apply_tuple([&](auto &sketch) { sketch.resize(num_seqs); }, sketches_);
+    void compute_edit_distance() {
+        edit_dists.resize(ingroup_pairs.size());
+        progress_bar::init(seqs.size());
+#pragma omp parallel for default(shared)
+        for (size_t i = 0; i < ingroup_pairs.size(); i++) {
+            size_t si = ingroup_pairs[i].first, sj = ingroup_pairs[i].second;
+            edit_dists[i] = edit_distance(seqs[si], seqs[sj]);
+            progress_bar::iter();
+        }
+        std::cout << endl;
     }
 
     void compute_sketches() {
+        size_t num_seqs = seqs.size();
+        apply_tuple([&](auto &sketch) { sketch.resize(num_seqs); }, sketches_);
         progress_bar::init(seqs.size());
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
@@ -188,6 +261,7 @@ class ExperimentRunner {
             // tss_sketch_binary[si] = l1SketchBin32.flatten(tss_sketch[si]);
             progress_bar::iter();
         }
+        std::cout << endl;
     }
 
     /*
@@ -221,6 +295,7 @@ class ExperimentRunner {
             // dists[7][i] = l1SketchBin32.dist(tss_sketch_binary[si], tss_sketch_binary[sj]);
             progress_bar::iter();
         }
+        std::cout << endl;
     }
 
     void print_summary() {
@@ -250,7 +325,6 @@ class ExperimentRunner {
 
         write_fasta(output_dir / "seqs.fa", seqs);
 
-        std::vector<std::string> method_names = { "ED", "MH", "WMH", "OMH", "TS", "TSS", "TSS2" };
         fo.open(output_dir / "dists.csv");
         fo << "s1,s2,ED";
         apply_tuple([&](const auto &algo) { fo << "," << algo.name; }, algorithms_);
@@ -296,7 +370,7 @@ int main(int argc, char *argv[]) {
             // TensorSlide<char_type>(FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)),
             // FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride)
     );
-    experiment.run();
+    experiment.new_run();
 
     return 0;
 }

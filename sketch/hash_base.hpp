@@ -23,7 +23,7 @@ class HashBase : public SketchBase<std::vector<T>, true> {
              size_t sketch_dim,
              size_t hash_size,
              HashAlgorithm hash_algorithm,
-             const std::string &name = "HashBash")
+             const std::string &name = "HashBase")
         : SketchBase<std::vector<T>, true>(name),
           set_size(set_size),
           sketch_dim(sketch_dim),
