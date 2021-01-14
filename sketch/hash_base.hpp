@@ -56,7 +56,7 @@ class HashBase {
                     } else {
                         do {
                             val = rand(rng);
-                        } while (hash_values[index].find(val) != hash_values[index].end());
+                        } while (not hash_values[index].insert(val).second);
                         it->second = val;
                     }
                 }
