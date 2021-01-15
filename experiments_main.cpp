@@ -17,6 +17,7 @@
 
 #include <gflags/gflags.h>
 
+#include <array>
 #include <filesystem>
 #include <memory>
 #include <numeric>
@@ -255,7 +256,7 @@ class ExperimentRunner {
         for (uint32_t pi = 0; pi < ingroup_pairs.size(); pi++) {
             fo << ingroup_pairs[pi].first << "," << ingroup_pairs[pi].second; // seq 1 & 2 indices
 
-                fo << "," << edit_dists[pi];
+            fo << "," << edit_dists[pi];
             for (const auto &dist : dists)
                 fo << "," << dist[pi];
             fo << "\n";
