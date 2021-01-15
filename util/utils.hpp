@@ -185,4 +185,11 @@ void apply_tuple(F &&f, T &tuple_t) {
 }
 
 
+// A simple wrapper around std::apply that applies f on pairs of elements of two tuples.
+template <typename F, typename T, typename U>
+void apply_tuple(F &&f, T &tuple_t, U &tuple_u) {
+    std::apply([&](auto &...t) { std::apply([&](auto &...u) { (f(t, u), ...); }, tuple_u); },
+               tuple_t);
+}
+
 } // namespace ts
