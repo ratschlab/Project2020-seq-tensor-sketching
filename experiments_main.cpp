@@ -1,6 +1,6 @@
 #include "sequence/fasta_io.hpp"
 #include "sequence/sequence_generator.hpp"
-#include "sketch/dim_reduce.h"
+#include "sketch/dim_reduce.hpp"
 #include "sketch/hash_base.hpp"
 #include "sketch/hash_min.hpp"
 #include "sketch/hash_ordered.hpp"
@@ -223,7 +223,7 @@ class ExperimentRunner {
 
     void compute_edit_distance() {
         edit_dists.resize(ingroup_pairs.size());
-        progress_bar::init(seqs.size());
+        progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
         for (size_t i = 0; i < ingroup_pairs.size(); i++) {
             size_t si = ingroup_pairs[i].first, sj = ingroup_pairs[i].second;
@@ -244,7 +244,7 @@ class ExperimentRunner {
 
         fo.open(output_dir / "timing.csv");
         assert(fo.is_open());
-        fo << timer_summary(FLAGS_num_seqs, ingroup_pairs.size());
+        fo << Timer::summary(FLAGS_num_seqs, ingroup_pairs.size());
         fo.close();
 
         write_fasta(output_dir / "seqs.fa", seqs);
