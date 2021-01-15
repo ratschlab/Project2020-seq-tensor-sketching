@@ -26,6 +26,8 @@ class TensorSlideFlat : public TensorSlide<seq_type> {
      * @param win_len sliding sketches are computed for substrings of size win_len
      * @param stride sliding sketches are computed every stride characters
      * @param flattener the object to use to flatten the compute output.
+     * @param seed the seed to initialize the random number generator used for the random hash
+     * functions.
      */
     TensorSlideFlat(seq_type alphabet_size,
                     size_t sketch_dim,
@@ -33,8 +35,9 @@ class TensorSlideFlat : public TensorSlide<seq_type> {
                     size_t win_len,
                     size_t stride,
                     Flattener flattener,
+                    unsigned int seed,
                     const std::string &name = "TSS")
-        : TensorSlide<seq_type>(alphabet_size, sketch_dim, tup_len, win_len, stride, name),
+        : TensorSlide<seq_type>(alphabet_size, sketch_dim, tup_len, win_len, stride, seed, name),
           flattener(flattener) {}
 
 

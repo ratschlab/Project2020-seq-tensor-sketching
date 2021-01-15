@@ -23,6 +23,7 @@ class HashBase : public SketchBase<std::vector<T>, true> {
              size_t sketch_dim,
              size_t hash_size,
              HashAlgorithm hash_algorithm,
+             unsigned int seed,
              const std::string &name = "HashBase")
         : SketchBase<std::vector<T>, true>(name),
           set_size(set_size),
@@ -32,7 +33,7 @@ class HashBase : public SketchBase<std::vector<T>, true> {
           hashes(std::vector<std::unordered_map<T, T>>(sketch_dim)),
           hash_values(std::vector<std::unordered_set<T>>(sketch_dim)) {
         std::random_device rd;
-        rng = std::mt19937(rd());
+        rng = std::mt19937(seed);
         rand = std::uniform_int_distribution<T>(0, this->hash_size - 1);
         crc32_base = rand(rng);
     }

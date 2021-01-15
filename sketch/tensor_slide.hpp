@@ -27,6 +27,8 @@ class TensorSlide : public Tensor<seq_type> {
      * in the paper
      * @param win_len sliding sketches are computed for substrings of size win_len
      * @param stride sliding sketches are computed every stride characters
+     * @param seed the seed to initialize the random number generator used for the random hash
+     * functions.
      * @param name the name of the algorithm in the output
      */
     TensorSlide(seq_type alphabet_size,
@@ -34,8 +36,9 @@ class TensorSlide : public Tensor<seq_type> {
                 size_t tup_len,
                 size_t win_len,
                 size_t stride,
+                unsigned int seed,
                 const std::string &name = "TSS")
-        : Tensor<seq_type>(alphabet_size, sketch_dim, tup_len, name),
+        : Tensor<seq_type>(alphabet_size, sketch_dim, tup_len, seed, name),
           win_len(win_len),
           stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");

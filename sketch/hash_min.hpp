@@ -28,12 +28,15 @@ class MinHash : public HashBase<T> {
      * and sketch dimension.
      * @param set_size the number of elements in S,
      * @param sketch_dim the number of components (elements) in the sketch vector.
+     * @param seed the seed to initialize the random number generator used for the random hash
+     * functions.
      */
     MinHash(T set_size,
             size_t sketch_dim,
             HashAlgorithm hash_algorithm,
+            unsigned int seed,
             const std::string &name = "MH")
-        : HashBase<T>(set_size, sketch_dim, set_size, hash_algorithm, name) {}
+        : HashBase<T>(set_size, sketch_dim, set_size, hash_algorithm, seed, name) {}
 
     /**
      * Computes the min-hash sketch for the given kmers.
