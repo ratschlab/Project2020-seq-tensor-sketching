@@ -221,7 +221,7 @@ class ExperimentRunner {
 
     void compute_edit_distance() {
         edit_dists.resize(ingroup_pairs.size());
-        progress_bar::init(seqs.size());
+        progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
         for (size_t i = 0; i < ingroup_pairs.size(); i++) {
             size_t si = ingroup_pairs[i].first, sj = ingroup_pairs[i].second;
