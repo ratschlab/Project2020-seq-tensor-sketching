@@ -6,8 +6,8 @@ find_package(OpenMP REQUIRED)
 
 include_directories(.)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g ")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 ")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
@@ -35,7 +35,7 @@ add_executable(seqgen sequence_generator_main.cpp)
 target_link_libraries(seqgen sequence util sketch_lib)
 
 # TESTS
-string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Werror  -msse4")
+string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Werror -Wfatal-errors -msse4")
 
 
 enable_testing()

@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <random>
+#include <string>
 
 namespace ts { // ts = Tensor Sketch
 
@@ -28,12 +29,13 @@ class OrderedMinHash : public HashBase<T> {
                    size_t sketch_dim,
                    size_t max_len,
                    size_t tup_len,
-                   HashAlgorithm hash_algorithm)
-        : HashBase<T>(set_size, sketch_dim, set_size * max_len, hash_algorithm),
+                   HashAlgorithm hash_algorithm,
+                   const std::string &name = "OMH")
+        : HashBase<T>(set_size, sketch_dim, set_size * max_len, hash_algorithm, name),
           max_len(max_len),
           tup_len(tup_len) {}
 
-    Vec2D<T> compute(const std::vector<T> &kmers) {
+    Vec2D<T> compute_2d(const std::vector<T> &kmers) {
         Vec2D<T> sketch(this->sketch_dim);
         if (kmers.size() < tup_len) {
             throw std::invalid_argument("Sequence of kmers must be longer than tuple length");
@@ -67,11 +69,11 @@ class OrderedMinHash : public HashBase<T> {
         return sketch;
     }
 
-    std::vector<T> compute_flat(const std::vector<T> &kmers) {
+    std::vector<T> compute(const std::vector<T> &kmers) {
         Timer timer("ordered_minhash");
         std::vector<T> sketch;
 
-        Vec2D<T> sketch2D = compute(kmers);
+        Vec2D<T> sketch2D = compute_2d(kmers);
         for (const auto &tuple : sketch2D) {
             T sum = 0;
             for (const auto &item : tuple) {
@@ -93,7 +95,7 @@ class OrderedMinHash : public HashBase<T> {
      * @tparam C the type of characters in the sequence
      */
     template <typename C>
-    Vec2D<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
+    std::vector<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
         return compute(seq2kmer<C, T>(sequence, k, alphabet_size));
     }
 

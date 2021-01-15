@@ -178,4 +178,11 @@ T int_pow(T x, T pow) {
 
 std::string flag_values(char delimiter = ' ', bool skip_empty = false);
 
+// A simple wrapper around std::apply that applies a given lambda on each element of a tuple.
+template <typename F, typename T>
+void apply_tuple(F &&f, T &tuple_t) {
+    std::apply([&](auto &...t) { (f(t), ...); }, tuple_t);
+}
+
+
 } // namespace ts

@@ -11,7 +11,7 @@ namespace ts {
 
 class Int32Flattener {
   public:
-    Int32Flattener() {}
+    using sketch_type = std::vector<uint32_t>;
 
     Int32Flattener(uint32_t flat_dim, uint32_t sketch_dim, uint32_t max_len)
         : flat_dim(flat_dim), sketch_dim(sketch_dim), max_len(max_len) {
@@ -66,7 +66,7 @@ class Int32Flattener {
 
 class DoubleFlattener {
   public:
-    DoubleFlattener() {}
+    using sketch_type = std::vector<double>;
 
     DoubleFlattener(uint32_t output_dim, uint32_t input_dim, uint32_t input_max_len)
         : flat_dim(output_dim), sketch_dim(input_dim), max_len(input_max_len) {

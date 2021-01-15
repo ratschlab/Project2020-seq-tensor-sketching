@@ -55,8 +55,8 @@ double pearson(const std::vector<T> &a, const std::vector<T> &b) {
     return (a.size() * sum_ab - sum_a * sum_b) / std::sqrt(var_a * var_b);
 }
 
-template <typename T>
-double spearman(const std::vector<T> &a, const std::vector<T> &b) {
+template <typename T, typename U>
+double spearman(const std::vector<T> &a, const std::vector<U> &b) {
     std::vector<double> rank1 = rankify(a);
     std::vector<double> rank2 = rankify(b);
     return pearson(rank1, rank2);

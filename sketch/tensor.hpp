@@ -1,15 +1,15 @@
 #pragma once
 
+#include "immintrin.h" // for AVX
+#include "nmmintrin.h" // for SSE4.2
+#include "sketch//sketch_base.hpp"
 #include "util/multivec.hpp"
-
-#include <cassert>
-#include <iostream> //todo: remove
-#include <random>
-#include <cmath>
 #include "util/timer.hpp"
 #include "util/utils.hpp"
-#include "nmmintrin.h" // for SSE4.2
-#include "immintrin.h" // for AVX
+
+#include <cassert>
+#include <cmath>
+#include <random>
 
 namespace ts { // ts = Tensor Sketch
 
@@ -19,9 +19,11 @@ namespace ts { // ts = Tensor Sketch
  * @tparam seq_type the type of elements in the sequences to be sketched.
  */
 template <class seq_type>
-class Tensor {
+class Tensor : public SketchBase<std::vector<double>, false> {
   public:
-    Tensor() {}
+    // Tensor sketch output should be transformed if the command line flag is set.
+    constexpr static bool transform_sketches = false;
+
     /**
      * @param alphabet_size the number of elements in the alphabet S over which sequences are
      * defined (e.g. 4 for DNA)
@@ -29,8 +31,12 @@ class Tensor {
      * @param subsequence_len the length of the subsequences considered for sketching, denoted by t
      * in the paper
      */
-    Tensor(seq_type alphabet_size, size_t sketch_dim, size_t subsequence_len)
-        : alphabet_size(alphabet_size),
+    Tensor(seq_type alphabet_size,
+           size_t sketch_dim,
+           size_t subsequence_len,
+           const std::string &name = "TS")
+        : SketchBase<std::vector<double>, false>(name),
+          alphabet_size(alphabet_size),
           sketch_dim(sketch_dim),
           subsequence_len(subsequence_len),
           hashes(new2D<seq_type>(subsequence_len, alphabet_size)),
@@ -102,9 +108,9 @@ class Tensor {
   protected:
     /** Computes (1-z)*a + z*b_shift */
     inline std::vector<double> shift_sum(const std::vector<double> &a,
-                                  const std::vector<double> &b,
-                                  seq_type shift,
-                                  double z) {
+                                         const std::vector<double> &b,
+                                         seq_type shift,
+                                         double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
         std::vector<double> result(a.size());
@@ -117,9 +123,9 @@ class Tensor {
 
     /** Computes (1-z)*a + z*b_shift */
     void shift_sum_inplace(std::vector<double> &a,
-                                         const std::vector<double> &b,
-                                         seq_type shift,
-                                         double z) {
+                           const std::vector<double> &b,
+                           seq_type shift,
+                           double z) {
         assert(a.size() == b.size());
         size_t len = a.size();
         for (uint32_t i = 0; i < len; i++) {
