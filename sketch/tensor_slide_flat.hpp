@@ -35,7 +35,7 @@ class TensorSlideFlat : public TensorSlide<seq_type> {
                     size_t win_len,
                     size_t stride,
                     Flattener flattener,
-                    unsigned int seed,
+                    uint32_t seed,
                     const std::string &name = "TSS")
         : TensorSlide<seq_type>(alphabet_size, sketch_dim, tup_len, win_len, stride, seed, name),
           flattener(flattener) {}

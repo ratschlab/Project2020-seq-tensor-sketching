@@ -13,7 +13,7 @@ class Int32Flattener {
   public:
     using sketch_type = std::vector<uint32_t>;
 
-    Int32Flattener(uint32_t flat_dim, uint32_t sketch_dim, uint32_t max_len, unsigned int seed)
+    Int32Flattener(uint32_t flat_dim, uint32_t sketch_dim, uint32_t max_len, uint32_t seed)
         : flat_dim(flat_dim), sketch_dim(sketch_dim), max_len(max_len) {
         assert(flat_dim % this->sketch_dim == 0 && "sketch_dim must be divisible by inner_dim");
         std::mt19937 gen(seed);
@@ -70,7 +70,7 @@ class DoubleFlattener {
     DoubleFlattener(uint32_t output_dim,
                     uint32_t input_dim,
                     uint32_t input_max_len,
-                    unsigned int seed)
+                    uint32_t seed)
         : flat_dim(output_dim), sketch_dim(input_dim), max_len(input_max_len) {
         assert((this->flat_dim) % this->sketch_dim == 0
                && "input_dim must be divisible by inner_dim");

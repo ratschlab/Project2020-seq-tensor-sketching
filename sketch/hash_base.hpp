@@ -23,7 +23,7 @@ class HashBase : public SketchBase<std::vector<T>, true> {
              size_t sketch_dim,
              size_t hash_size,
              HashAlgorithm hash_algorithm,
-             unsigned int seed,
+             uint32_t seed,
              const std::string &name = "HashBase")
         : SketchBase<std::vector<T>, true>(name),
           set_size(set_size),
@@ -71,8 +71,8 @@ class HashBase : public SketchBase<std::vector<T>, true> {
                 return val;
             }
             case HashAlgorithm::crc32: {
-                T val = _mm_crc32_u32((unsigned int)crc32_base, (unsigned int)key);
-                return _mm_crc32_u32((unsigned int)val, (unsigned int)index);
+                T val = _mm_crc32_u32((uint32_t)crc32_base, (uint32_t)key);
+                return _mm_crc32_u32((uint32_t)val, (uint32_t)index);
             }
             default:
                 return -1;

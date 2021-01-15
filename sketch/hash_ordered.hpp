@@ -32,7 +32,7 @@ class OrderedMinHash : public HashBase<T> {
                    size_t max_len,
                    size_t tup_len,
                    HashAlgorithm hash_algorithm,
-                   unsigned int seed,
+                   uint32_t seed,
                    const std::string &name = "OMH")
         : HashBase<T>(set_size, sketch_dim, set_size * max_len, hash_algorithm, seed, name),
           max_len(max_len),

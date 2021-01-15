@@ -36,7 +36,7 @@ class TensorSlide : public Tensor<seq_type> {
                 size_t tup_len,
                 size_t win_len,
                 size_t stride,
-                unsigned int seed,
+                uint32_t seed,
                 const std::string &name = "TSS")
         : Tensor<seq_type>(alphabet_size, sketch_dim, tup_len, seed, name),
           win_len(win_len),

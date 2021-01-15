@@ -39,7 +39,7 @@ class WeightedMinHash : public HashBase<T> {
                     size_t sketch_dim,
                     size_t max_len,
                     HashAlgorithm hash_algorithm,
-                    unsigned int seed,
+                    uint32_t seed,
                     const std::string &name = "WMH")
         : HashBase<T>(set_size, sketch_dim, max_len * set_size, hash_algorithm, seed, name),
           max_len(max_len) {}

@@ -34,7 +34,7 @@ class MinHash : public HashBase<T> {
     MinHash(T set_size,
             size_t sketch_dim,
             HashAlgorithm hash_algorithm,
-            unsigned int seed,
+            uint32_t seed,
             const std::string &name = "MH")
         : HashBase<T>(set_size, sketch_dim, set_size, hash_algorithm, seed, name) {}
 

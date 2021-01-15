@@ -36,7 +36,7 @@ class Tensor : public SketchBase<std::vector<double>, false> {
     Tensor(seq_type alphabet_size,
            size_t sketch_dim,
            size_t subsequence_len,
-           unsigned int seed,
+           uint32_t seed,
            const std::string &name = "TS")
         : SketchBase<std::vector<double>, false>(name),
           alphabet_size(alphabet_size),
