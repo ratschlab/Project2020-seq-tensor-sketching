@@ -7,10 +7,10 @@ namespace ts {
 
 using namespace std::chrono;
 
-std::vector<std::map<std::string, nanoseconds>> durations_vec(100);
+auto Timer::durations_vec = std::vector<std::map<std::string, nanoseconds>>(100);
 
 
-void timer_add_duration(const std::string &func_name, nanoseconds dur) {
+void Timer::add_duration(const std::string &func_name, nanoseconds dur) {
     int tid = omp_get_thread_num();
     std::map<std::string, std::chrono::nanoseconds> &durations = durations_vec[tid];
 
@@ -21,7 +21,8 @@ void timer_add_duration(const std::string &func_name, nanoseconds dur) {
     }
 }
 
-std::string timer_summary(uint32_t num_seqs, uint32_t num_pairs) {
+
+std::string Timer::summary(uint32_t num_seqs, uint32_t num_pairs) {
     std::map<std::string, std::string> trans= {
             { "edit_distance", "ED" },
             { "minhash", "MH" },
@@ -35,7 +36,7 @@ std::string timer_summary(uint32_t num_seqs, uint32_t num_pairs) {
     };
     std::string str = "long name,short name, time, time sketch, time dist\n";
     std::map<std::string, double> acc;
-    for (auto &durations : durations_vec) {
+    for (auto &durations : Timer::durations_vec) {
         for (auto const &[arg_name, arg] : durations) {
             if (acc.find(arg_name) != acc.end()) {
                 acc[arg_name] += arg.count();
@@ -46,19 +47,17 @@ std::string timer_summary(uint32_t num_seqs, uint32_t num_pairs) {
     }
     for (auto const &[arg_name, arg] : acc) {
         double count = (double)arg, count2;
-        // add kmer computation time to the sketch time of MH* methods
         if (arg_name.find("hash") != std::string::npos && // contains *hash*
             arg_name.find("dist") == std::string::npos) { // doesn't contain *dist*
-            count += acc["seq2kmer"];
+            count += acc["seq2kmer"]; // add kmer computation time to MH* methods
         }
         if (arg_name == "edit_distance") {
             count = count/1e6/num_pairs;
-            str = str + arg_name + "," + trans[arg_name] + "," + std::to_string(count) + ",0,0\n";
+            str += arg_name + "," + trans[arg_name] + "," + std::to_string(count) + ",0,0\n";
         } else if (arg_name.find("dist") == std::string::npos && arg_name!="seq2kmer") {
-            // average sketching time + average distance computation time in milliseonds
-            count = count/1e6/num_seqs ;
-            count2 = acc[arg_name + "_dist"]/1e6/num_pairs;
-            str = str + arg_name + "," + trans[arg_name] +
+            count = count/1e6/num_seqs ;    // mean sketching time (ms)
+            count2 = acc[arg_name + "_dist"]/1e6/num_pairs; // mean distance computation time (ms)
+            str += arg_name + "," + trans[arg_name] +
                   "," + std::to_string(count+count2) +
                   "," + std::to_string(count) +
                   "," + std::to_string(count2) + '\n';

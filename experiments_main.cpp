@@ -1,6 +1,6 @@
 #include "sequence/fasta_io.hpp"
 #include "sequence/sequence_generator.hpp"
-#include "sketch/dim_reduce.h"
+#include "sketch/dim_reduce.hpp"
 #include "sketch/hash_base.hpp"
 #include "sketch/hash_min.hpp"
 #include "sketch/hash_ordered.hpp"
@@ -207,7 +207,7 @@ class ExperimentRunner {
         std::cout << "Computing sketches ... " << std::endl;
         apply_tuple([&](auto &algorithm) { run_sketch_algorithm(&algorithm); }, algorithms);
         std::cout << "Writing output to ... " << FLAGS_o << std::endl;
-        // save_output();
+//        save_output();
     }
 
     void generate_sequences() {
@@ -242,7 +242,7 @@ class ExperimentRunner {
 
         fo.open(output_dir / "timing.csv");
         assert(fo.is_open());
-        fo << timer_summary(FLAGS_num_seqs, ingroup_pairs.size());
+        fo << Timer::summary(FLAGS_num_seqs, ingroup_pairs.size());
         fo.close();
 
         write_fasta(output_dir / "seqs.fa", seqs);
@@ -253,7 +253,6 @@ class ExperimentRunner {
         fo << "\n";
         for (uint32_t pi = 0; pi < ingroup_pairs.size(); pi++) {
             fo << ingroup_pairs[pi].first << "," << ingroup_pairs[pi].second; // seq 1 & 2 indices
-
             apply_tuple([&](const auto &dist) { fo << "," << dist[pi]; }, dists);
             fo << "\n";
         }
