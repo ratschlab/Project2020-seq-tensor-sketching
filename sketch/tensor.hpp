@@ -30,10 +30,13 @@ class Tensor : public SketchBase<std::vector<double>, false> {
      * @param sketch_dim the dimension of the embedded (sketched) space, denoted by D in the paper
      * @param subsequence_len the length of the subsequences considered for sketching, denoted by t
      * in the paper
+     * @param seed the seed to initialize the random number generator used for the random hash
+     * functions.
      */
     Tensor(seq_type alphabet_size,
            size_t sketch_dim,
            size_t subsequence_len,
+           uint32_t seed,
            const std::string &name = "TS")
         : SketchBase<std::vector<double>, false>(name),
           alphabet_size(alphabet_size),
@@ -41,8 +44,7 @@ class Tensor : public SketchBase<std::vector<double>, false> {
           subsequence_len(subsequence_len),
           hashes(new2D<seq_type>(subsequence_len, alphabet_size)),
           signs(new2D<bool>(subsequence_len, alphabet_size)) {
-        std::random_device rd;
-        std::mt19937 gen(rd());
+        std::mt19937 gen(seed);
         std::uniform_int_distribution<seq_type> rand_hash2(0, sketch_dim - 1);
         std::uniform_int_distribution<seq_type> rand_bool(0, 1);
 

@@ -13,11 +13,10 @@ class Int32Flattener {
   public:
     using sketch_type = std::vector<uint32_t>;
 
-    Int32Flattener(uint32_t flat_dim, uint32_t sketch_dim, uint32_t max_len)
+    Int32Flattener(uint32_t flat_dim, uint32_t sketch_dim, uint32_t max_len, uint32_t seed)
         : flat_dim(flat_dim), sketch_dim(sketch_dim), max_len(max_len) {
         assert(flat_dim % this->sketch_dim == 0 && "sketch_dim must be divisible by inner_dim");
-        std::random_device rd;
-        std::mt19937 gen(rd());
+        std::mt19937 gen(seed);
         std::uniform_int_distribution<uint32_t> distribution;
         rand_proj = new2D<uint32_t>(flat_dim, this->max_len * sketch_dim * 2);
         for (auto &v : rand_proj) {
@@ -68,12 +67,14 @@ class DoubleFlattener {
   public:
     using sketch_type = std::vector<double>;
 
-    DoubleFlattener(uint32_t output_dim, uint32_t input_dim, uint32_t input_max_len)
+    DoubleFlattener(uint32_t output_dim,
+                    uint32_t input_dim,
+                    uint32_t input_max_len,
+                    uint32_t seed)
         : flat_dim(output_dim), sketch_dim(input_dim), max_len(input_max_len) {
         assert((this->flat_dim) % this->sketch_dim == 0
                && "input_dim must be divisible by inner_dim");
-        std::random_device rd;
-        std::mt19937 gen(rd());
+        std::mt19937 gen(seed);
         std::cauchy_distribution<double> distribution(0, 1.0);
         rand_proj = new2D<double>(this->flat_dim, this->max_len * input_dim * 2);
         for (auto &v : rand_proj) {

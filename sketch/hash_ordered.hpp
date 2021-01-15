@@ -24,14 +24,17 @@ class OrderedMinHash : public HashBase<T> {
      * @param sketch_dim the number of components (elements) in the sketch vector.
      * @param max_len maximum sequence length to be hashed.
      * @param tup_len the sketching will select the tup_len lowest values for each hash function
+     * @param seed the seed to initialize the random number generator used for the random hash
+     * functions.
      */
     OrderedMinHash(T set_size,
                    size_t sketch_dim,
                    size_t max_len,
                    size_t tup_len,
                    HashAlgorithm hash_algorithm,
+                   uint32_t seed,
                    const std::string &name = "OMH")
-        : HashBase<T>(set_size, sketch_dim, set_size * max_len, hash_algorithm, name),
+        : HashBase<T>(set_size, sketch_dim, set_size * max_len, hash_algorithm, seed, name),
           max_len(max_len),
           tup_len(tup_len) {}
 
@@ -43,7 +46,7 @@ class OrderedMinHash : public HashBase<T> {
         for (size_t pi = 0; pi < this->sketch_dim; pi++) {
             std::unordered_map<size_t, uint32_t> counts;
             std::vector<std::pair<T, size_t>> ranks;
-            for (size_t i=0; i<kmers.size(); i++) {
+            for (size_t i = 0; i < kmers.size(); i++) {
                 auto s = kmers[i];
                 ranks.push_back({ this->hash(pi, s + this->set_size * counts[s]), i });
                 counts[s]++;

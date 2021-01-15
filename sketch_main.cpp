@@ -12,7 +12,9 @@
 
 #include <filesystem>
 #include <memory>
+#include <random>
 #include <sstream>
+#include <utility>
 
 DEFINE_string(alphabet,
               "dna4",
@@ -48,7 +50,7 @@ DEFINE_int32(max_len, 32, "The maximum accepted sequence length for Ordered and 
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
 DEFINE_int32(s, 8, "Short hand for --stride");
 
-static bool ValidateInput(const char *, const std::string &value) {
+static bool ValidateInput(const char * /*unused*/, const std::string &value) {
     if (!value.empty()) {
         return true;
     }
@@ -57,7 +59,7 @@ static bool ValidateInput(const char *, const std::string &value) {
 }
 DEFINE_validator(i, &ValidateInput);
 
-static bool ValidateOutput(const char *, const std::string &value) {
+static bool ValidateOutput(const char * /*unused*/, const std::string &value) {
     if (value.empty()) {
         FLAGS_o = FLAGS_i + "." + FLAGS_sketch_method;
     }
@@ -89,9 +91,9 @@ template <typename seq_type, class kmer_type, class embed_type>
 class SketchHelper {
   public:
     SketchHelper(
-            const std::function<std::vector<embed_type>(const std::vector<kmer_type> &)> &sketcher,
-            const std::function<Vec2D<double>(const std::vector<uint64_t> &)> &slide_sketcher)
-        : sketcher(sketcher), slide_sketcher(slide_sketcher) {}
+            std::function<std::vector<embed_type>(const std::vector<kmer_type> &)> sketcher,
+            std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher)
+        : sketcher(std::move(sketcher)), slide_sketcher(std::move(slide_sketcher)) {}
 
     void compute_sketches() {
         size_t num_seqs = seqs.size();
@@ -174,6 +176,8 @@ int main(int argc, char *argv[]) {
 
     uint64_t kmer_word_size = int_pow<uint64_t>(alphabet_size, FLAGS_kmer_length);
 
+	std::random_device rd;
+
     if (FLAGS_sketch_method.substr(FLAGS_sketch_method.size() - 2, 2) == "MH") {
         std::function<std::vector<uint64_t>(const std::vector<uint64_t> &)> sketcher;
 
@@ -181,7 +185,7 @@ int main(int argc, char *argv[]) {
             // The hash function is part of the lambda state.
             sketcher = [&,
                         min_hash = MinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim,
-                                                     HashAlgorithm::uniform)](
+                                                     HashAlgorithm::uniform, rd())](
                                const std::vector<uint64_t> &seq) mutable {
                 return min_hash.compute(seq);
             };
@@ -189,7 +193,7 @@ int main(int argc, char *argv[]) {
             sketcher = [&,
                         wmin_hash
                         = WeightedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                                    HashAlgorithm::uniform)](
+                                                    HashAlgorithm::uniform, rd())](
                                const std::vector<uint64_t> &seq) mutable {
                 return wmin_hash.compute(seq);
             };
@@ -197,21 +201,21 @@ int main(int argc, char *argv[]) {
             sketcher = [&,
                         omin_hash
                         = OrderedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                                   FLAGS_tuple_length, HashAlgorithm::uniform)](
+                                                   FLAGS_tuple_length, HashAlgorithm::uniform, rd())](
                                const std::vector<uint64_t> &seq) mutable {
                 return omin_hash.compute(seq);
             };
         }
         std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher
-                = [&](const std::vector<uint64_t> &) { return new2D<double>(0, 0); };
+                = [&](const std::vector<uint64_t> & /*unused*/) { return new2D<double>(0, 0); };
         SketchHelper<uint8_t, uint64_t, uint64_t> sketch_helper(sketcher, slide_sketcher);
         sketch_helper.read_input();
         sketch_helper.compute_sketches();
         sketch_helper.save_output();
     } else if (FLAGS_sketch_method.rfind("Tensor", 0) == 0) {
-        Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length);
+        Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length, rd());
         TensorSlide<uint64_t> tensor_slide(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
-                                           FLAGS_window_size, FLAGS_stride);
+                                           FLAGS_window_size, FLAGS_stride, rd());
         std::function<std::vector<double>(const std::vector<uint64_t> &)> sketcher
                 = [&](const std::vector<uint64_t> &seq) { return tensor_sketch.compute(seq); };
         std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher

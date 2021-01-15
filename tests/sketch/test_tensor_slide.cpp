@@ -36,7 +36,7 @@ void rand_init(uint32_t sketch_size, Vec2D<set_type> *hashes, Vec2D<bool> *signs
 
 TEST(TensorSlide, Empty) {
     TensorSlide<uint8_t> under_test(set_size, sketch_dim, tuple_length, window_length,
-                                             stride);
+                                             stride, /*seed=*/ 31415);
     Vec2D<double> sketch = under_test.compute(std::vector<uint8_t>());
     ASSERT_EQ(0, sketch.size());
 }
@@ -47,7 +47,7 @@ TEST(TensorSlide, TupleOne) {
     Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
     rand_init(sketch_dim, &hashes, &signs);
 
-    TensorSlide<uint8_t> under_test(set_size, sketch_dim, 1, 1, 1);
+    TensorSlide<uint8_t> under_test(set_size, sketch_dim, 1, 1, 1, /*seed=*/ 31415);
     under_test.set_hashes_for_testing(hashes, signs);
 
     std::vector<uint8_t> sequence(4);
@@ -69,7 +69,7 @@ TEST(TensorSlide, OneCharStrideOne) {
     Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
     Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
     rand_init(sketch_dim, &hashes, &signs);
-    TensorSlide<uint8_t> under_test(set_size, sketch_dim, tuple_len, 1, 1);
+    TensorSlide<uint8_t> under_test(set_size, sketch_dim, tuple_len, 1, 1, /*seed=*/ 31415);
     under_test.set_hashes_for_testing(hashes, signs);
 
     for (uint8_t c = 0; c < alphabet_size; ++c) {
@@ -86,8 +86,8 @@ TEST(TensorSlide, TwoCharsStrideOne) {
     Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
     Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
     rand_init(sketch_dim, &hashes, &signs);
-    TensorSlide<uint8_t> tensor_slide(set_size, sketch_dim, tuple_len, 1, 1);
-    Tensor<uint8_t> tensor_sketch(set_size, sketch_dim, tuple_len);
+    TensorSlide<uint8_t> tensor_slide(set_size, sketch_dim, tuple_len, 1, 1, /*seed=*/ 31415);
+    Tensor<uint8_t> tensor_sketch(set_size, sketch_dim, tuple_len, /*seed=*/ 31415);
     tensor_sketch.set_hashes_for_testing(hashes, signs);
     tensor_slide.set_hashes_for_testing(hashes, signs);
 
@@ -106,8 +106,8 @@ TEST(TensorSlide, ThreeCharsStrideOne) {
     Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
     Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
     rand_init(sketch_dim, &hashes, &signs);
-    TensorSlide<uint8_t> tensor_slide(set_size, sketch_dim, tuple_len, 1, 1);
-    Tensor<uint8_t> tensor_sketch(set_size, sketch_dim, tuple_len);
+    TensorSlide<uint8_t> tensor_slide(set_size, sketch_dim, tuple_len, 1, 1, /*seed=*/ 31415);
+    Tensor<uint8_t> tensor_sketch(set_size, sketch_dim, tuple_len, /*seed=*/ 31415);
     tensor_sketch.set_hashes_for_testing(hashes, signs);
     tensor_slide.set_hashes_for_testing(hashes, signs);
 
@@ -127,8 +127,8 @@ TEST(TensorSlide, TwoCharsStrideTwo) {
     Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
     Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
     rand_init(sketch_dim, &hashes, &signs);
-    TensorSlide<uint8_t> tensor_slide(set_size, sketch_dim, tuple_len, 2, 2);
-    Tensor<uint8_t> tensor_sketch(set_size, sketch_dim, tuple_len);
+    TensorSlide<uint8_t> tensor_slide(set_size, sketch_dim, tuple_len, 2, 2, /*seed=*/ 31415);
+    Tensor<uint8_t> tensor_sketch(set_size, sketch_dim, tuple_len, /*seed=*/ 31415);
     tensor_sketch.set_hashes_for_testing(hashes, signs);
     tensor_slide.set_hashes_for_testing(hashes, signs);
 
@@ -145,8 +145,8 @@ TEST(TensorSlide, ThreeChars) {
     Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
     Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
     rand_init(sketch_dim, &hashes, &signs);
-    TensorSlide<uint8_t> tensor_slide(set_size, sketch_dim, tuple_len, 3, 3);
-    Tensor<uint8_t> tensor_sketch(set_size, sketch_dim, tuple_len);
+    TensorSlide<uint8_t> tensor_slide(set_size, sketch_dim, tuple_len, 3, 3, /*seed=*/ 31415);
+    Tensor<uint8_t> tensor_sketch(set_size, sketch_dim, tuple_len, /*seed=*/ 31415);
     tensor_sketch.set_hashes_for_testing(hashes, signs);
     tensor_slide.set_hashes_for_testing(hashes, signs);
 
@@ -172,11 +172,11 @@ TEST(TensorSlide, SameAsTensorSketchOneWindow) {
         Vec2D<bool> signs = new2D<bool>(tuple_size, alphabet_size);
         rand_init(sketch_dim, &hashes, &signs);
 
-        Tensor<uint8_t> tensor_sketch(alphabet_size, sketch_dimension, tuple_size);
+        Tensor<uint8_t> tensor_sketch(alphabet_size, sketch_dimension, tuple_size, /*seed=*/ 31415);
         tensor_sketch.set_hashes_for_testing(hashes, signs);
 
         TensorSlide<uint8_t> tensor_slide(alphabet_size, sketch_dimension, tuple_size,
-                                                   sequence_size, sequence_size);
+                                                   sequence_size, sequence_size, /*seed=*/ 31415);
         tensor_slide.set_hashes_for_testing(hashes, signs);
 
         std::vector<uint8_t> sequence(sequence_size);
@@ -204,11 +204,11 @@ TEST(TensorSlide, SameAsTensorSketchMultipleWindows) {
         Vec2D<bool> signs = new2D<bool>(tuple_size, alphabet_size);
         rand_init(sketch_dim, &hashes, &signs);
 
-        Tensor<uint8_t> tensor_sketch(alphabet_size, sketch_dimension, tuple_size);
+        Tensor<uint8_t> tensor_sketch(alphabet_size, sketch_dimension, tuple_size, /*seed=*/ 31415);
         tensor_sketch.set_hashes_for_testing(hashes, signs);
 
         TensorSlide<uint8_t> tensor_slide(alphabet_size, sketch_dimension, tuple_size,
-                                                   window_size, window_size);
+                                                   window_size, window_size, /*seed=*/ 31415);
         tensor_slide.set_hashes_for_testing(hashes, signs);
 
         std::vector<uint8_t> sequence(sequence_size);

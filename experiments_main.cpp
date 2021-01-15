@@ -284,28 +284,32 @@ int main(int argc, char *argv[]) {
 
     using char_type = uint8_t;
     using kmer_type = uint64_t;
+    std::random_device rd;
     auto experiment = MakeExperimentRunner<char_type, kmer_type>(
             MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
-                               FLAGS_embed_dim, parse_hash_algorithm(FLAGS_hash_alg), "MH"),
+                               FLAGS_embed_dim, parse_hash_algorithm(FLAGS_hash_alg), rd(), "MH"),
             WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
                                        FLAGS_embed_dim, FLAGS_max_len,
-                                       parse_hash_algorithm(FLAGS_hash_alg), "WMH"),
+                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "WMH"),
             OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
                                       FLAGS_embed_dim, FLAGS_max_len, FLAGS_tuple_length,
-                                      parse_hash_algorithm(FLAGS_hash_alg), "OMH"),
-            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, "TS"),
+                                      parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH"),
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(), "TS"),
             TensorSlide<char_type>(FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)),
-                                   FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride, "TSS"),
+                                   FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride, rd(),
+                                   "TSS"),
             TensorSlideFlat<char_type, Int32Flattener>(
                     FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)), FLAGS_tuple_length,
                     FLAGS_window_size, FLAGS_stride,
-                    Int32Flattener(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len),
-                    "TSS_flat_int32"),
+                    Int32Flattener(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len,
+                                   rd()),
+                    rd(), "TSS_flat_int32"),
             TensorSlideFlat<char_type, DoubleFlattener>(
                     FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)), FLAGS_tuple_length,
                     FLAGS_window_size, FLAGS_stride,
-                    DoubleFlattener(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len),
-                    "TSS_flat_double"));
+                    DoubleFlattener(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len,
+                                    rd()),
+                    rd(), "TSS_flat_double"));
     experiment.run();
 
     return 0;
