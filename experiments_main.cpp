@@ -111,15 +111,24 @@ DEFINE_uint32(num_threads,
 
 using namespace ts;
 
-template <class char_type, class kmer_type, class embed_type, class... SketchAlgorithms>
+/**
+ * The main class that takes care of running and comparing multiple sketch algorithms.
+ * Takes a variable number of algorithms of potentially different types and runs them on the same
+ * synthetically generated set of sequences.
+ *
+ * @tparam char_type the type of the characters in a sequence.
+ * @tparam kmer_type the type of the characters in the sequence of kmers.
+ * @tparam SketchAlgorithms the types of the sketch algorithms.
+ */
+template <class char_type, class kmer_type, class... SketchAlgorithms>
 class ExperimentRunner {
     static constexpr size_t NumAlgorithms = sizeof...(SketchAlgorithms);
-    std::tuple<SketchAlgorithms...> algorithms_;
+    std::tuple<SketchAlgorithms...> algorithms;
 
     Vec2D<char_type> seqs;
     std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
 
-    std::vector<embed_type> edit_dists;
+    std::vector<size_t> edit_dists;
     using Distances
             = std::tuple<std::conditional_t<true, std::vector<double>, SketchAlgorithms>...>;
     Distances dists;
@@ -128,13 +137,14 @@ class ExperimentRunner {
     ExperimentRunner() = delete;
     ExperimentRunner(ExperimentRunner &) = delete;
 
-    explicit ExperimentRunner(SketchAlgorithms... algorithms) : algorithms_(algorithms...) {}
+    explicit ExperimentRunner(SketchAlgorithms... algorithms) : algorithms(algorithms...) {}
 
 
     // Return the Spearman coefficient.
     template <class SketchAlgorithm>
-    double run_sketch_algorithm(SketchAlgorithm &algorithm) {
-        std::cout << "Running " << algorithm.name << std::endl;
+    double run_sketch_algorithm(SketchAlgorithm *algorithm) const {
+        assert(algorithm != nullptr);
+        std::cout << "Running " << algorithm->name << std::endl;
 
         std::vector<typename SketchAlgorithm::sketch_type> sketch(seqs.size());
 
@@ -144,9 +154,9 @@ class ExperimentRunner {
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
             if constexpr (SketchAlgorithm::kmer_input) {
-                sketch[si] = algorithm.compute(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
+                sketch[si] = algorithm->compute(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
             } else {
-                sketch[si] = algorithm.compute(seqs[si]);
+                sketch[si] = algorithm->compute(seqs[si]);
             }
             progress_bar::iter();
         }
@@ -173,7 +183,7 @@ class ExperimentRunner {
         for (size_t i = 0; i < ingroup_pairs.size(); i++) {
             auto [si, sj] = ingroup_pairs[i];
 
-            dist[i] = algorithm.dist(sketch[si], sketch[sj]);
+            dist[i] = algorithm->dist(sketch[si], sketch[sj]);
             progress_bar::iter();
         }
         std::cout << std::endl;
@@ -181,7 +191,7 @@ class ExperimentRunner {
 
         // Print summary.
         auto spearman_coefficient = spearman(edit_dists, dist);
-        std::cout << "\t" << setw(20) << algorithm.name << "\t: " << spearman_coefficient
+        std::cout << "\t" << setw(20) << algorithm->name << "\t: " << spearman_coefficient
                   << std::endl;
 
         // TODO: Save output.
@@ -195,7 +205,7 @@ class ExperimentRunner {
         std::cout << "Computing edit distances ..." << std::endl;
         compute_edit_distance();
         std::cout << "Computing sketches ... " << std::endl;
-        apply_tuple([&](auto &algorithm) { run_sketch_algorithm(algorithm); }, algorithms_);
+        apply_tuple([&](auto &algorithm) { run_sketch_algorithm(&algorithm); }, algorithms);
         std::cout << "Writing output to ... " << FLAGS_o << std::endl;
         // save_output();
     }
@@ -239,7 +249,7 @@ class ExperimentRunner {
 
         fo.open(output_dir / "dists.csv");
         fo << "s1,s2,ED";
-        apply_tuple([&](const auto &algo) { fo << "," << algo.name; }, algorithms_);
+        apply_tuple([&](const auto &algo) { fo << "," << algo.name; }, algorithms);
         fo << "\n";
         for (uint32_t pi = 0; pi < ingroup_pairs.size(); pi++) {
             fo << ingroup_pairs[pi].first << "," << ingroup_pairs[pi].second; // seq 1 & 2 indices
@@ -250,10 +260,12 @@ class ExperimentRunner {
     }
 };
 
-template <class char_type, class kmer_type, class embed_type, class... SketchAlgorithms>
-ExperimentRunner<char_type, kmer_type, embed_type, SketchAlgorithms...>
+// A small wrapper around the ExperimentRunner constructor that can be called without specifying the
+// SketchAlgorithm types.
+template <class char_type, class kmer_type, class... SketchAlgorithms>
+ExperimentRunner<char_type, kmer_type, SketchAlgorithms...>
 MakeExperimentRunner(SketchAlgorithms... algorithms) {
-    return ExperimentRunner<char_type, kmer_type, embed_type, SketchAlgorithms...>(algorithms...);
+    return ExperimentRunner<char_type, kmer_type, SketchAlgorithms...>(algorithms...);
 }
 
 
@@ -268,8 +280,7 @@ int main(int argc, char *argv[]) {
 
     using char_type = uint8_t;
     using kmer_type = uint64_t;
-    using embed_type = double;
-    auto experiment = MakeExperimentRunner<char_type, kmer_type, embed_type>(
+    auto experiment = MakeExperimentRunner<char_type, kmer_type>(
             MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
                                FLAGS_embed_dim, parse_hash_algorithm(FLAGS_hash_alg), "MH"),
             WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),

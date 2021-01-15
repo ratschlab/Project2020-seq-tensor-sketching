@@ -5,14 +5,20 @@
 #include <utility>
 namespace ts {
 
-template <typename sketch_type_, bool kmer_input_>
+/**
+ * A base class for sketch algorithms.
+ *
+ * @tparam SketchType the type returned by the compute() function.
+ * @tparam KmerInput is true when the hash algorithm first should convert the sequence to kmers.
+ * */
+template <typename SketchType, bool KmerInput>
 class SketchBase {
   public:
     // The type that the compute function returns.
-    using sketch_type = sketch_type_;
+    using sketch_type = SketchType;
 
     // Whether the compute function takes a list of kmers.
-    constexpr static bool kmer_input = kmer_input_;
+    constexpr static bool kmer_input = KmerInput;
 
     // Whether transformations should be applied to the sketch output of this algorithm.
     constexpr static bool transform_sketches = false;

@@ -23,10 +23,11 @@ class TensorSlide : public Tensor<seq_type> {
      * @param alphabet_size the number of elements in the alphabet S over which sequences are
      * defined (e.g. 4 for DNA)
      * @param sketch_dim the dimension of the embedded (sketched) space, denoted by D in the paper
-     * @param subsequence_len the length of the subsequences considered for sketching, denoted by t
+     * @param tup_len the length of the subsequences considered for sketching, denoted by t
      * in the paper
      * @param win_len sliding sketches are computed for substrings of size win_len
      * @param stride sliding sketches are computed every stride characters
+     * @param name the name of the algorithm in the output
      */
     TensorSlide(seq_type alphabet_size,
                 size_t sketch_dim,
