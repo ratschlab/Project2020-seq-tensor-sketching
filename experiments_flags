@@ -23,4 +23,4 @@
 --num_bins=256
 # execution & I/O
 --num_threads=0
---o=/tmp
+--o=/tmp/ts

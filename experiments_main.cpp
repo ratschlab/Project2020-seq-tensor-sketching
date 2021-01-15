@@ -128,9 +128,8 @@ class ExperimentRunner {
     Vec2D<char_type> seqs;
     std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
 
-    std::vector<size_t> edit_dists;
-    using Distances
-            = std::tuple<std::conditional_t<true, std::vector<double>, SketchAlgorithms>...>;
+    std::vector<double> edit_dists;
+    using Distances = std::array<std::vector<double>, NumAlgorithms>;
     Distances dists;
 
   public:
@@ -142,8 +141,9 @@ class ExperimentRunner {
 
     // Return the Spearman coefficient.
     template <class SketchAlgorithm>
-    double run_sketch_algorithm(SketchAlgorithm *algorithm) const {
+    double run_sketch_algorithm(SketchAlgorithm *algorithm, std::vector<double> *dist) const {
         assert(algorithm != nullptr);
+        assert(dist != nullptr);
         std::cout << "Running " << algorithm->name << std::endl;
 
         std::vector<typename SketchAlgorithm::sketch_type> sketch(seqs.size());
@@ -177,20 +177,20 @@ class ExperimentRunner {
 
         // Compute pairwise distances.
         std::cout << "Compute distances ... " << std::endl;
-        std::vector<double> dist(ingroup_pairs.size());
+        dist->resize(ingroup_pairs.size());
         progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
         for (size_t i = 0; i < ingroup_pairs.size(); i++) {
             auto [si, sj] = ingroup_pairs[i];
 
-            dist[i] = algorithm->dist(sketch[si], sketch[sj]);
+            (*dist)[i] = algorithm->dist(sketch[si], sketch[sj]);
             progress_bar::iter();
         }
         std::cout << std::endl;
 
 
         // Print summary.
-        auto spearman_coefficient = spearman(edit_dists, dist);
+        auto spearman_coefficient = spearman(edit_dists, *dist);
         std::cout << "\t" << setw(20) << algorithm->name << "\t: " << spearman_coefficient
                   << std::endl;
 
@@ -205,9 +205,10 @@ class ExperimentRunner {
         std::cout << "Computing edit distances ..." << std::endl;
         compute_edit_distance();
         std::cout << "Computing sketches ... " << std::endl;
-        apply_tuple([&](auto &algorithm) { run_sketch_algorithm(&algorithm); }, algorithms);
+        apply_tuple([&](auto &algorithm, auto &dist) { run_sketch_algorithm(&algorithm, &dist); },
+                    algorithms, dists);
         std::cout << "Writing output to ... " << FLAGS_o << std::endl;
-        // save_output();
+        save_output();
     }
 
     void generate_sequences() {
@@ -254,7 +255,9 @@ class ExperimentRunner {
         for (uint32_t pi = 0; pi < ingroup_pairs.size(); pi++) {
             fo << ingroup_pairs[pi].first << "," << ingroup_pairs[pi].second; // seq 1 & 2 indices
 
-            apply_tuple([&](const auto &dist) { fo << "," << dist[pi]; }, dists);
+                fo << "," << edit_dists[pi];
+            for (const auto &dist : dists)
+                fo << "," << dist[pi];
             fo << "\n";
         }
     }
