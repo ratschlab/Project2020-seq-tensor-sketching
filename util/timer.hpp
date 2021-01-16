@@ -13,7 +13,6 @@ namespace ts { // ts = Tensor Sketch
 using namespace std::chrono;
 
 
-
 class Timer {
   public:
     Timer(std::string name) :

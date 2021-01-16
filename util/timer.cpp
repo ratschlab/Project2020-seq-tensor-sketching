@@ -7,7 +7,7 @@ namespace ts {
 
 using namespace std::chrono;
 
-auto Timer::durations_vec = std::vector<std::map<std::string, nanoseconds>>(100);
+std::vector<std::map<std::string, nanoseconds>> Timer::durations_vec = std::vector<std::map<std::string, nanoseconds>>(100);
 
 
 void Timer::add_duration(const std::string &func_name, nanoseconds dur) {
