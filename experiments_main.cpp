@@ -150,7 +150,7 @@ class ExperimentRunner {
         std::vector<typename SketchAlgorithm::sketch_type> sketch(seqs.size());
 
         // Compute sketches.
-        std::cout << "Compute sketches ... " << std::endl;
+        std::cout << "\t" << "Compute sketches ... " << std::endl;
         progress_bar::init(seqs.size());
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
@@ -161,7 +161,6 @@ class ExperimentRunner {
             }
             progress_bar::iter();
         }
-        std::cout << std::endl;
 
         // If needed, transform the sketch output.
         // Currently this is only done for TensorSketch variants when the command line flag is set.
@@ -177,7 +176,7 @@ class ExperimentRunner {
 
 
         // Compute pairwise distances.
-        std::cout << "Compute distances ... " << std::endl;
+        std::cout << "\t" << "Compute distances ... " << std::endl;
         dist->resize(ingroup_pairs.size());
         progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
@@ -187,12 +186,11 @@ class ExperimentRunner {
             (*dist)[i] = algorithm->dist(sketch[si], sketch[sj]);
             progress_bar::iter();
         }
-        std::cout << std::endl;
 
 
         // Print summary.
         auto spearman_coefficient = spearman(edit_dists, *dist);
-        std::cout << "\t" << setw(20) << algorithm->name << "\t: " << spearman_coefficient
+        std::cout << "\t" << "Spearman Corr.: " << spearman_coefficient
                   << std::endl;
 
         // TODO: Save output.
@@ -205,7 +203,6 @@ class ExperimentRunner {
         generate_sequences();
         std::cout << "Computing edit distances ..." << std::endl;
         compute_edit_distance();
-        std::cout << "Computing sketches ... " << std::endl;
         apply_tuple([&](auto &algorithm, auto &dist) { run_sketch_algorithm(&algorithm, &dist); },
                     algorithms, dists);
         std::cout << "Writing output to ... " << FLAGS_o << std::endl;
