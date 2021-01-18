@@ -42,7 +42,9 @@ class Tensor : public SketchBase<std::vector<double>, false> {
           alphabet_size(alphabet_size),
           sketch_dim(sketch_dim),
           subsequence_len(subsequence_len),
-          rng(seed) {}
+          rng(seed) {
+        init();
+    }
 
     void init() {
         hashes = new2D<seq_type>(subsequence_len, alphabet_size);
