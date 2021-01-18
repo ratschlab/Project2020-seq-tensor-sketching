@@ -72,10 +72,17 @@ def gen_table1(data_dir, save_dir, thresh):
     table_body = table_body + '\\\\\n\hline\n'.join(
         [' & '.join(col[row] for method, col in stats.items()) for row in range(6)])
 
+    Min = float(flags['min_mutation_rate'])
+    Max = float(flags['max_mutation_rate'])
+    assert (Min <= Max)
+    if Min < Max:
+        mutation_rate = "mutation rate uniformly drawn from $[{:.2f},{:.2f}]$".format(Min, Max)
+    else:
+        mutation_rate = "mutation rate set to {:.2f}".format(Min)
     caption = """
 \\caption{{${flags[pairs]}$ sequence pairs of length $\\SLen={flags[seq_len]}$
 were generated over an alphabet of size $\\#\\Abc={flags[alphabet_size]}$,
- with the mutation rate drawn uniformly from $({flags[min_mutation_rate]},{flags[max_mutation_rate]})$.
+ with the {mutation_rate}.
 The time column shows normalized time in microseconds, i.e., total time divided by number of sequences,
 while the relative time shows the ratio of sketch-based time to the time for computing exact edit distance.
 As for the the model parameters, embedding dimension is set to $\\EDim={flags[embed_dim]}$, and model parameters are
@@ -85,7 +92,7 @@ As for the the model parameters, embedding dimension is set to $\\EDim={flags[em
 (d) Tensor Sketch $t={flags[tuple_length]}$,
 (e) Tensor Slide Sketch $w={flags[window_size]},t={flags[tuple_length]}$. }}
     """
-    caption = caption.format(flags=flags)
+    caption = caption.format(flags=flags, mutation_rate=mutation_rate)
 
     table_latex = """
 \\begin{table}[h!]
@@ -113,11 +120,12 @@ def gen_fig_s1(data_dir, save_dir):
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
     cols = dists.columns[3:8]
     for mi, method in enumerate(cols):
-        ax = axes[int(mi / 3), mi % 3]
-        sns.scatterplot(ax=ax, x=dists['ED'] / int(flags['seq_len']), y=dists[method] / dists[method].max())
-        ax.set_xlabel('Normalized edit dist.')
-        ax.set_ylabel('Normalized sketch dist.')
-        ax.set_title('({}) {}'.format(chr(ord('a') + mi), method))
+        g = sns.scatterplot(ax=axes[int(mi / 3), mi % 3],
+                            x=dists['ED'] / int(flags['seq_len']),
+                            y=dists[method] / dists[method].max())
+        g.set(xlabel='Normalized edit dist.',
+              ylabel='Normalized sketch dist.',
+              title=('({}) {}'.format(chr(ord('a') + mi), method)))
 
     fig.delaxes(axes[1][2])
     caption = """\\caption{{Normalized sketch distance ranks versus normalized edit distance ranks. ${flags[pairs]}$ 
@@ -156,17 +164,23 @@ def gen_fig_s2(data_dir, save_dir, ed_th):
     fig, axes = plt.subplots(2, 2, figsize=(14, 12))
     for thi, th in enumerate(ed_th):
         ax = axes[int(thi / 2), thi % 2]
-        sns.lineplot(ax=ax, data=data[data.th == th], x='fpr', y='tpr', hue='method')
-        ax.set_xlabel('False Positive')
-        ax.set_ylabel('True Positive')
-        ax.set_title('ROC to detect ED<{}'.format(th))
+        g = sns.lineplot(ax=ax, data=data[data.th == th], x='fpr', y='tpr', hue='method')
+        g.set(xlabel='False Positive',
+              ylabel='True Positive',
+              title='ROC to detect ED<{}'.format(th))
 
+    Min = float(flags['min_mutation_rate'])
+    Max = float(flags['max_mutation_rate'])
+    assert (Min <= Max)
+    if Min < Max:
+        mutation_rate = "mutation rate uniformly drawn from $[{:.2f},{:.2f}]$".format(Min, Max)
+    else:
+        mutation_rate = "mutation rate set to {:.2f}".format(Min)
     caption = """\\caption{{ {flags[pairs]} sequence pairs of length $\\SLen={flags[seq_len]}$ were generated over an 
-    alphabet of size $\\#\\Abc={flags[alphabet_size]}$. with the mutation rate uniformly drawn from 
-    $({flags[min_mutation_rate]},{flags[max_mutation_rate]})$, to produce a range of edit distances. 
+    alphabet of size $\\#\\Abc={flags[alphabet_size]}$. with the {mutation_rate}. 
     Subplots (a)-(e) show the ROC curve for detecting pairs with edit distance (normalized by length) 
     less than ${th[0]},{th[1]},{th[2]},$ and ${th[3]}$respectively }} """
-    caption = caption.format(flags=flags, th=ed_th)
+    caption = caption.format(flags=flags, th=ed_th, mutation_rate=mutation_rate)
     fo = open(os.path.join(save_dir, 'FigS2.tex'), 'w')
     plt.savefig(os.path.join(save_dir, 'FigS2.pdf'))
     fo.write(caption)
@@ -174,7 +188,7 @@ def gen_fig_s2(data_dir, save_dir, ed_th):
 
 
 def gen_fig1(data_dir, save_dir):
-    figsize=(5,5)
+    figure_size=(5,5)
     flags, dists, stats = load_results(path=os.path.join(data_dir, 'a'), thresh=[])
 
     data = {'auc': [], 'method': [], 'th': []}
@@ -187,45 +201,68 @@ def gen_fig1(data_dir, save_dir):
             data['method'].append(method)
             data['th'].append(th)
     data = pd.DataFrame(data)
-    plt.figure(figsize=figsize)
-    sns.lineplot(data=data, x='th', y='auc', hue='method')
+    fig, ax = plt.subplots(figsize=figure_size)
+    g = sns.lineplot(ax=ax, data=data, x='th', y='auc', hue='method')
+    g.set(xlabel='Edit distance threshold', ylabel='AUROC')
     plt.savefig(os.path.join(save_dir, 'Fig1a.pdf'))
 
     dirs = glob(os.path.join(data_dir, 'b', '*'))
     data = pd.DataFrame()
     for path in dirs:
         flags, dists, stats = load_results(path=path, thresh=[])
-        stats = pd.DataFrame(stats)
-        stats['seq_len'] = int(flags['seq_len'])
+        stats['seq_len'] = [ int(flags['seq_len']) ] * len(stats['method'])
         data = pd.concat([data, pd.DataFrame(stats)])
     data = data[data.method != 'ED']
-    plt.figure(figsize=figsize)
-    sns.lineplot(data=data, x='seq_len', y='Sp', hue='method')
+    fig, ax = plt.subplots(figsize=figure_size)
+    ax.set_xscale('log')
+    g = sns.lineplot(ax=ax, data=data, x='seq_len', y='Sp', hue='method')
+    g.set(xlabel='Sequence length', ylabel='Spearman Corr.')
     plt.savefig(os.path.join(save_dir, 'Fig1b.pdf'))
 
     dirs = glob(os.path.join(data_dir, 'c', '*'))
     data = pd.DataFrame()
     for path in dirs:
         flags, dists, stats = load_results(path=path, thresh=[])
-        stats = pd.DataFrame(stats)
-        stats['seq_len'] = int(flags['seq_len'])
+        stats['seq_len'] = [int(flags['seq_len']) ] * len(stats['method'])
         data = pd.concat([data, pd.DataFrame(stats)])
-    plt.figure(figsize=figsize)
-    sns.lineplot(data=data, x='seq_len', y='AbsTime', hue='method')
+    fig,ax = plt.subplots(figsize=figure_size)
+    # ax.set_xscale('log')
+    # ax.set_yscale('log')
+    data = data[data.method != 'ED']
+    g = sns.lineplot(ax=ax, data=data, x='seq_len', y='AbsTime', hue='method')
+    # g.set(xlabel='Sequence length', ylabel='Absolute Time (ms)', ylim=[0.0001, 100])
     plt.savefig(os.path.join(save_dir, 'Fig1c.pdf'))
 
     dirs = glob(os.path.join(data_dir, 'd', '*'))
     data = pd.DataFrame()
     for path in dirs:
         flags, dists, stats = load_results(path=path, thresh=[])
-        stats = pd.DataFrame(stats)
-        stats['embed_dim'] = int(flags['embed_dim'])
+        stats['embed_dim'] = [int(flags['embed_dim'])] * len(stats['method'])
         data = pd.concat([data, pd.DataFrame(stats)])
     data = data[data.method != 'ED']
-
-    plt.figure(figsize=figsize)
-    sns.lineplot(data=data, x='embed_dim', y='Sp', hue='method')
+    fig, ax = plt.subplots(figsize=figure_size)
+    g = sns.lineplot(ax=ax, data=data, x='embed_dim', y='Sp', hue='method')
+    g.set(xlabel='Embedding dimension', ylabel='Spearman Corr.')
     plt.savefig(os.path.join(save_dir, 'Fig1d.pdf'))
+
+    caption = """
+    \\caption{{
+The dataset for these experiments consisted of ${flags[num_seqs]}$ sequence pairs independently generated 
+over an alphabet of size $\\#\\Abc={flags[alphabet_size]}$, using embedding dimension $\\EDim={flags[embed_dim]}$
+with models parameters: MH: $k = {k}$, WMH: $k={k}$, OMH: $k={k},t={t}$, TS: $t={t}$, TSS: $w={w},t={t}$ 
+(\\ref{{fig:AUROC}}) Area Under the ROC Curve (AUROC), for detection of edit distances below a threshold using the sketch-based approximations.  
+The x-axis, shows which edit distance (normalized) is used, and the y axis shows AUROC for various sketch-based distances.  
+(\\ref{{fig:Spearman_vs_len}}) Similar setting (\\ref{{fig:Time_vs_len}}), with variable sequence length. 
+ The Spearman's rank correlation is plotted against the sequence length (logarithmic scale). 
+(\\ref{{fig:Time_vs_len}}) Similar setting to (\\ref{{fig:Spearman_vs_len}}), plotting the execution time 
+of each sketching method as a function of sequence length. 
+The reported times are normalized, i.e., total sketching time divided by the number of sequences. 
+(\\ref{{fig:Spearman_vs_embed}}) Spearman rank correlation of each sketching method as a function of the embedding dimension $\EDim$. 
+}}
+    """.format(flags=flags,k=flags['kmer_size'], t=flags['tuple_length'], w=flags['window_size'])
+    fo = open(os.path.join(save_dir, 'Fig1.tex'), 'w')
+    fo.write(caption)
+    fo.close()
 
 
 def gen_fig2(data_dir, save_dir):
@@ -241,11 +278,17 @@ def gen_fig2(data_dir, save_dir):
         for i, d in enumerate(d_rank):
             d_sq[s1[i], s2[i]] = d
             d_sq[s2[i], s1[i]] = d
-        ax = axes[int(mi / 3), mi % 3]
-        sns.heatmap(ax=ax, data=d_sq)
-        ax.set_xlabel('seq #')
-        ax.set_ylabel('seq #')
-        ax.set_title('({}) {}'.format(chr(ord('a') + mi), method))
+
+        g = sns.heatmap(ax=axes[int(mi / 3), mi % 3], data=d_sq, cbar=False, xticklabels=[], yticklabels=[])
+        g.set(xlabel='seq #', ylabel='seq #', title='({}) {}'.format(chr(ord('a') + mi), method))
+
+    Min = float(flags['min_mutation_rate'])
+    Max = float(flags['max_mutation_rate'])
+    assert (Min <= Max)
+    if Min < Max:
+        mutation_rate = "mutation rate uniformly drawn from $[{:.2f},{:.2f}]$".format(Min, Max)
+    else:
+        mutation_rate = "mutation rate set to {:.2f}".format(Min)
     num_generations = int(math.log2(num_seqs))
     caption = """\\caption{{ The subplot (a) illustrate the exact edit distance matrix, while the subplots (b)-(f) 
     demonstrate the approximate distance matrices based on sketching methods. To highlight how well each method 
@@ -253,12 +296,14 @@ def gen_fig2(data_dir, save_dir):
     smaller distance). The phylogeny was simulated by an initial random sequence of length $\\SLen={flags[seq_len]}$, 
     over an alphabet of size $\\#\\Abc={flags[alphabet_size]}$. Afterwards, for ${num_generations}$ generations, 
     each sequence in the gene pool was mutated and added back to the pool, resulting in ${flags[num_seqs]}$ sequences 
-    overall. The mutation rate was which was mutated drawn uniformly from the interval $({flags[min_mutation_rate]},
-    {flags[max_mutation_rate]})$, to produce a diverse set of distances. For all sketching algorithms, 
-    embedding dimension is set to $\\EDim={flags[embed_dim]}$, and individual model parameters are set to (b) MinHash 
-    $k = {flags[kmer_size]}$, (c) Weighted MinHash $k={flags[kmer_size]}$, (d) Ordered MinHash $k=3,t=3$, (e) Tensor 
-    Sketch $t=3$, (f) Tensor Slide Sketch $w={flags[window_size]},t={flags[tuple_length]}$. }} """
-    caption = caption.format(flags=flags, num_generations=num_generations)
+    overall. The {mutation_rate}, to produce a diverse set of distances. For all sketching algorithms, 
+    embedding dimension is set to $\\EDim={flags[embed_dim]}$, and individual model parameters are set to 
+    (b) MinHash $k = {flags[kmer_size]}$, 
+    (c) Weighted MinHash $k={flags[kmer_size]}$, 
+    (d) Ordered MinHash $k={flags[kmer_size]},t={flags[tuple_length]}$, 
+    (e) Tensor Sketch $t={flags[tuple_length]}$, 
+    (f) Tensor Slide Sketch $w={flags[window_size]},t={flags[tuple_length]}$. }} """
+    caption = caption.format(flags=flags, num_generations=num_generations, mutation_rate=mutation_rate)
     fo = open(os.path.join(save_dir, 'Fig2.tex'), 'w')
     plt.savefig(os.path.join(save_dir, 'Fig2.pdf'))
     fo.write(caption)
