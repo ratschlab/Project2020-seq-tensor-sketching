@@ -1,5 +1,5 @@
 EXP=$(echo ./cmake-build-release/experiments --flagfile experiments_flags)
-ROOT_DIR=/tmp/experiments
+ROOT_DIR=./experiments/data
 
 # clean directory
 P=$(pwd)
@@ -38,4 +38,4 @@ $FIG1 -o $SAVE_DIR/8 --embed_dim 80
 $FIG1 -o $SAVE_DIR/10 --embed_dim 100
 
 ##fig 2
-$EXP -o $ROOT_DIR/fig2 --embed_dim 10 --phylogeny_shape=tree group_size=128  --min_mutation_rate=.1 --max_mutation_rate=.3
+$EXP -o $ROOT_DIR/fig2 --embed_dim 100 --phylogeny_shape tree --num_seqs 64 --group_size 64  --min_mutation_rate=.1 --max_mutation_rate=.1

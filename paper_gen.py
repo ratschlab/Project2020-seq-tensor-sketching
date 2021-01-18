@@ -72,7 +72,7 @@ def texify_table(flags, stats, thresh):
     caption = """
 \\caption{{${flags[pairs]}$ sequence pairs of length $\\SLen={flags[seq_len]}$
 were generated over an alphabet of size $\\#\\Abc={flags[alphabet_size]}$.
-with the mutation_rate uniformly drawn from $({flags[min_mutation_rate],{flags[max_mutation_rate]}})$.
+with the number of random edit operations, uniformly drawn from $\\{{0,1,\\dots,\\SLen}}$.
 The time column shows normalized time in microseconds, i.e., total time divided by number of sequences,
 while the relative time shows the ratio of sketch-based time to the time for computing exact edit distance.
 As for the the model parameters, embedding dimension is set to $\\EDim={flags[embed_dim]}$, and model parameters are
@@ -80,7 +80,7 @@ As for the the model parameters, embedding dimension is set to $\\EDim={flags[em
 (b) Weighted MinHash $k={flags[kmer_size]}$,
 (c) Ordered MinHash $k={flags[kmer_size]},t={flags[tuple_length]}$,
 (d) Tensor Sketch $t={flags[tuple_length]}$,
-(e) Tensor Slide Sketch $w={flags[window_size]},t={flags[tuple_length]}$.}}
+(e) Tensor Slide Sketch $w={flags[window_size]},t={flags[tuple_length]}$. }}
     """
     caption = caption.format(flags=flags)
 
@@ -99,7 +99,7 @@ As for the the model parameters, embedding dimension is set to $\\EDim={flags[em
 \\hline
 \\end{tabular}
 \\end{table}"""
-    fout = open('table.tex', 'w')
+    fout = open('experiments/figures/table.tex', 'w')
     fout.write(table_latex)
     fout.close()
     return table_latex
@@ -129,8 +129,8 @@ def gen_fig_s1(flags, dists):
     (d) Tensor Sketch $t={flags[tuple_length]}$, 
     (e) Tensor Slide Sketch $t={flags[tuple_length]}, w={flags[window_size]}. $ }} """
     caption = caption.format(flags=flags)
-    plt.savefig('figures/FigS1.pdf')
-    fout = open('figures/FigS1.tex', 'w')
+    plt.savefig('experiments/figures/FigS1.pdf')
+    fout = open('experiments/figures/FigS1.tex', 'w')
     fout.write(caption)
     fout.close()
 
@@ -162,14 +162,14 @@ def gen_fig_s2(flags, dists, ed_th):
     Subplots (a)-(e) show the ROC curve for detecting pairs with edit distance (normalized by length) 
     less than ${th[0]},{th[1]},{th[2]},$ and ${th[3]}$respectively }} """
     caption = caption.format(flags=flags, th=ed_th)
-    fo = open('figures/FigS2.tex', 'w')
-    plt.savefig('figures/FigS2.pdf')
+    fo = open('experiments/figures/FigS2.tex', 'w')
+    plt.savefig('experiments/figures/FigS2.pdf')
     fo.write(caption)
     fo.close()
 
 
 def gen_fig1(fig1_path):
-    flags, dists, summary = load_results(path=os.path.join(fig1_path, 'fig1a'), thresh=[.1, .2, .3])
+    flags, dists, summary = load_results(path=os.path.join(fig1_path, 'a'), thresh=[.1, .2, .3])
 
     data = {'auc': [], 'method': [], 'th': []}
     for th in np.linspace(.05, .5, 10):
@@ -182,7 +182,7 @@ def gen_fig1(fig1_path):
             data['th'].append(th)
     stats1 = pd.DataFrame(data)
 
-    dirs = glob(os.path.join(fig1_path, 'fig1b', '*'))
+    dirs = glob(os.path.join(fig1_path, 'b', '*'))
     summaries = pd.DataFrame()
     for path in dirs:
         flags, dists, summary = load_results(path=path, thresh=[.1, .2, .3])
@@ -191,7 +191,7 @@ def gen_fig1(fig1_path):
         summaries = pd.concat([summaries, pd.DataFrame(summary)])
     stats2 = summaries
 
-    dirs = glob(os.path.join(fig1_path, 'fig1d', '*'))
+    dirs = glob(os.path.join(fig1_path, 'd', '*'))
     summaries = pd.DataFrame()
     for path in dirs:
         flags, dists, summary = load_results(path=path, thresh=[.1, .2, .3])
@@ -208,7 +208,7 @@ def gen_fig1(fig1_path):
     sns.lineplot(ax=axes[1], data=stats2[stats2.method != 'ED'], x='seq_len', y='Sp', hue='method')
     sns.lineplot(ax=axes[2], data=stats2, x='seq_len', y='AbsTime', hue='method')
     sns.lineplot(ax=axes[3], data=stats3, x='embed_dim', y='Sp', hue='method')
-    plt.savefig('figures/Fig1.pdf')
+    plt.savefig('experiments/figures/Fig1.pdf')
 
 
 def gen_fig2(path):
@@ -242,22 +242,22 @@ def gen_fig2(path):
     $k = {flags[kmer_size]}$, (c) Weighted MinHash $k={flags[kmer_size]}$, (d) Ordered MinHash $k=3,t=3$, (e) Tensor 
     Sketch $t=3$, (f) Tensor Slide Sketch $w={flags[window_size]},t={flags[tuple_length]}$. }} """
     caption = caption.format(flags=flags, num_generations=num_generations)
-    fo = open('figures/Fig2.tex', 'w')
-    plt.savefig('figures/Fig2.pdf')
+    fo = open('experiments/figures/Fig2.tex', 'w')
+    plt.savefig('experiments/figures/Fig2.pdf')
     fo.write(caption)
     fo.close()
 
 
 if __name__ == '__main__':
-    path = '/tmp/experiments/table1'
+    path = 'experiments/data/table1'
     ed_th = [.1, .2, .3, .5]
     flags, dists, stats = load_results(path=path, thresh=ed_th)
     texify_table(flags=flags, stats=stats, thresh=ed_th)
     gen_fig_s1(flags=flags, dists=dists)
     gen_fig_s2(flags=flags, dists=dists, ed_th=ed_th)
 
-    path = '/tmp/fig1/'
+    path = 'experiments/data/fig1/'
     gen_fig1(fig1_path=path)
 
-    path = '/tmp/experiments/fig2'
+    path = 'experiments/data/fig2'
     gen_fig2(path=path)
