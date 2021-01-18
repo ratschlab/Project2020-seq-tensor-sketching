@@ -184,39 +184,53 @@ def gen_fig1(load_path, save_dir):
             data['auc'].append(metrics.auc(fpr, tpr))
             data['method'].append(method)
             data['th'].append(th)
-    stats1 = pd.DataFrame(data)
+    data = pd.DataFrame(data)
+    plt.figure(figsize=(6,6))
+    sns.lineplot(data=data, x='th', y='auc', hue='method')
+    # plt.set_xlabel('ED threshold')
+    # plt.set_ylabel('AUROC')
+    # plt.set_title('(a) AUROC vs. ED threshold')
+    plt.savefig(os.path.join(save_dir, 'Fig1a.pdf'))
 
     dirs = glob(os.path.join(load_path, 'b', '*'))
-    summaries = pd.DataFrame()
+    data = pd.DataFrame()
     for path in dirs:
         flags, dists, stats = load_results(path=path, thresh=[])
         stats = pd.DataFrame(stats)
         stats['seq_len'] = int(flags['seq_len'])
-        summaries = pd.concat([summaries, pd.DataFrame(stats)])
-    stats2 = summaries
+        data = pd.concat([data, pd.DataFrame(stats)])
+    data = data[data.method != 'ED']
+    plt.figure(figsize=(6, 6))
+    sns.lineplot(data=data, x='seq_len', y='Sp', hue='method')
+    plt.savefig(os.path.join(save_dir, 'Fig1b.pdf'))
+
+    dirs = glob(os.path.join(load_path, 'c', '*'))
+    data = pd.DataFrame()
+    for path in dirs:
+        flags, dists, stats = load_results(path=path, thresh=[])
+        stats = pd.DataFrame(stats)
+        stats['seq_len'] = int(flags['seq_len'])
+        data = pd.concat([data, pd.DataFrame(stats)])
+    plt.figure(figsize=(6, 6))
+    sns.lineplot(data=data, x='seq_len', y='AbsTime', hue='method')
+    plt.savefig(os.path.join(save_dir, 'Fig1c.pdf'))
 
     dirs = glob(os.path.join(load_path, 'd', '*'))
-    summaries = pd.DataFrame()
+    data = pd.DataFrame()
     for path in dirs:
         flags, dists, stats = load_results(path=path, thresh=[])
         stats = pd.DataFrame(stats)
         stats['embed_dim'] = int(flags['embed_dim'])
-        summaries = pd.concat([summaries, pd.DataFrame(stats)])
-    stats3 = summaries[summaries.method != 'ED']
+        data = pd.concat([data, pd.DataFrame(stats)])
+    data = data[data.method != 'ED']
 
-    fig, axes = plt.subplots(1, 4, figsize=(24, 6))
-    sns.lineplot(ax=axes[0], data=stats1, x='th', y='auc', hue='method')
-    axes[0].set_xlabel('ED threshold')
-    axes[0].set_ylabel('AUROC')
-    axes[0].set_title('(a) AUROC vs. ED threshold'.format(th))
-    sns.lineplot(ax=axes[1], data=stats2[stats2.method != 'ED'], x='seq_len', y='Sp', hue='method')
-    sns.lineplot(ax=axes[2], data=stats2, x='seq_len', y='AbsTime', hue='method')
-    sns.lineplot(ax=axes[3], data=stats3, x='embed_dim', y='Sp', hue='method')
-    plt.savefig(os.path.join(save_dir, 'Fig1.pdf'))
+    plt.figure(figsize=(6, 6))
+    sns.lineplot(data=data, x='embed_dim', y='Sp', hue='method')
+    plt.savefig(os.path.join(save_dir, 'Fig1d.pdf'))
 
 
 def gen_fig2(load_path, save_dir):
-    flags, dists, summary = load_results(path=load_path, thresh=[.1, .2, .5])
+    flags, dists, _ = load_results(path=load_path, thresh=[.1, .2, .5])
     cols = dists.columns[2:8]
     num_seqs = int(flags['num_seqs'])
     d_sq = np.zeros((num_seqs, num_seqs))
