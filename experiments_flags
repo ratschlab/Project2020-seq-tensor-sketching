@@ -1,23 +1,20 @@
 # sequence generation
 --alphabet_size=4
 --seq_len=10000
---num_seqs=200
+--num_seqs=1000
 --group_size=2
 --phylogeny_shape=path
 --fix_len=true
---mutation_type=rate
 --max_mutation_rate=1.0
 --min_mutation_rate=0.0
---block_mutation_rate=0
---max_num_blocks=4
---min_num_blocks=2
 # sketching methods
---embed_dim=64
+--embed_dim=30
 --kmer_size=4
 --tuple_length=3
---window_size=500
---stride=32
+--window_size=2000
+--stride=1000
 --max_len=1000
+# change this to uniform for final experiments
 --hash_alg=crc32
 --transform=none
 --num_bins=256

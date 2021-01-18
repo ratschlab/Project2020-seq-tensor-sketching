@@ -20,10 +20,8 @@
 #include <array>
 #include <filesystem>
 #include <memory>
-#include <numeric>
 #include <omp.h>
 #include <sys/types.h>
-#include <type_traits>
 
 DEFINE_uint32(kmer_size, 4, "Kmer size for MH, OMH, WMH");
 
@@ -150,7 +148,7 @@ class ExperimentRunner {
         std::vector<typename SketchAlgorithm::sketch_type> sketch(seqs.size());
 
         // Compute sketches.
-        std::cout << "\t" << "Compute sketches ... " << std::endl;
+        std::cout << "\t" << "Compute sketches ... ";
         progress_bar::init(seqs.size());
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
@@ -176,7 +174,7 @@ class ExperimentRunner {
 
 
         // Compute pairwise distances.
-        std::cout << "\t" << "Compute distances ... " << std::endl;
+        std::cout << "\t" << "Compute distances ... ";
         dist->resize(ingroup_pairs.size());
         progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
@@ -201,7 +199,7 @@ class ExperimentRunner {
     void run() {
         std::cout << "Generating sequences ..." << std::endl;
         generate_sequences();
-        std::cout << "Computing edit distances ..." << std::endl;
+        std::cout << "Computing edit distances ... ";
         compute_edit_distance();
         apply_tuple([&](auto &algorithm, auto &dist) { run_sketch_algorithm(&algorithm, &dist); },
                     algorithms, dists);
@@ -232,6 +230,7 @@ class ExperimentRunner {
 
     void save_output() {
         const std::filesystem::path output_dir(FLAGS_o);
+        std::filesystem::create_directories(FLAGS_o);
 
         std::ofstream fo;
         fo.open(output_dir / "flags");
@@ -279,6 +278,8 @@ int main(int argc, char *argv[]) {
         omp_set_num_threads(FLAGS_num_threads);
     }
 
+    uint32_t tss_dim = (FLAGS_embed_dim * FLAGS_stride + FLAGS_seq_len - 1)/ FLAGS_seq_len;
+
     using char_type = uint8_t;
     using kmer_type = uint64_t;
     std::random_device rd;
@@ -292,19 +293,19 @@ int main(int argc, char *argv[]) {
                                       FLAGS_embed_dim, FLAGS_max_len, FLAGS_tuple_length,
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH"),
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(), "TS"),
-            TensorSlide<char_type>(FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)),
+            TensorSlide<char_type>(FLAGS_alphabet_size, tss_dim,
                                    FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride, rd(),
                                    "TSS"),
             TensorSlideFlat<char_type, Int32Flattener>(
-                    FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)), FLAGS_tuple_length,
+                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
                     FLAGS_window_size, FLAGS_stride,
-                    Int32Flattener(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len,
+                    Int32Flattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len,
                                    rd()),
                     rd(), "TSS_flat_int32"),
             TensorSlideFlat<char_type, DoubleFlattener>(
-                    FLAGS_alphabet_size, ceil(sqrt(FLAGS_embed_dim)), FLAGS_tuple_length,
+                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
                     FLAGS_window_size, FLAGS_stride,
-                    DoubleFlattener(FLAGS_embed_dim, ceil(sqrt(FLAGS_embed_dim)), FLAGS_seq_len,
+                    DoubleFlattener(FLAGS_embed_dim, tss_dim , FLAGS_seq_len,
                                     rd()),
                     rd(), "TSS_flat_double"));
     experiment.run();
