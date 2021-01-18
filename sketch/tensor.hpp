@@ -42,16 +42,19 @@ class Tensor : public SketchBase<std::vector<double>, false> {
           alphabet_size(alphabet_size),
           sketch_dim(sketch_dim),
           subsequence_len(subsequence_len),
-          hashes(new2D<seq_type>(subsequence_len, alphabet_size)),
-          signs(new2D<bool>(subsequence_len, alphabet_size)) {
-        std::mt19937 gen(seed);
+          rng(seed) {}
+
+    void init() {
+        hashes = new2D<seq_type>(subsequence_len, alphabet_size);
+        signs = new2D<bool>(subsequence_len, alphabet_size);
+
         std::uniform_int_distribution<seq_type> rand_hash2(0, sketch_dim - 1);
         std::uniform_int_distribution<seq_type> rand_bool(0, 1);
 
         for (size_t h = 0; h < subsequence_len; h++) {
             for (size_t c = 0; c < alphabet_size; c++) {
-                hashes[h][c] = rand_hash2(gen);
-                signs[h][c] = rand_bool(gen);
+                hashes[h][c] = rand_hash2(rng);
+                signs[h][c] = rand_bool(rng);
             }
         }
     }
@@ -151,6 +154,8 @@ class Tensor : public SketchBase<std::vector<double>, false> {
 
     /** The sign functions s1...st:A->{-1,1} */
     Vec2D<bool> signs;
+
+    std::mt19937 rng;
 };
 
 } // namespace ts
