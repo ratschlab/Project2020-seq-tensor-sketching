@@ -108,6 +108,8 @@ DEFINE_uint32(num_threads,
               "use --num_threads=0 to use all available cores");
 
 
+DEFINE_int32(reruns, 1, "The number of times to rerun sketch algorithms on the same data");
+
 using namespace ts;
 
 /**
@@ -143,12 +145,15 @@ class ExperimentRunner {
     double run_sketch_algorithm(SketchAlgorithm *algorithm, std::vector<double> *dist) const {
         assert(algorithm != nullptr);
         assert(dist != nullptr);
-        std::cout << "Running " << algorithm->name << std::endl;
+
+        // Initialize the algorithm.
+        algorithm->init();
 
         std::vector<typename SketchAlgorithm::sketch_type> sketch(seqs.size());
 
         // Compute sketches.
-        std::cout << "\t" << "Compute sketches ... ";
+        std::cout << "\t"
+                  << "Compute sketches ... ";
         progress_bar::init(seqs.size());
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
@@ -172,9 +177,11 @@ class ExperimentRunner {
             }
         }
 
+        std::cout << "\r";
 
         // Compute pairwise distances.
-        std::cout << "\t" << "Compute distances ... ";
+        std::cout << "\t"
+                  << "Compute distances ... ";
         dist->resize(ingroup_pairs.size());
         progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
@@ -188,10 +195,9 @@ class ExperimentRunner {
 
         // Print summary.
         auto spearman_coefficient = spearman(edit_dists, *dist);
-        std::cout << "\t" << "Spearman Corr.: " << spearman_coefficient
-                  << std::endl;
+        std::cout << "\t"
+                  << "Spearman Corr.: " << spearman_coefficient << std::endl;
 
-        // TODO: Save output.
         return spearman_coefficient;
     }
 
@@ -201,8 +207,21 @@ class ExperimentRunner {
         generate_sequences();
         std::cout << "Computing edit distances ... ";
         compute_edit_distance();
-        apply_tuple([&](auto &algorithm, auto &dist) { run_sketch_algorithm(&algorithm, &dist); },
-                    algorithms, dists);
+        apply_tuple(
+                [&](auto &algorithm, auto &dist) {
+                    vector<double> spearman_coefficients(FLAGS_reruns);
+                    std::cout << "Running " << algorithm.name << std::endl;
+                    for (int32_t rerun = 0; rerun < FLAGS_reruns; ++rerun) {
+                        spearman_coefficients[rerun] = run_sketch_algorithm(&algorithm, &dist);
+                    }
+                    const auto [avg, sd] = avg_stddev(spearman_coefficients);
+
+                    std::cout << "\t"
+                              << "Spearman Corr.: " << avg << " \t (σ=" << sd
+                              << ", n=" << FLAGS_reruns << ")" << std::endl;
+                    std::cout << std::endl;
+                },
+                algorithms, dists);
         std::cout << "Writing output to ... " << FLAGS_o << std::endl;
         save_output();
     }
@@ -278,7 +297,7 @@ int main(int argc, char *argv[]) {
         omp_set_num_threads(FLAGS_num_threads);
     }
 
-    uint32_t tss_dim = (FLAGS_embed_dim * FLAGS_stride + FLAGS_seq_len - 1)/ FLAGS_seq_len;
+    uint32_t tss_dim = (FLAGS_embed_dim * FLAGS_stride + FLAGS_seq_len - 1) / FLAGS_seq_len;
 
     using char_type = uint8_t;
     using kmer_type = uint64_t;
@@ -293,20 +312,15 @@ int main(int argc, char *argv[]) {
                                       FLAGS_embed_dim, FLAGS_max_len, FLAGS_tuple_length,
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH"),
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(), "TS"),
-            TensorSlide<char_type>(FLAGS_alphabet_size, tss_dim,
-                                   FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride, rd(),
-                                   "TSS"),
+            TensorSlide<char_type>(FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
+                                   FLAGS_window_size, FLAGS_stride, rd(), "TSS"),
             TensorSlideFlat<char_type, Int32Flattener>(
-                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
-                    FLAGS_window_size, FLAGS_stride,
-                    Int32Flattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len,
-                                   rd()),
+                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
+                    FLAGS_stride, Int32Flattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
                     rd(), "TSS_flat_int32"),
             TensorSlideFlat<char_type, DoubleFlattener>(
-                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
-                    FLAGS_window_size, FLAGS_stride,
-                    DoubleFlattener(FLAGS_embed_dim, tss_dim , FLAGS_seq_len,
-                                    rd()),
+                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
+                    FLAGS_stride, DoubleFlattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
                     rd(), "TSS_flat_double"));
     experiment.run();
 
