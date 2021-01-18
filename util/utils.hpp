@@ -83,6 +83,19 @@ T l1_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
     return val;
 }
 
+template <class T>
+T l2_dist2D_minlen(const Vec2D<T> &a, const Vec2D<T> &b) {
+    auto len = std::min(a.size(), b.size());
+    T val = 0;
+    for (size_t i = 0; i < len; i++) {
+        for (size_t j = 0; j < a[i].size() and j < b[i].size(); j++) {
+            auto el = (a[i][j] - b[i][j]);
+            val += el * el;
+        }
+    }
+    return val;
+}
+
 
 template <class T>
 T hamming_dist(const std::vector<T> &a, const std::vector<T> &b) {
