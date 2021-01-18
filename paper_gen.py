@@ -43,12 +43,14 @@ def load_results(path, thresh):
             sr = 0
         sp_corr.append(sr)
 
-    stats = {'method': methods, 'Sp': sp_corr, 'AUC0': auc[0], 'AUC1': auc[1], 'AUC2': auc[2], 'AbsTime': times_abs,
-             'RelTime': times_rel}
+    stats = {'method': methods, 'Sp': sp_corr}
+    stats.update({'AUC{}'.format(i): val for i,val in enumerate(auc)})
+    stats.update({'AbsTime': times_abs, 'RelTime': times_rel})
     return flags, dists, stats
 
 
-def texify_table(flags, stats, thresh):
+def texify_table(load_path, save_dir, thresh):
+    flags, dists, stats = load_results(path=load_path, thresh=thresh)
     # best Sp corr, AUC values (higher better), exclude edit distance
     best_row = {k: np.argmax(v[:-1]) for k, v in stats.items()}
     # best times (lower better), excluce edit distance
@@ -71,8 +73,8 @@ def texify_table(flags, stats, thresh):
 
     caption = """
 \\caption{{${flags[pairs]}$ sequence pairs of length $\\SLen={flags[seq_len]}$
-were generated over an alphabet of size $\\#\\Abc={flags[alphabet_size]}$.
-with the number of random edit operations, uniformly drawn from $\\{{0,1,\\dots,\\SLen}}$.
+were generated over an alphabet of size $\\#\\Abc={flags[alphabet_size]}$,
+ with the mutation rate drawn uniformly from $({flags[min_mutation_rate]},{flags[max_mutation_rate]})$.
 The time column shows normalized time in microseconds, i.e., total time divided by number of sequences,
 while the relative time shows the ratio of sketch-based time to the time for computing exact edit distance.
 As for the the model parameters, embedding dimension is set to $\\EDim={flags[embed_dim]}$, and model parameters are
@@ -88,24 +90,25 @@ As for the the model parameters, embedding dimension is set to $\\EDim={flags[em
 \\begin{table}[h!]
     """ + caption + """
 \\centering
-\\begin{tabular}{ |c|c|c|c|c|c|c|}
+\\begin{tabular}{ |c|c|"""+'c|'*len(thresh)+"""c|c|}
 \\hline
 \\multicolumn{1}{|c|}{\\textbf{}} &
 \\multicolumn{1}{|c|}{\\textbf{Correlation}} &
 \\multicolumn{""" + str(len(thresh)) + """}{|c|}{\\textbf{AUROC ($\\ED \\le \\cdot $)}} &
 \\multicolumn{2}{c|}{\\textbf{Time}} \\\\
 \\hline
-    """ + table_body + """
+    """ + table_body + """\\\\
 \\hline
 \\end{tabular}
 \\end{table}"""
-    fout = open('experiments/figures/table.tex', 'w')
+    fout = open(os.path.join(save_dir, 'table.tex'), 'w')
     fout.write(table_latex)
     fout.close()
     return table_latex
 
 
-def gen_fig_s1(flags, dists):
+def gen_fig_s1(load_path, save_dir):
+    flags, dists, _ = load_results(path=load_path, thresh=[])
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
     cols = dists.columns[3:8]
     for mi, method in enumerate(cols):
@@ -129,13 +132,14 @@ def gen_fig_s1(flags, dists):
     (d) Tensor Sketch $t={flags[tuple_length]}$, 
     (e) Tensor Slide Sketch $t={flags[tuple_length]}, w={flags[window_size]}. $ }} """
     caption = caption.format(flags=flags)
-    plt.savefig('experiments/figures/FigS1.pdf')
-    fout = open('experiments/figures/FigS1.tex', 'w')
+    plt.savefig(os.path.join(save_dir, 'FigS1.pdf'))
+    fout = open(os.path.join(save_dir, 'FigS1.tex'), 'w')
     fout.write(caption)
     fout.close()
 
 
-def gen_fig_s2(flags, dists, ed_th):
+def gen_fig_s2(load_path, save_dir, ed_th):
+    flags, dists, stat = load_results(path=load_path, thresh=ed_th)
     data = {'fpr': [], 'tpr': [], 'method': [], 'th': []}
     for th in ed_th:
         seq_len = int(flags['seq_len'])
@@ -162,14 +166,14 @@ def gen_fig_s2(flags, dists, ed_th):
     Subplots (a)-(e) show the ROC curve for detecting pairs with edit distance (normalized by length) 
     less than ${th[0]},{th[1]},{th[2]},$ and ${th[3]}$respectively }} """
     caption = caption.format(flags=flags, th=ed_th)
-    fo = open('experiments/figures/FigS2.tex', 'w')
-    plt.savefig('experiments/figures/FigS2.pdf')
+    fo = open(os.path.join(save_dir, 'FigS2.tex'), 'w')
+    plt.savefig(os.path.join(save_dir, 'FigS2.pdf'))
     fo.write(caption)
     fo.close()
 
 
-def gen_fig1(fig1_path):
-    flags, dists, summary = load_results(path=os.path.join(fig1_path, 'a'), thresh=[.1, .2, .3])
+def gen_fig1(load_path, save_dir):
+    flags, dists, stats = load_results(path=os.path.join(load_path, 'a'), thresh=[])
 
     data = {'auc': [], 'method': [], 'th': []}
     for th in np.linspace(.05, .5, 10):
@@ -182,22 +186,22 @@ def gen_fig1(fig1_path):
             data['th'].append(th)
     stats1 = pd.DataFrame(data)
 
-    dirs = glob(os.path.join(fig1_path, 'b', '*'))
+    dirs = glob(os.path.join(load_path, 'b', '*'))
     summaries = pd.DataFrame()
     for path in dirs:
-        flags, dists, summary = load_results(path=path, thresh=[.1, .2, .3])
-        summary = pd.DataFrame(summary)
-        summary['seq_len'] = int(flags['seq_len'])
-        summaries = pd.concat([summaries, pd.DataFrame(summary)])
+        flags, dists, stats = load_results(path=path, thresh=[])
+        stats = pd.DataFrame(stats)
+        stats['seq_len'] = int(flags['seq_len'])
+        summaries = pd.concat([summaries, pd.DataFrame(stats)])
     stats2 = summaries
 
-    dirs = glob(os.path.join(fig1_path, 'd', '*'))
+    dirs = glob(os.path.join(load_path, 'd', '*'))
     summaries = pd.DataFrame()
     for path in dirs:
-        flags, dists, summary = load_results(path=path, thresh=[.1, .2, .3])
-        summary = pd.DataFrame(summary)
-        summary['embed_dim'] = int(flags['embed_dim'])
-        summaries = pd.concat([summaries, pd.DataFrame(summary)])
+        flags, dists, stats = load_results(path=path, thresh=[])
+        stats = pd.DataFrame(stats)
+        stats['embed_dim'] = int(flags['embed_dim'])
+        summaries = pd.concat([summaries, pd.DataFrame(stats)])
     stats3 = summaries[summaries.method != 'ED']
 
     fig, axes = plt.subplots(1, 4, figsize=(24, 6))
@@ -208,11 +212,11 @@ def gen_fig1(fig1_path):
     sns.lineplot(ax=axes[1], data=stats2[stats2.method != 'ED'], x='seq_len', y='Sp', hue='method')
     sns.lineplot(ax=axes[2], data=stats2, x='seq_len', y='AbsTime', hue='method')
     sns.lineplot(ax=axes[3], data=stats3, x='embed_dim', y='Sp', hue='method')
-    plt.savefig('experiments/figures/Fig1.pdf')
+    plt.savefig(os.path.join(save_dir, 'Fig1.pdf'))
 
 
-def gen_fig2(path):
-    flags, dists, summary = load_results(path=path, thresh=[.1, .2, .5])
+def gen_fig2(load_path, save_dir):
+    flags, dists, summary = load_results(path=load_path, thresh=[.1, .2, .5])
     cols = dists.columns[2:8]
     num_seqs = int(flags['num_seqs'])
     d_sq = np.zeros((num_seqs, num_seqs))
@@ -242,22 +246,24 @@ def gen_fig2(path):
     $k = {flags[kmer_size]}$, (c) Weighted MinHash $k={flags[kmer_size]}$, (d) Ordered MinHash $k=3,t=3$, (e) Tensor 
     Sketch $t=3$, (f) Tensor Slide Sketch $w={flags[window_size]},t={flags[tuple_length]}$. }} """
     caption = caption.format(flags=flags, num_generations=num_generations)
-    fo = open('experiments/figures/Fig2.tex', 'w')
-    plt.savefig('experiments/figures/Fig2.pdf')
+    fo = open(os.path.join(save_dir, 'Fig2.tex'), 'w')
+    plt.savefig(os.path.join(save_dir, 'Fig2.pdf'))
     fo.write(caption)
     fo.close()
 
 
 if __name__ == '__main__':
-    path = 'experiments/data/table1'
-    ed_th = [.1, .2, .3, .5]
-    flags, dists, stats = load_results(path=path, thresh=ed_th)
-    texify_table(flags=flags, stats=stats, thresh=ed_th)
-    gen_fig_s1(flags=flags, dists=dists)
-    gen_fig_s2(flags=flags, dists=dists, ed_th=ed_th)
+    root_dir = 'experiments'
+    save_dir = os.path.join(root_dir, 'figures')
 
-    path = 'experiments/data/fig1/'
-    gen_fig1(fig1_path=path)
+    texify_table(load_path=os.path.join(root_dir, 'data', 'table1'),
+                 save_dir=save_dir, thresh=[.1, .2, .3, .5])
 
-    path = 'experiments/data/fig2'
-    gen_fig2(path=path)
+    gen_fig_s1(load_path=os.path.join(root_dir, 'data', 'table1'), save_dir=save_dir)
+
+    gen_fig_s2(load_path=os.path.join(root_dir, 'data', 'table1'),
+               ed_th=[.1, .2, .3, .5], save_dir=save_dir)
+
+    gen_fig1(load_path=os.path.join(root_dir, 'data', 'fig1'), save_dir=save_dir)
+
+    gen_fig2(load_path=os.path.join(root_dir, 'data', 'fig2'), save_dir=save_dir)
