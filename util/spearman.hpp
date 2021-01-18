@@ -4,8 +4,6 @@
 #include <iostream>
 #include <vector>
 
-using namespace std;
-
 // Function returns the 1-based rank vector of a set of observations v
 template <typename T>
 std::vector<double> rankify(const std::vector<T> &v) {

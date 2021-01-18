@@ -20,6 +20,7 @@
 #include <array>
 #include <filesystem>
 #include <memory>
+#include <numeric>
 #include <omp.h>
 #include <sys/types.h>
 
@@ -108,6 +109,8 @@ DEFINE_uint32(num_threads,
               "use --num_threads=0 to use all available cores");
 
 
+DEFINE_uint32(reruns, 1, "The number of times to rerun sketch algorithms on the same data");
+
 using namespace ts;
 
 /**
@@ -140,15 +143,17 @@ class ExperimentRunner {
 
     // Return the Spearman coefficient.
     template <class SketchAlgorithm>
-    double run_sketch_algorithm(SketchAlgorithm *algorithm, std::vector<double> *dist) const {
+    double run_sketch_algorithm(SketchAlgorithm *algorithm, std::vector<double> *store_dist) const {
         assert(algorithm != nullptr);
-        assert(dist != nullptr);
-        std::cout << "Running " << algorithm->name << std::endl;
+
+        // Initialize the algorithm.
+        algorithm->init();
 
         std::vector<typename SketchAlgorithm::sketch_type> sketch(seqs.size());
 
         // Compute sketches.
-        std::cout << "\t" << "Compute sketches ... ";
+        std::cout << "\t"
+                  << "Compute sketches ... ";
         progress_bar::init(seqs.size());
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
@@ -172,26 +177,34 @@ class ExperimentRunner {
             }
         }
 
+        std::cout << "\r";
 
         // Compute pairwise distances.
-        std::cout << "\t" << "Compute distances ... ";
-        dist->resize(ingroup_pairs.size());
+        std::cout << "\t"
+                  << "Compute distances ... ";
+        std::vector<double> dists(ingroup_pairs.size(), 0);
         progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
         for (size_t i = 0; i < ingroup_pairs.size(); i++) {
             auto [si, sj] = ingroup_pairs[i];
 
-            (*dist)[i] = algorithm->dist(sketch[si], sketch[sj]);
+            dists[i] += algorithm->dist(sketch[si], sketch[sj]);
             progress_bar::iter();
         }
 
 
         // Print summary.
-        auto spearman_coefficient = spearman(edit_dists, *dist);
-        std::cout << "\t" << "Spearman Corr.: " << spearman_coefficient
-                  << std::endl;
+        auto spearman_coefficient = spearman(edit_dists, dists);
+        std::cout << "\t"
+                  << "Spearman Corr.: " << spearman_coefficient << std::endl;
 
-        // TODO: Save output.
+        if (store_dist) {
+            store_dist->resize(dists.size());
+            for (size_t i = 0; i < dists.size(); ++i)
+                (*store_dist)[i] += dists[i];
+        }
+
+
         return spearman_coefficient;
     }
 
@@ -201,8 +214,61 @@ class ExperimentRunner {
         generate_sequences();
         std::cout << "Computing edit distances ... ";
         compute_edit_distance();
-        apply_tuple([&](auto &algorithm, auto &dist) { run_sketch_algorithm(&algorithm, &dist); },
-                    algorithms, dists);
+        apply_tuple(
+                [&](auto &algorithm, auto &dist) {
+                    std::cout << "Running " << algorithm.name << std::endl;
+
+                    // Run the algorithms FLAGS_reruns times, storing the distances and Spearman
+                    // coefficient computed in each run. The average and standard deviation of the
+                    // Spearman coefficients is reported, as well as the Spearman coefficient
+                    // obtained from using the median and average of the distances of all runs.
+                    std::vector<double> spearman_coefficients(FLAGS_reruns);
+                    Vec2D<double> dists_per_run = new2D<double>(FLAGS_reruns, ingroup_pairs.size());
+
+                    for (uint32_t rerun = 0; rerun < FLAGS_reruns; ++rerun) {
+                        spearman_coefficients[rerun]
+                                = run_sketch_algorithm(&algorithm, &dists_per_run[rerun]);
+                    }
+
+                    if (FLAGS_reruns > 1) {
+                        // Transpose of dists_per_run.
+                        Vec2D<double> runs_per_dist
+                                = new2D<double>(ingroup_pairs.size(), FLAGS_reruns);
+                        for (size_t i = 0; i < FLAGS_reruns; ++i)
+                            for (size_t j = 0; j < dists_per_run[i].size(); ++j)
+                                runs_per_dist[j][i] = dists_per_run[i][j];
+
+                        for (std::vector<double> &distances : runs_per_dist)
+                            sort(begin(distances), end(distances));
+
+                        const auto [avg, sd] = avg_stddev(spearman_coefficients);
+
+                        std::cout << "\t"
+                                  << "Average  Corr.: " << avg << " \t (σ=" << sd
+                                  << ", n=" << FLAGS_reruns << ")" << std::endl;
+
+                        dist.resize(ingroup_pairs.size());
+
+                        for (size_t i = 0; i < ingroup_pairs.size(); ++i)
+                            dist[i] = median(runs_per_dist[i]);
+                        double sc_on_med_dist = spearman(edit_dists, dist);
+                        std::cout << "\t"
+                                  << "SC on med dist: " << sc_on_med_dist << std::endl;
+
+                        for (size_t i = 0; i < ingroup_pairs.size(); ++i)
+                            dist[i] = std::accumulate(begin(runs_per_dist[i]),
+                                                      end(runs_per_dist[i]), 0.0)
+                                    / FLAGS_reruns;
+                        double sc_on_avg_dist = spearman(edit_dists, dist);
+                        std::cout << "\t"
+                                  << "SC on avg dist: " << sc_on_avg_dist << std::endl;
+
+                        std::cout << std::endl;
+                    } else {
+                        dist = dists_per_run[0];
+                    }
+                },
+                algorithms, dists);
         std::cout << "Writing output to ... " << FLAGS_o << std::endl;
         save_output();
     }
@@ -225,7 +291,7 @@ class ExperimentRunner {
             edit_dists[i] = edit_distance(seqs[si], seqs[sj]);
             progress_bar::iter();
         }
-        std::cout << endl;
+        std::cout << std::endl;
     }
 
     void save_output() {
@@ -276,7 +342,7 @@ int main(int argc, char *argv[]) {
         omp_set_num_threads(FLAGS_num_threads);
     }
 
-    uint32_t tss_dim = (FLAGS_embed_dim * FLAGS_stride + FLAGS_seq_len - 1)/ FLAGS_seq_len;
+    uint32_t tss_dim = (FLAGS_embed_dim * FLAGS_stride + FLAGS_seq_len - 1) / FLAGS_seq_len;
 
     using char_type = uint8_t;
     using kmer_type = uint64_t;
@@ -291,20 +357,15 @@ int main(int argc, char *argv[]) {
                                       FLAGS_embed_dim, FLAGS_max_len, FLAGS_tuple_length,
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH"),
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(), "TS"),
-            TensorSlide<char_type>(FLAGS_alphabet_size, tss_dim,
-                                   FLAGS_tuple_length, FLAGS_window_size, FLAGS_stride, rd(),
-                                   "TSS"),
+            TensorSlide<char_type>(FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
+                                   FLAGS_window_size, FLAGS_stride, rd(), "TSS"),
             TensorSlideFlat<char_type, Int32Flattener>(
-                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
-                    FLAGS_window_size, FLAGS_stride,
-                    Int32Flattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len,
-                                   rd()),
+                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
+                    FLAGS_stride, Int32Flattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
                     rd(), "TSS_flat_int32"),
             TensorSlideFlat<char_type, DoubleFlattener>(
-                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
-                    FLAGS_window_size, FLAGS_stride,
-                    DoubleFlattener(FLAGS_embed_dim, tss_dim , FLAGS_seq_len,
-                                    rd()),
+                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
+                    FLAGS_stride, DoubleFlattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
                     rd(), "TSS_flat_double"));
     experiment.run();
 
