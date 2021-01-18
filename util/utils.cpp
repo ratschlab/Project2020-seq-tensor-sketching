@@ -30,4 +30,11 @@ std::pair<double, double> avg_stddev(const std::vector<double> &v) {
     return { avg, sqrt(var / v.size()) };
 }
 
+double median(const std::vector<double> &v) {
+	assert(!v.empty());
+    if (v.size() % 2)
+        return v[v.size() / 2];
+    return (v[v.size() / 2 - 1] + v[v.size() / 2]) / 2;
+}
+
 } // namespace ts

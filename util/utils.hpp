@@ -195,4 +195,7 @@ void apply_tuple(F &&f, T &tuple_t, U &tuple_u) {
 
 std::pair<double, double> avg_stddev(const std::vector<double> &v);
 
+// v must be sorted.
+double median(const std::vector<double> &v);
+
 } // namespace ts
