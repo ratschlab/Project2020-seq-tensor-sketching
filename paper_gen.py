@@ -38,9 +38,10 @@ def load_results(path, thresh):
 
     sp_corr = []
     for m in methods:
-        sr = spearmanr(dists['ED'], dists[m]).correlation
-        if math.isnan(sr):  # nan occurs if one vector contains a single value, set to 0
+        if len(pd.unique(dists[m]))==1: # check if dists[m] is a constant vector
             sr = 0
+        else:
+            sr = spearmanr(dists['ED'], dists[m]).correlation
         sp_corr.append(sr)
 
     stats = {'method': methods, 'Sp': sp_corr}
@@ -49,7 +50,7 @@ def load_results(path, thresh):
     return flags, dists, stats
 
 
-def texify_table(data_dir, save_dir, thresh):
+def gen_table1(data_dir, save_dir, thresh):
     flags, dists, stats = load_results(path=data_dir, thresh=thresh)
     # best Sp corr, AUC values (higher better), exclude edit distance
     best_row = {k: np.argmax(v[:-1]) for k, v in stats.items()}
@@ -101,7 +102,7 @@ As for the the model parameters, embedding dimension is set to $\\EDim={flags[em
 \\hline
 \\end{tabular}
 \\end{table}"""
-    fout = open(os.path.join(save_dir, 'table.tex'), 'w')
+    fout = open(os.path.join(save_dir, 'table1.tex'), 'w')
     fout.write(table_latex)
     fout.close()
     return table_latex
@@ -268,8 +269,8 @@ if __name__ == '__main__':
     root_dir = 'experiments'
     save_dir = os.path.join(root_dir, 'figures')
 
-    texify_table(data_dir=os.path.join(root_dir, 'data', 'table1'),
-                 save_dir=save_dir, thresh=[.1, .2, .3, .5])
+    gen_table1(data_dir=os.path.join(root_dir, 'data', 'table1'),
+               save_dir=save_dir, thresh=[.1, .2, .3, .5])
 
     gen_fig_s1(data_dir=os.path.join(root_dir, 'data', 'table1'),
                save_dir=save_dir)

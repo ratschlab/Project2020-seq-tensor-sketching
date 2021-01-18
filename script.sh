@@ -17,7 +17,7 @@ FIG1=$(echo $EXP --num_seqs 2000)
 # fig 1a
 $FIG1 --seq_len 10000 --stride 1000 --window_size 2000
 
-# fig 1b
+# fig 1b: stride set to seq_len/10, and window_size=2*stride
 SAVE_DIR=$ROOT_DIR/fig1/b
 $FIG1 -o $SAVE_DIR/0 --seq_len 10 --stride 1 --window_size 2
 $FIG1 -o $SAVE_DIR/1 --seq_len 20 --stride 2 --window_size 4

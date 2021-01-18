@@ -243,8 +243,6 @@ class ExperimentRunner {
         fo << Timer::summary();
         fo.close();
 
-        write_fasta(output_dir / "seqs.fa", seqs);
-
         fo.open(output_dir / "dists.csv");
         fo << "s1,s2,ED";
         apply_tuple([&](const auto &algo) { fo << "," << algo.name; }, algorithms);
