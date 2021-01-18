@@ -182,7 +182,7 @@ class ExperimentRunner {
         // Compute pairwise distances.
         std::cout << "\t"
                   << "Compute distances ... ";
-        vector<double> dists(ingroup_pairs.size(), 0);
+        std::vector<double> dists(ingroup_pairs.size(), 0);
         progress_bar::init(ingroup_pairs.size());
 #pragma omp parallel for default(shared)
         for (size_t i = 0; i < ingroup_pairs.size(); i++) {
@@ -222,7 +222,7 @@ class ExperimentRunner {
                     // coefficient computed in each run. The average and standard deviation of the
                     // Spearman coefficients is reported, as well as the Spearman coefficient
                     // obtained from using the median and average of the distances of all runs.
-                    vector<double> spearman_coefficients(FLAGS_reruns);
+                    std::vector<double> spearman_coefficients(FLAGS_reruns);
                     Vec2D<double> dists_per_run = new2D<double>(FLAGS_reruns, ingroup_pairs.size());
 
                     for (uint32_t rerun = 0; rerun < FLAGS_reruns; ++rerun) {
@@ -238,7 +238,7 @@ class ExperimentRunner {
                             for (size_t j = 0; j < dists_per_run[i].size(); ++j)
                                 runs_per_dist[j][i] = dists_per_run[i][j];
 
-                        for (auto &distances : runs_per_dist)
+                        for (std::vector<double> &distances : runs_per_dist)
                             sort(begin(distances), end(distances));
 
                         const auto [avg, sd] = avg_stddev(spearman_coefficients);
@@ -249,10 +249,9 @@ class ExperimentRunner {
 
                         dist.resize(ingroup_pairs.size());
 
-
                         for (size_t i = 0; i < ingroup_pairs.size(); ++i)
                             dist[i] = median(runs_per_dist[i]);
-                        auto sc_on_med_dist = spearman(edit_dists, dist);
+                        double sc_on_med_dist = spearman(edit_dists, dist);
                         std::cout << "\t"
                                   << "SC on med dist: " << sc_on_med_dist << std::endl;
 
@@ -260,7 +259,7 @@ class ExperimentRunner {
                             dist[i] = std::accumulate(begin(runs_per_dist[i]),
                                                       end(runs_per_dist[i]), 0.0)
                                     / FLAGS_reruns;
-                        auto sc_on_avg_dist = spearman(edit_dists, dist);
+                        double sc_on_avg_dist = spearman(edit_dists, dist);
                         std::cout << "\t"
                                   << "SC on avg dist: " << sc_on_avg_dist << std::endl;
 
@@ -292,7 +291,7 @@ class ExperimentRunner {
             edit_dists[i] = edit_distance(seqs[si], seqs[sj]);
             progress_bar::iter();
         }
-        std::cout << endl;
+        std::cout << std::endl;
     }
 
     void save_output() {
