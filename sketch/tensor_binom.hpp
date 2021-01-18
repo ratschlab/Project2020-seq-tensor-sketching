@@ -1,8 +1,14 @@
 #pragma once
 
+#include "sequence/alphabets.hpp"
+#include "sketch/sketch_base.hpp"
 #include "util/multivec.hpp"
+#include "util/timer.hpp"
+#include "util/utils.hpp"
 
+#include <bits/stdint-uintn.h>
 #include <cassert>
+#include <cmath>
 #include <iostream> //todo: remove
 #include <random>
 
@@ -14,7 +20,7 @@ namespace ts { // ts = Tensor Sketch
  * @tparam seq_type the type of elements in the sequences to be sketched.
  */
 template <class seq_type>
-class TensorBinom {
+class TensorBinom : public SketchBase<std::vector<double>, false> {
   public:
     /**
      * @param alphabet_size the number of elements in the alphabet S over which sequences are
@@ -26,29 +32,35 @@ class TensorBinom {
     TensorBinom(seq_type alphabet_size_arg,
                 size_t sketch_size,
                 size_t subsequence_len,
-                bool use_permutation)
-        // TODO: Remove this +1.
-        : alphabet_size(alphabet_size_arg + 1),
+                uint32_t seed,
+                const std::string &name = "BTS",
+                bool l2_hash = false)
+        : SketchBase<std::vector<double>, false>(name),
+          rng(seed),
+          alphabet_size(alphabet_size_arg),
           sketch_size(sketch_size),
           subsequence_len(subsequence_len),
-          hashes(alphabet_size),
           signs(alphabet_size),
-          use_permutation(use_permutation) {
-        std::random_device rd;
-        std::mt19937 gen(rd());
+          l2_hash(l2_hash) {
+        init();
+    }
+
+    void init() {
         std::uniform_int_distribution<seq_type> rand_hash2(0, sketch_size - 1);
         std::uniform_int_distribution<seq_type> rand_bool(0, 1);
 
+        signs.resize(alphabet_size);
+
         for (size_t c = 0; c < alphabet_size; c++) {
-            hashes[c] = rand_hash2(gen);
-            signs[c] = rand_bool(gen);
+            signs[c] = rand_bool(rng);
         }
 
-        permutations = new2D<int>(alphabet_size, sketch_size);
+        permutations.resize(alphabet_size);
         for (size_t i = 0; i < alphabet_size; ++i) {
+            permutations[i].resize(sketch_size);
             // Assign a random permutation to permutations[i].
             std::iota(std::begin(permutations[i]), std::end(permutations[i]), 0);
-            std::shuffle(std::begin(permutations[i]), std::end(permutations[i]), gen);
+            std::shuffle(std::begin(permutations[i]), std::end(permutations[i]), rng);
         }
     }
 
@@ -70,14 +82,13 @@ class TensorBinom {
         for (uint32_t i = 0; i < seq.size(); i++) {
             // Probability that we include index i.
             double z = subsequence_len * 1.0 / seq.size();
-            seq_type r = hashes[seq[i]];
             bool s = signs[seq[i]];
             if (s) {
-                Tp = shift_sum(Tp, Tp, r, z, seq[i]);
-                Tm = shift_sum(Tm, Tm, r, z, seq[i]);
+                Tp = shift_sum(Tp, Tp, z, seq[i]);
+                Tm = shift_sum(Tm, Tm, z, seq[i]);
             } else {
-                Tp = shift_sum(Tp, Tm, r, z, seq[i]);
-                Tm = shift_sum(Tm, Tp, r, z, seq[i]);
+                Tp = shift_sum(Tp, Tm, z, seq[i]);
+                Tm = shift_sum(Tm, Tp, z, seq[i]);
             }
         }
         std::vector<double> sketch(sketch_size, 0);
@@ -88,35 +99,37 @@ class TensorBinom {
     }
 
     /** Sets the hash and sign functions to predetermined values for testing */
-    void set_hashes_for_testing(const std::vector<seq_type> &h, const std::vector<bool> &s) {
-        hashes = h;
+    void set_hashes_for_testing(const Vec2D<seq_type> &h, const std::vector<bool> &s) {
         signs = s;
+        permutations = h;
+    }
+
+    double dist(const std::vector<double> &a, const std::vector<double> &b) {
+        Timer timer("tensor_sketch_dist");
+        if (l2_hash)
+            return l2_dist(a, b);
+        return l1_dist(a, b);
     }
 
   protected:
     /** Computes (1-z)*a + z*b_shift */
-    std::vector<double> shift_sum(const std::vector<double> &a,
-                                  const std::vector<double> &b,
-                                  seq_type shift,
-                                  double z,
-                                  seq_type ch) {
+    std::vector<double>
+    shift_sum(const std::vector<double> &a, const std::vector<double> &b, double z, seq_type ch) {
         assert(a.size() == b.size());
-        size_t len = a.size();
         std::vector<double> result(a.size());
         assert(ch < alphabet_size);
         const auto &perm = permutations[ch];
         assert(perm.size() == a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
-            if (use_permutation) {
-                result[i] = (1 - z) * a[i] + z * b[perm[i]];
-            } else {
-                result[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
-            }
+            result[i] = (1 - z) * a[i] + z * b[perm[i]];
 
             assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
         }
         return result;
     }
+
+
+    std::mt19937 rng;
 
     /** Size of the alphabet over which sequences to be sketched are defined, e.g. 4 for DNA */
     seq_type alphabet_size;
@@ -125,19 +138,13 @@ class TensorBinom {
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
     uint8_t subsequence_len;
 
-    /**
-     * Denotes the hash functions h1,....ht:A->{1....D}, where t is #subsequence_len and D is
-     * #sketch_size
-     */
-    std::vector<seq_type> hashes;
-
     /** The sign functions s1...st:A->{-1,1} */
     std::vector<bool> signs;
 
     /** The permuations to apply for each element in A. */
     Vec2D<int> permutations;
 
-    bool use_permutation;
+    bool l2_hash;
 };
 
 } // namespace ts

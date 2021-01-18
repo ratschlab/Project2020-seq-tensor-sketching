@@ -348,6 +348,7 @@ int main(int argc, char *argv[]) {
     using kmer_type = uint64_t;
     std::random_device rd;
     auto experiment = MakeExperimentRunner<char_type, kmer_type>(
+            /*
             MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
                                FLAGS_embed_dim, parse_hash_algorithm(FLAGS_hash_alg), rd(), "MH"),
             WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
@@ -356,9 +357,13 @@ int main(int argc, char *argv[]) {
             OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
                                       FLAGS_embed_dim, FLAGS_max_len, FLAGS_tuple_length,
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH"),
+                                      */
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(), "TS"),
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                              "TS-L2", true),
             TensorSlide<char_type>(FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
                                    FLAGS_window_size, FLAGS_stride, rd(), "TSS"),
+            /*
             TensorSlideFlat<char_type, Int32Flattener>(
                     FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
                     FLAGS_stride, Int32Flattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
@@ -366,7 +371,21 @@ int main(int argc, char *argv[]) {
             TensorSlideFlat<char_type, DoubleFlattener>(
                     FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
                     FLAGS_stride, DoubleFlattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
-                    rd(), "TSS_flat_double"));
+                    rd(), "TSS_flat_double"),
+                    */
+
+
+            // Binomial sketch variants.
+            TensorBinom<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                                   "BTS-perm"),
+            TensorBinom<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                                   "BTS-perm-L2", true),
+
+            // Tensor sketch variants.
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                              "TS-perm", true, false),
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                              "TS-inj", false, true));
     experiment.run();
 
     return 0;

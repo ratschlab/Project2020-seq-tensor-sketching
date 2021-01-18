@@ -39,27 +39,28 @@ class Tensor : public SketchBase<std::vector<double>, false> {
            size_t sketch_dim,
            size_t subsequence_len,
            uint32_t seed,
-           bool injective_hash = false,
-           bool permutation_hash = false,
-           const std::string &name = "TS")
+           const std::string &name = "TS",
+           bool use_permutation = false,
+           bool injective_hash = false)
         : SketchBase<std::vector<double>, false>(name),
           alphabet_size(alphabet_size),
           sketch_dim(sketch_dim),
           subsequence_len(subsequence_len),
           rng(seed),
           injective_hash(injective_hash),
-          permutation_hash(permutation_hash) {
+          use_permutation(use_permutation) {
         init();
     }
 
     void init() {
         hashes = new2D<seq_type>(subsequence_len, alphabet_size);
         signs = new2D<bool>(subsequence_len, alphabet_size);
+        permutation_hashes = new3D<seq_type>(subsequence_len, alphabet_size, sketch_dim);
 
         std::uniform_int_distribution<seq_type> rand_hash2(0, sketch_dim - 1);
         std::uniform_int_distribution<seq_type> rand_bool(0, 1);
 
-        if (permutation_hash) {
+        if (use_permutation) {
             for (size_t h = 0; h < subsequence_len; h++) {
                 for (size_t c = 0; c < alphabet_size; c++) {
                     auto &p = permutation_hashes[h][c];
@@ -119,7 +120,7 @@ class Tensor : public SketchBase<std::vector<double>, false> {
                 // std::cerr << "Index: " << p-1 << " " << int(seq[i]) << std::endl;
                 const auto &perm = permutation_hashes[p - 1][seq[i]];
                 bool s = signs[p - 1][seq[i]];
-                if (permutation_hash) {
+                if (use_permutation) {
                     if (s) {
                         Tp[p] = perm_sum(Tp[p], Tp[p - 1], perm, z);
                         Tm[p] = perm_sum(Tm[p], Tm[p - 1], perm, z);
@@ -152,7 +153,7 @@ class Tensor : public SketchBase<std::vector<double>, false> {
         signs = s;
     }
 
-    static double dist(const std::vector<double> &a, const std::vector<double> &b) {
+    double dist(const std::vector<double> &a, const std::vector<double> &b) {
         Timer timer("tensor_sketch_dist");
         return l2_dist(a, b);
     }
@@ -226,7 +227,7 @@ class Tensor : public SketchBase<std::vector<double>, false> {
     std::mt19937 rng;
 
     bool injective_hash;
-    bool permutation_hash;
+    bool use_permutation;
     Vec3D<seq_type> permutation_hashes;
 };
 
