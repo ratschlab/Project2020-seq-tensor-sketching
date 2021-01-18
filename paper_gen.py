@@ -1,5 +1,5 @@
 from itertools import product
-import os, shutil, math
+import os, math
 import numpy as np
 import pandas as pd
 from scipy.stats import spearmanr, rankdata
@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from glob import glob
 import seaborn as sns
 
-# global settings for figures
+
 sns.set(context="paper", style="white", font_scale=1)
 
 
@@ -49,8 +49,8 @@ def load_results(path, thresh):
     return flags, dists, stats
 
 
-def texify_table(load_path, save_dir, thresh):
-    flags, dists, stats = load_results(path=load_path, thresh=thresh)
+def texify_table(data_dir, save_dir, thresh):
+    flags, dists, stats = load_results(path=data_dir, thresh=thresh)
     # best Sp corr, AUC values (higher better), exclude edit distance
     best_row = {k: np.argmax(v[:-1]) for k, v in stats.items()}
     # best times (lower better), excluce edit distance
@@ -107,8 +107,8 @@ As for the the model parameters, embedding dimension is set to $\\EDim={flags[em
     return table_latex
 
 
-def gen_fig_s1(load_path, save_dir):
-    flags, dists, _ = load_results(path=load_path, thresh=[])
+def gen_fig_s1(data_dir, save_dir):
+    flags, dists, _ = load_results(path=data_dir, thresh=[])
     fig, axes = plt.subplots(2, 3, figsize=(18, 12))
     cols = dists.columns[3:8]
     for mi, method in enumerate(cols):
@@ -138,8 +138,8 @@ def gen_fig_s1(load_path, save_dir):
     fout.close()
 
 
-def gen_fig_s2(load_path, save_dir, ed_th):
-    flags, dists, stat = load_results(path=load_path, thresh=ed_th)
+def gen_fig_s2(data_dir, save_dir, ed_th):
+    flags, dists, stat = load_results(path=data_dir, thresh=ed_th)
     data = {'fpr': [], 'tpr': [], 'method': [], 'th': []}
     for th in ed_th:
         seq_len = int(flags['seq_len'])
@@ -172,8 +172,9 @@ def gen_fig_s2(load_path, save_dir, ed_th):
     fo.close()
 
 
-def gen_fig1(load_path, save_dir):
-    flags, dists, stats = load_results(path=os.path.join(load_path, 'a'), thresh=[])
+def gen_fig1(data_dir, save_dir):
+    figsize=(5,5)
+    flags, dists, stats = load_results(path=os.path.join(data_dir, 'a'), thresh=[])
 
     data = {'auc': [], 'method': [], 'th': []}
     for th in np.linspace(.05, .5, 10):
@@ -185,14 +186,11 @@ def gen_fig1(load_path, save_dir):
             data['method'].append(method)
             data['th'].append(th)
     data = pd.DataFrame(data)
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=figsize)
     sns.lineplot(data=data, x='th', y='auc', hue='method')
-    # plt.set_xlabel('ED threshold')
-    # plt.set_ylabel('AUROC')
-    # plt.set_title('(a) AUROC vs. ED threshold')
     plt.savefig(os.path.join(save_dir, 'Fig1a.pdf'))
 
-    dirs = glob(os.path.join(load_path, 'b', '*'))
+    dirs = glob(os.path.join(data_dir, 'b', '*'))
     data = pd.DataFrame()
     for path in dirs:
         flags, dists, stats = load_results(path=path, thresh=[])
@@ -200,22 +198,22 @@ def gen_fig1(load_path, save_dir):
         stats['seq_len'] = int(flags['seq_len'])
         data = pd.concat([data, pd.DataFrame(stats)])
     data = data[data.method != 'ED']
-    plt.figure(figsize=(6, 6))
+    plt.figure(figsize=figsize)
     sns.lineplot(data=data, x='seq_len', y='Sp', hue='method')
     plt.savefig(os.path.join(save_dir, 'Fig1b.pdf'))
 
-    dirs = glob(os.path.join(load_path, 'c', '*'))
+    dirs = glob(os.path.join(data_dir, 'c', '*'))
     data = pd.DataFrame()
     for path in dirs:
         flags, dists, stats = load_results(path=path, thresh=[])
         stats = pd.DataFrame(stats)
         stats['seq_len'] = int(flags['seq_len'])
         data = pd.concat([data, pd.DataFrame(stats)])
-    plt.figure(figsize=(6, 6))
+    plt.figure(figsize=figsize)
     sns.lineplot(data=data, x='seq_len', y='AbsTime', hue='method')
     plt.savefig(os.path.join(save_dir, 'Fig1c.pdf'))
 
-    dirs = glob(os.path.join(load_path, 'd', '*'))
+    dirs = glob(os.path.join(data_dir, 'd', '*'))
     data = pd.DataFrame()
     for path in dirs:
         flags, dists, stats = load_results(path=path, thresh=[])
@@ -224,13 +222,13 @@ def gen_fig1(load_path, save_dir):
         data = pd.concat([data, pd.DataFrame(stats)])
     data = data[data.method != 'ED']
 
-    plt.figure(figsize=(6, 6))
+    plt.figure(figsize=figsize)
     sns.lineplot(data=data, x='embed_dim', y='Sp', hue='method')
     plt.savefig(os.path.join(save_dir, 'Fig1d.pdf'))
 
 
-def gen_fig2(load_path, save_dir):
-    flags, dists, _ = load_results(path=load_path, thresh=[.1, .2, .5])
+def gen_fig2(data_dir, save_dir):
+    flags, dists, _ = load_results(path=data_dir, thresh=[.1, .2, .5])
     cols = dists.columns[2:8]
     num_seqs = int(flags['num_seqs'])
     d_sq = np.zeros((num_seqs, num_seqs))
@@ -270,14 +268,17 @@ if __name__ == '__main__':
     root_dir = 'experiments'
     save_dir = os.path.join(root_dir, 'figures')
 
-    texify_table(load_path=os.path.join(root_dir, 'data', 'table1'),
+    texify_table(data_dir=os.path.join(root_dir, 'data', 'table1'),
                  save_dir=save_dir, thresh=[.1, .2, .3, .5])
 
-    gen_fig_s1(load_path=os.path.join(root_dir, 'data', 'table1'), save_dir=save_dir)
+    gen_fig_s1(data_dir=os.path.join(root_dir, 'data', 'table1'),
+               save_dir=save_dir)
 
-    gen_fig_s2(load_path=os.path.join(root_dir, 'data', 'table1'),
-               ed_th=[.1, .2, .3, .5], save_dir=save_dir)
+    gen_fig_s2(data_dir=os.path.join(root_dir, 'data', 'table1'),
+               save_dir=save_dir, ed_th=[.1, .2, .3, .5])
 
-    gen_fig1(load_path=os.path.join(root_dir, 'data', 'fig1'), save_dir=save_dir)
+    gen_fig1(data_dir=os.path.join(root_dir, 'data', 'fig1'),
+             save_dir=save_dir)
 
-    gen_fig2(load_path=os.path.join(root_dir, 'data', 'fig2'), save_dir=save_dir)
+    gen_fig2(data_dir=os.path.join(root_dir, 'data', 'fig2'),
+             save_dir=save_dir)

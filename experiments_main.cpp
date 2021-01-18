@@ -240,7 +240,7 @@ class ExperimentRunner {
 
         fo.open(output_dir / "timing.csv");
         assert(fo.is_open());
-        fo << Timer::summary(FLAGS_num_seqs, ingroup_pairs.size());
+        fo << Timer::summary();
         fo.close();
 
         write_fasta(output_dir / "seqs.fa", seqs);

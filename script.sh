@@ -9,10 +9,10 @@ mkdir table1 fig1a fig1b fig1c fig1d fig2
 cd $P || return
 
 # table 1
-$EXP -o $ROOT_DIR/table1 --num_seqs 1000 --seq_len 10000 --stride 1000 --window_size=2000
+$EXP -o $ROOT_DIR/table1 --num_seqs 4000 --seq_len 10000 --stride 1000 --window_size=2000
 
-# fig 1
-FIG1=$(echo $EXP --num_seqs 1000 --seq_len 10000 --stride 1000 --window_size=2000)
+# fig 1: common properties
+FIG1=$(echo $EXP --num_seqs 2000 --seq_len 10000 --stride 1000 --window_size=2000)
 
 $FIG1 -o $ROOT_DIR/fig1/a
 
@@ -38,4 +38,4 @@ $FIG1 -o $SAVE_DIR/8 --embed_dim 80
 $FIG1 -o $SAVE_DIR/10 --embed_dim 100
 
 ##fig 2
-$EXP -o $ROOT_DIR/fig2 --embed_dim 100 --phylogeny_shape tree --num_seqs 64 --group_size 64  --min_mutation_rate=.1 --max_mutation_rate=.1
+$EXP -o $ROOT_DIR/fig2 --embed_dim 100 --phylogeny_shape tree --num_seqs 128 --group_size 128  --min_mutation_rate=.1 --max_mutation_rate=.1

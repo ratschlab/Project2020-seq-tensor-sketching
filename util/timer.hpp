@@ -27,7 +27,7 @@ class Timer {
         Timer::add_duration(name, dur);
     }
 
-    static std::string summary(uint32_t num_seqs, uint32_t num_pairs);
+    static std::string summary();
 
   private:
     static void add_duration(const std::string &func_name, std::chrono::nanoseconds dur);
@@ -37,6 +37,7 @@ class Timer {
     high_resolution_clock::time_point birth;
 
     static std::vector<std::map<std::string, std::chrono::nanoseconds>> durations_vec;
+    static std::vector<std::map<std::string, size_t>> counts_vec;
 };
 
 } // namespace ts
