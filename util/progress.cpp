@@ -30,10 +30,7 @@ void progress_bar::iter() {
             std::cout << "\b\b\b\b" << "#" << std::setw(3) << (int)(100.0 * it / total) << "%" << std::flush;
         }
         if (it == total) {
-            for (size_t i=0; i<bar_len+4; i++){
-                std::cout << "\b";
-            }
-            std::cout << std::flush;
+            std::cout << std::endl;
         }
     }
 }
