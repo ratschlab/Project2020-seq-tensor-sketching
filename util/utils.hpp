@@ -192,4 +192,7 @@ void apply_tuple(F &&f, T &tuple_t, U &tuple_u) {
                tuple_t);
 }
 
+
+std::pair<double, double> avg_stddev(const std::vector<double> &v);
+
 } // namespace ts
