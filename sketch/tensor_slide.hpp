@@ -116,7 +116,7 @@ class TensorSlide : public Tensor<seq_type> {
 
     double dist(const Vec2D<double> &a, const Vec2D<double> &b) {
         Timer timer("tensor_slide_sketch_dist");
-        return l1_dist2D_minlen(a, b);
+        return l2_dist2D_minlen(a, b);
     }
 
 

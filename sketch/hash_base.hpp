@@ -30,12 +30,15 @@ class HashBase : public SketchBase<std::vector<T>, true> {
           sketch_dim(sketch_dim),
           hash_size(2 * hash_size),
           hash_algorithm(hash_algorithm),
-          hashes(std::vector<std::unordered_map<T, T>>(sketch_dim)),
-          hash_values(std::vector<std::unordered_set<T>>(sketch_dim)) {
-        std::random_device rd;
-        rng = std::mt19937(seed);
-        rand = std::uniform_int_distribution<T>(0, this->hash_size - 1);
+          rand(0, this->hash_size - 1),
+          rng(seed) {
+        init();
+    }
+
+    void init() {
         crc32_base = rand(rng);
+        hashes.assign(sketch_dim, {});
+        hash_values.assign(sketch_dim, {});
     }
 
     void set_hashes_for_testing(const std::vector<std::unordered_map<T, T>> &h) { hashes = h; }

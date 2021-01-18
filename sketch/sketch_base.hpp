@@ -27,6 +27,12 @@ class SketchBase {
     const std::string name;
 
     explicit SketchBase(std::string name) : name(std::move(name)) {}
+
+    // Must be overridden by implementations.
+    // Calling it will initialize the random hashes, overwriting any previous hash functions.
+    // May be called multiple times on the same object to reset the state before running it on a new
+    // set of sequences.
+    void init() { static_assert(!sizeof(SketchType *), "Sketch type should implement init()."); }
 };
 
 } // namespace ts
