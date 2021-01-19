@@ -28,10 +28,6 @@ DEFINE_uint32(kmer_size, 4, "Kmer size for MH, OMH, WMH");
 
 DEFINE_int32(alphabet_size, 4, "size of alphabet for synthetic sequence generation");
 
-DEFINE_int32(max_num_blocks, 4, "Maximum number of blocks for block permutation");
-
-DEFINE_int32(min_num_blocks, 2, "Minimum number of blocks for block permutation");
-
 DEFINE_uint32(num_seqs, 200, "Number of sequences to be generated");
 
 DEFINE_uint32(seq_len, 256, "The length of sequence to be generated");
@@ -43,13 +39,11 @@ DEFINE_double(max_mutation_rate, 0.5, "Maximum rate of point mutation for sequen
 DEFINE_double(min_mutation_rate, 0.0, "Minimum rate of point mutation for sequence generation");
 
 
-DEFINE_double(block_mutation_rate, 0.00, "The probability of having a block permutation");
-
 DEFINE_uint32(group_size, 2, "Number of sequences in each independent group");
 
 DEFINE_string(o, "/tmp", "Directory where the generated sequence should be written");
 
-DEFINE_int32(embed_dim, 16, "Embedding dimension, used for all sketching methods");
+DEFINE_int32(embed_dim, 30, "Embedding dimension, used for all sketching methods");
 
 DEFINE_int32(tuple_length,
              3,
@@ -64,7 +58,10 @@ DEFINE_int32(
         "than seq_len + delta, where delta is the number of random insertions, if max_len=-1, "
         "its value will be set to seq_len (default=-1)");
 
-DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
+DEFINE_int32(stride, 8, "Stride for sliding window: shift step for TSS sliding window");
+
+
+DEFINE_int32(tss_dim, 5, "width of of TSS sketch output");
 
 static bool validatePhylogenyShape(const char *flagname, const std::string &value) {
     if (value == "path" || value == "tree" || value == "star" || value == "pair")
@@ -342,8 +339,6 @@ int main(int argc, char *argv[]) {
         omp_set_num_threads(FLAGS_num_threads);
     }
 
-    uint32_t tss_dim = (FLAGS_embed_dim * FLAGS_stride + FLAGS_seq_len - 1) / FLAGS_seq_len;
-
     using char_type = uint8_t;
     using kmer_type = uint64_t;
     std::random_device rd;
@@ -357,15 +352,15 @@ int main(int argc, char *argv[]) {
                                       FLAGS_embed_dim, FLAGS_max_len, FLAGS_tuple_length,
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH"),
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(), "TS"),
-            TensorSlide<char_type>(FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
+            TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tuple_length,
                                    FLAGS_window_size, FLAGS_stride, rd(), "TSS"),
             TensorSlideFlat<char_type, Int32Flattener>(
-                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
-                    FLAGS_stride, Int32Flattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
+                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tuple_length, FLAGS_window_size,
+                    FLAGS_stride, Int32Flattener(FLAGS_embed_dim, FLAGS_tss_dim, FLAGS_seq_len, rd()),
                     rd(), "TSS_flat_int32"),
             TensorSlideFlat<char_type, DoubleFlattener>(
-                    FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
-                    FLAGS_stride, DoubleFlattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
+                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tuple_length, FLAGS_window_size,
+                    FLAGS_stride, DoubleFlattener(FLAGS_embed_dim, FLAGS_tss_dim, FLAGS_seq_len, rd()),
                     rd(), "TSS_flat_double"));
     experiment.run();
 
