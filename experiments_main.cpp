@@ -359,11 +359,8 @@ int main(int argc, char *argv[]) {
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH"),
                                       */
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(), "TS"),
-            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
-                              "TS-L2", true),
             TensorSlide<char_type>(FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length,
                                    FLAGS_window_size, FLAGS_stride, rd(), "TSS"),
-            /*
             TensorSlideFlat<char_type, Int32Flattener>(
                     FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
                     FLAGS_stride, Int32Flattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
@@ -372,20 +369,38 @@ int main(int argc, char *argv[]) {
                     FLAGS_alphabet_size, tss_dim, FLAGS_tuple_length, FLAGS_window_size,
                     FLAGS_stride, DoubleFlattener(FLAGS_embed_dim, tss_dim, FLAGS_seq_len, rd()),
                     rd(), "TSS_flat_double"),
-                    */
 
 
             // Binomial sketch variants.
             TensorBinom<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
-                                   "BTS-perm"),
+                                   "BTS"),
             TensorBinom<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
-                                   "BTS-perm-L2", true),
+                                   "BTS-p-.001", -0.001),
+            TensorBinom<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                                   "BTS-p.001", 0.001),
+            TensorBinom<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                                   "BTS-p.01", 0.01),
+            TensorBinom<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                                   "BTS-p.03", 0.03),
+            TensorBinom<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                                   "BTS-p.10", 0.10),
 
             // Tensor sketch variants.
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
-                              "TS-perm", true, false),
+                              "TS-perm", 0, true, false),
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
-                              "TS-inj", false, true));
+                              "TS-inj", 0, false, true),
+
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                              "TS-p-.001", -0.001),
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                              "TS-p.001", 0.001),
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                              "TS-p.01", 0.01),
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                              "TS-p.03", 0.03),
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(),
+                              "TS-p.10", 0.10));
     experiment.run();
 
     return 0;

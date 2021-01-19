@@ -34,14 +34,14 @@ class TensorBinom : public SketchBase<std::vector<double>, false> {
                 size_t subsequence_len,
                 uint32_t seed,
                 const std::string &name = "BTS",
-                bool l2_hash = false)
+                double gap_penalty = 0)
         : SketchBase<std::vector<double>, false>(name),
           rng(seed),
           alphabet_size(alphabet_size_arg),
           sketch_size(sketch_size),
           subsequence_len(subsequence_len),
-          signs(alphabet_size),
-          l2_hash(l2_hash) {
+          gap_penalty(gap_penalty),
+          signs(alphabet_size) {
         init();
     }
 
@@ -70,30 +70,56 @@ class TensorBinom : public SketchBase<std::vector<double>, false> {
      * @return an array of size #sketch_size containing the sequence's sketch
      */
     std::vector<double> compute(const std::vector<seq_type> &seq) {
-        // Tp corresponds to T+, Tm to T- in the paper; Tp[0], Tm[0] are sentinels and contain the
-        // initial condition for empty strings; Tp[p], Tm[p] represent the partial sketch when
-        // considering hashes h1...hp, over the prefix x1...xi. The final result is then
-        // Tp[t]-Tm[t], where t is #sequence_len
-        std::vector<double> Tp(sketch_size, 0);
-        std::vector<double> Tm(sketch_size, 0);
+        // 0: subsequence didn't start yet
+        // 1: subsequence in progress
+        // 2: subsequence ended
+        //
+        // layer 1 gets a (1-gap_penalty) factor applied when the character is not chosen.
+        std::array<std::vector<double>, 3> Tp;
+        std::array<std::vector<double>, 3> Tm;
+        for (auto &t : Tp)
+            t.resize(sketch_size, 0);
+        for (auto &t : Tm)
+            t.resize(sketch_size, 0);
 
         // the initial condition states that the sketch for the empty string is (1,0,..)
-        Tp[0] = 1;
+        Tp[0][0] = 1;
+        // Probability that we include index i is constant.
+        const double z = subsequence_len * 1.0 / seq.size();
         for (uint32_t i = 0; i < seq.size(); i++) {
-            // Probability that we include index i.
-            double z = subsequence_len * 1.0 / seq.size();
-            bool s = signs[seq[i]];
-            if (s) {
-                Tp = shift_sum(Tp, Tp, z, seq[i]);
-                Tm = shift_sum(Tm, Tm, z, seq[i]);
-            } else {
-                Tp = shift_sum(Tp, Tm, z, seq[i]);
-                Tm = shift_sum(Tm, Tp, z, seq[i]);
+            // TODO: We _could_ choose the sign (and optionally hash function as well) on the layer,
+            // but that would still only specialize them for the first and last character of the
+            // sequence, not all k characters.
+            const bool s = signs[seq[i]];
+
+            // Temporary: T01 = T[0] + T[1]
+            std::vector<double> Tp01(sketch_size, 0), Tm01(sketch_size, 0);
+            for (int i = 0; i < sketch_size; ++i) {
+                Tp01[i] = Tp[0][i] + Tp[1][i];
+                Tm01[i] = Tm[0][i] + Tm[1][i];
             }
+
+            // Update layer 2 and 1:
+            for (int p : { 2, 1 }) {
+                const double gp = p == 2 ? 0 : gap_penalty;
+                if (s) {
+                    Tp[p] = shift_sum(Tp[p], Tp01, z, seq[i], gp);
+                    Tm[p] = shift_sum(Tm[p], Tm01, z, seq[i], gp);
+                } else {
+                    Tp[p] = shift_sum(Tp[p], Tm01, z, seq[i], gp);
+                    Tm[p] = shift_sum(Tm[p], Tp01, z, seq[i], gp);
+                }
+            }
+
+            // Update layer 0:
+            for (double &x : Tp[0])
+                x *= (1 - z);
+            for (double &x : Tm[0])
+                x *= (1 - z);
         }
         std::vector<double> sketch(sketch_size, 0);
         for (uint32_t m = 0; m < sketch_size; m++) {
-            sketch[m] = Tp[m] - Tm[m];
+            sketch[m] = Tp[2][m] - Tm[2][m];
         }
         return sketch;
     }
@@ -106,24 +132,25 @@ class TensorBinom : public SketchBase<std::vector<double>, false> {
 
     double dist(const std::vector<double> &a, const std::vector<double> &b) {
         Timer timer("tensor_sketch_dist");
-        if (l2_hash)
-            return l2_dist(a, b);
-        return l1_dist(a, b);
+        return l2_dist(a, b);
     }
 
   protected:
     /** Computes (1-z)*a + z*b_shift */
-    std::vector<double>
-    shift_sum(const std::vector<double> &a, const std::vector<double> &b, double z, seq_type ch) {
+    std::vector<double> shift_sum(const std::vector<double> &a,
+                                  const std::vector<double> &b,
+                                  double z,
+                                  seq_type ch,
+                                  double gap_penalty) {
         assert(a.size() == b.size());
         std::vector<double> result(a.size());
         assert(ch < alphabet_size);
         const auto &perm = permutations[ch];
         assert(perm.size() == a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
-            result[i] = (1 - z) * a[i] + z * b[perm[i]];
+            result[i] = (1 - z) * (1 - gap_penalty) * a[i] + z * b[perm[i]];
 
-            assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
+            // assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
         }
         return result;
     }
@@ -132,19 +159,19 @@ class TensorBinom : public SketchBase<std::vector<double>, false> {
     std::mt19937 rng;
 
     /** Size of the alphabet over which sequences to be sketched are defined, e.g. 4 for DNA */
-    seq_type alphabet_size;
+    const seq_type alphabet_size;
     /** Number of elements in the sketch, denoted by D in the paper */
-    uint8_t sketch_size;
+    const uint8_t sketch_size;
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
-    uint8_t subsequence_len;
+    const uint8_t subsequence_len;
+    /** Gaps penalize the weight by (1-gap_penalty)^gaps */
+    const double gap_penalty;
 
     /** The sign functions s1...st:A->{-1,1} */
     std::vector<bool> signs;
 
     /** The permuations to apply for each element in A. */
     Vec2D<int> permutations;
-
-    bool l2_hash;
 };
 
 } // namespace ts

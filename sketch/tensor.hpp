@@ -40,12 +40,14 @@ class Tensor : public SketchBase<std::vector<double>, false> {
            size_t subsequence_len,
            uint32_t seed,
            const std::string &name = "TS",
+           double gap_penalty = 0,
            bool use_permutation = false,
            bool injective_hash = false)
         : SketchBase<std::vector<double>, false>(name),
           alphabet_size(alphabet_size),
           sketch_dim(sketch_dim),
           subsequence_len(subsequence_len),
+          gap_penalty(gap_penalty),
           rng(seed),
           injective_hash(injective_hash),
           use_permutation(use_permutation) {
@@ -120,21 +122,22 @@ class Tensor : public SketchBase<std::vector<double>, false> {
                 // std::cerr << "Index: " << p-1 << " " << int(seq[i]) << std::endl;
                 const auto &perm = permutation_hashes[p - 1][seq[i]];
                 bool s = signs[p - 1][seq[i]];
+                double gp = p == subsequence_len ? 0 : gap_penalty;
                 if (use_permutation) {
                     if (s) {
-                        Tp[p] = perm_sum(Tp[p], Tp[p - 1], perm, z);
-                        Tm[p] = perm_sum(Tm[p], Tm[p - 1], perm, z);
+                        Tp[p] = perm_sum(Tp[p], Tp[p - 1], perm, z, gp);
+                        Tm[p] = perm_sum(Tm[p], Tm[p - 1], perm, z, gp);
                     } else {
-                        Tp[p] = perm_sum(Tp[p], Tm[p - 1], perm, z);
-                        Tm[p] = perm_sum(Tm[p], Tp[p - 1], perm, z);
+                        Tp[p] = perm_sum(Tp[p], Tm[p - 1], perm, z, gp);
+                        Tm[p] = perm_sum(Tm[p], Tp[p - 1], perm, z, gp);
                     }
                 } else {
                     if (s) {
-                        Tp[p] = shift_sum(Tp[p], Tp[p - 1], r, z);
-                        Tm[p] = shift_sum(Tm[p], Tm[p - 1], r, z);
+                        Tp[p] = shift_sum(Tp[p], Tp[p - 1], r, z, gp);
+                        Tm[p] = shift_sum(Tm[p], Tm[p - 1], r, z, gp);
                     } else {
-                        Tp[p] = shift_sum(Tp[p], Tm[p - 1], r, z);
-                        Tm[p] = shift_sum(Tm[p], Tp[p - 1], r, z);
+                        Tp[p] = shift_sum(Tp[p], Tm[p - 1], r, z, gp);
+                        Tm[p] = shift_sum(Tm[p], Tp[p - 1], r, z, gp);
                     }
                 }
             }
@@ -163,13 +166,14 @@ class Tensor : public SketchBase<std::vector<double>, false> {
     inline std::vector<double> shift_sum(const std::vector<double> &a,
                                          const std::vector<double> &b,
                                          seq_type shift,
-                                         double z) {
+                                         double z,
+                                         double gap_penalty = 0) {
         assert(a.size() == b.size());
         size_t len = a.size();
         std::vector<double> result(a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
-            result[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
-            assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
+            result[i] = (1 - gap_penalty) * (1 - z) * a[i] + z * b[(len + i - shift) % len];
+            //assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
         }
         return result;
     }
@@ -178,19 +182,21 @@ class Tensor : public SketchBase<std::vector<double>, false> {
     void shift_sum_inplace(std::vector<double> &a,
                            const std::vector<double> &b,
                            seq_type shift,
-                           double z) {
+                           double z,
+                           double gap_penalty = 0) {
         assert(a.size() == b.size());
         size_t len = a.size();
         for (uint32_t i = 0; i < len; i++) {
-            a[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
-            assert(a[i] <= 1 + 1e-5 && a[i] >= -1e-5);
+            a[i] = (1 - gap_penalty) * (1 - z) * a[i] + z * b[(len + i - shift) % len];
+            //assert(a[i] <= 1 + 1e-5 && a[i] >= -1e-5);
         }
     }
 
     std::vector<double> perm_sum(const std::vector<double> &a,
                                  const std::vector<double> &b,
                                  const std::vector<seq_type> &perm,
-                                 double z) {
+                                 double z,
+                                 double gap_penalty = 0) {
         // std::cerr << "Start perm sum" << std::endl;
         assert(a.size() == b.size());
         if (perm.size() != sketch_dim) {
@@ -201,19 +207,21 @@ class Tensor : public SketchBase<std::vector<double>, false> {
 
         std::vector<double> result(a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
-            result[i] = (1 - z) * a[i] + z * b[perm[i]];
-            assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
+            result[i] = (1 - gap_penalty) * (1 - z) * a[i] + z * b[perm[i]];
+            //assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
         }
         // std::cerr << "done" << std::endl;
         return result;
     }
 
     /** Size of the alphabet over which sequences to be sketched are defined, e.g. 4 for DNA */
-    seq_type alphabet_size;
+    const seq_type alphabet_size;
     /** Number of elements in the sketch, denoted by D in the paper */
-    uint32_t sketch_dim;
+    const uint32_t sketch_dim;
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
-    uint8_t subsequence_len;
+    const uint8_t subsequence_len;
+    /** Gaps penalize the weight by (1-gap_penalty)^gaps */
+    const double gap_penalty;
 
     /**
      * Denotes the hash functions h1,....ht:A->{1....D}, where t is #subsequence_len and D is
