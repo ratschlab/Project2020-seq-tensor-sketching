@@ -60,9 +60,6 @@ DEFINE_int32(
 
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for TSS sliding window");
 
-
-DEFINE_int32(tss_dim, 5, "width of of TSS sketch output");
-
 static bool validatePhylogenyShape(const char *flagname, const std::string &value) {
     if (value == "path" || value == "tree" || value == "star" || value == "pair")
         return true;
@@ -107,6 +104,15 @@ DEFINE_uint32(num_threads,
 
 
 DEFINE_uint32(reruns, 1, "The number of times to rerun sketch algorithms on the same data");
+
+// individual flags, use global values if 0 (default)
+
+DEFINE_uint32(mh_kmer_size, 0, "Kmer size for MH, 0: set to kmer_size");
+DEFINE_uint32(wmh_kmer_size, 0, "Kmer size for WMH, 0: set to kmer_size");
+DEFINE_uint32(omh_kmer_size, 0, "Kmer size for OMH, 0: set to kmer_size");
+DEFINE_uint32(omh_tuple_length, 0, "Tuple length for OMH, 0: set to tup_len");
+
+DEFINE_int32(tss_dim, 0, "width of of TSS sketch output");
 
 using namespace ts;
 
@@ -155,7 +161,7 @@ class ExperimentRunner {
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
             if constexpr (SketchAlgorithm::kmer_input) {
-                sketch[si] = algorithm->compute(seqs[si], FLAGS_kmer_size, FLAGS_alphabet_size);
+                sketch[si] = algorithm->compute(seqs[si], algorithm->kmer_size, FLAGS_alphabet_size);
             } else {
                 sketch[si] = algorithm->compute(seqs[si]);
             }
@@ -332,25 +338,44 @@ MakeExperimentRunner(SketchAlgorithms... algorithms) {
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
+    // Infer default flags
     if (FLAGS_max_len == 0) { // 0: automatic computation, based on seq_len
         FLAGS_max_len = FLAGS_seq_len * 2;
     }
     if (FLAGS_num_threads > 0) { // 0: default: use all threads
         omp_set_num_threads(FLAGS_num_threads);
     }
+    if (FLAGS_omh_kmer_size == 0) {
+        FLAGS_omh_kmer_size = FLAGS_kmer_size;
+    }
+    if (FLAGS_mh_kmer_size == 0) {
+        FLAGS_mh_kmer_size = FLAGS_kmer_size;
+    }
+    if (FLAGS_wmh_kmer_size == 0) {
+        FLAGS_wmh_kmer_size = FLAGS_kmer_size;
+    }
+    if (FLAGS_omh_tuple_length == 0) {
+        FLAGS_omh_tuple_length = FLAGS_tuple_length;
+    }
+    if (FLAGS_tss_dim == 0 ) {
+        FLAGS_tss_dim = FLAGS_embed_dim;
+    }
 
     using char_type = uint8_t;
     using kmer_type = uint64_t;
     std::random_device rd;
     auto experiment = MakeExperimentRunner<char_type, kmer_type>(
-            MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
-                               FLAGS_embed_dim, parse_hash_algorithm(FLAGS_hash_alg), rd(), "MH"),
-            WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
+            MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_mh_kmer_size),
+                               FLAGS_embed_dim, parse_hash_algorithm(FLAGS_hash_alg), rd(), "MH",
+                               FLAGS_mh_kmer_size),
+            WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_wmh_kmer_size),
                                        FLAGS_embed_dim, FLAGS_max_len,
-                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "WMH"),
-            OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_kmer_size),
-                                      FLAGS_embed_dim, FLAGS_max_len, FLAGS_tuple_length,
-                                      parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH"),
+                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "WMH",
+                                       FLAGS_wmh_kmer_size),
+            OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_omh_kmer_size),
+                                      FLAGS_embed_dim, FLAGS_max_len, FLAGS_omh_tuple_length,
+                                      parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH",
+                                      FLAGS_omh_kmer_size),
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(), "TS"),
             TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tuple_length,
                                    FLAGS_window_size, FLAGS_stride, rd(), "TSS"),

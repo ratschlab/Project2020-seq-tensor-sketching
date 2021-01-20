@@ -8,11 +8,12 @@
 --max_mutation_rate=1.0
 --min_mutation_rate=0.0
 # sketching methods
---embed_dim=30
+--embed_dim=16
 --kmer_size=4
 --tuple_length=3
 --window_size=2000
 --stride=1000
+--tss_dim=4
 --max_len=1000
 # change this to uniform for final experiments
 --hash_alg=crc32

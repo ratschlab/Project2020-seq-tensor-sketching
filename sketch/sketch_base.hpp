@@ -26,7 +26,10 @@ class SketchBase {
     // The name of the sketching algorithm.
     const std::string name;
 
-    explicit SketchBase(std::string name) : name(std::move(name)) {}
+    // If  kmer_input=true, value of kmer_size
+    size_t kmer_size = 1;
+
+    explicit SketchBase(std::string name, size_t kmer_size = 1) : name(std::move(name)), kmer_size(kmer_size) {}
 
     // Must be overridden by implementations.
     // Calling it will initialize the random hashes, overwriting any previous hash functions.

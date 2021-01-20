@@ -35,8 +35,9 @@ class MinHash : public HashBase<T> {
             size_t sketch_dim,
             HashAlgorithm hash_algorithm,
             uint32_t seed,
-            const std::string &name = "MH")
-        : HashBase<T>(set_size, sketch_dim, set_size, hash_algorithm, seed, name) {}
+            const std::string &name = "MH",
+            size_t kmer_size = 1)
+        : HashBase<T>(set_size, sketch_dim, set_size, hash_algorithm, seed, name, kmer_size) {}
 
     /**
      * Computes the min-hash sketch for the given kmers.
