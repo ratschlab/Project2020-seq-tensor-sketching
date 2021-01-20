@@ -53,10 +53,10 @@ class WeightedMinHash : public HashBase<T> {
 
         for (size_t si = 0; si < this->sketch_dim; si++) {
             T min_char = T(0);
-            uint32_t min_rank = std::numeric_limits<uint32_t>::max();
-            std::unordered_map<size_t, uint32_t> cnts;
+            T min_rank = std::numeric_limits<T>::max();
+            std::unordered_map<T, uint32_t> cnts;
             for (const auto s : kmers) {
-                auto r = this->hash(si, s + cnts[s] * this->set_size);
+                T r = this->hash(si, s + cnts[s] * this->set_size);
                 cnts[s]++;
 #ifndef NDEBUG
                 assert(cnts[s] != 0); // no overflow
