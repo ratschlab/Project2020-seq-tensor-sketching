@@ -15,7 +15,7 @@
 --stride=1000
 --max_len=1000
 # change this to uniform for final experiments
---hash_alg=crc32
+--hash_alg=murmur
 --transform=none
 --num_bins=256
 # execution & I/O

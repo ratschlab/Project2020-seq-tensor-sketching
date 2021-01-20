@@ -9,6 +9,9 @@ HashAlgorithm parse_hash_algorithm(const std::string &name) {
     if (name == "crc32") {
         return HashAlgorithm::crc32;
     }
+    if (name == "murmur") {
+        return HashAlgorithm::murmur;
+    }
     assert(false);
 }
 

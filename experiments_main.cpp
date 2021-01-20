@@ -89,16 +89,17 @@ DEFINE_validator(transform, &ValidateTransformation);
 
 
 static bool ValidateHashAlg(const char *flagname, const std::string &value) {
-    if (value == "uniform" || value == "crc32")
+    if (value == "uniform" || value == "crc32" || value == "murmur") {
         return true;
+    }
     printf("Invalid value for --%s: %s\n", flagname, value.c_str());
     return false;
 }
 // Use CRC32 only for comparing speed
 // TODO: implement a proper iterative permutation generation for hash*
 DEFINE_string(hash_alg,
-              "uniform",
-              "hash algorithm to be used as basis, can be 'uniform', or 'crc32'");
+              "murmur",
+              "hash algorithm to be used as basis, can be 'murmur', 'uniform', or 'crc32'");
 DEFINE_validator(hash_alg, &ValidateHashAlg);
 
 DEFINE_uint32(num_bins, 256, "Number of bins used to discretize, if --transform=disc");

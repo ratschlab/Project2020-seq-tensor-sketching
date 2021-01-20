@@ -16,17 +16,17 @@ constexpr uint8_t SET_SIZE = 4 * 4;
 constexpr uint32_t MAX_LEN = 3;
 constexpr uint8_t HASH_SIZE = MAX_LEN * SET_SIZE;
 
-class Hash : public HashBase<uint8_t>, public testing::Test {
+class Hash : public HashBase<uint32_t>, public testing::TestWithParam<HashAlgorithm> {
   public:
     Hash()
-        : HashBase<uint8_t>(SET_SIZE,
-                            SKETCH_DIM,
-                            HASH_SIZE,
-                            HashAlgorithm::uniform,
-                            /*seed=*/31415) {}
+            : HashBase<uint32_t>(SET_SIZE,
+                                 SKETCH_DIM,
+                                 HASH_SIZE,
+                                 HashAlgorithm::uniform,
+            /*seed=*/31415) {}
 };
 
-// test that the hash function bijective, i.e. it is in effect a permutation:
+// test that the uniform hash function is bijective, i.e. it is in effect a permutation:
 TEST_F(Hash, HashesDistinct) {
     for (uint32_t s = 0; s < SKETCH_DIM; ++s) {
         std::unordered_set<uint8_t> seen(SKETCH_DIM);
@@ -39,8 +39,18 @@ TEST_F(Hash, HashesDistinct) {
     }
 }
 
+class Hash2 : public HashBase<uint32_t>, public testing::TestWithParam<HashAlgorithm> {
+  public:
+    Hash2()
+        : HashBase<uint32_t>(SET_SIZE,
+                             SKETCH_DIM,
+                             HASH_SIZE,
+                             GetParam(),
+                             /*seed=*/31415) {}
+};
+
 // test that the hash values are consistent - i.e. asking for the same value returns the same result
-TEST_F(Hash, HashesConsistent) {
+TEST_P(Hash2, HashesConsistent) {
     std::vector<std::unordered_map<uint8_t, uint8_t>> hashes(SKETCH_DIM);
     for (uint32_t s = 0; s < SKETCH_DIM; ++s) {
         for (uint32_t i = 0; i < hash_size; ++i) {
@@ -58,5 +68,11 @@ TEST_F(Hash, HashesConsistent) {
         }
     }
 }
+
+INSTANTIATE_TEST_SUITE_P(Method,
+                         Hash2,
+                         ::testing::Values(HashAlgorithm::uniform,
+                                           HashAlgorithm::crc32,
+                                           HashAlgorithm::murmur));
 
 } // namespace

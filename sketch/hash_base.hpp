@@ -4,6 +4,8 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
+#include <murmur_hash3.hpp>
+
 #include <algorithm>
 #include <immintrin.h>
 #include <random>
@@ -12,10 +14,16 @@
 
 namespace ts {
 
-enum class HashAlgorithm { uniform, crc32 };
+enum class HashAlgorithm { uniform, crc32, murmur };
 
 HashAlgorithm parse_hash_algorithm(const std::string &name);
 
+/**
+ * @tparam T the type of elements in the hash. Can't be larger than a 32-bit int.
+ *
+ * //TODO(ddanciu) - this template parameter makes no sense, as CRC and Murmur always return int32
+ * // remove it.
+ */
 template <typename T>
 class HashBase : public SketchBase<std::vector<T>, true> {
   public:
@@ -36,7 +44,7 @@ class HashBase : public SketchBase<std::vector<T>, true> {
     }
 
     void init() {
-        crc32_base = rand(rng);
+        hash_seed = rand(rng);
         hashes.assign(sketch_dim, {});
         hash_values.assign(sketch_dim, {});
     }
@@ -49,8 +57,7 @@ class HashBase : public SketchBase<std::vector<T>, true> {
     size_t hash_size;
 
     /**
-     * Returns the hash value for the index-th hash function.
-     * Since the Hashes are generated on demand.
+     * Returns the hash value for the given #key of the #index-th hash function.
      */
     uint32_t hash(size_t index, size_t key) {
         switch (hash_algorithm) {
@@ -74,9 +81,14 @@ class HashBase : public SketchBase<std::vector<T>, true> {
                 return val;
             }
             case HashAlgorithm::crc32: {
-                T val = _mm_crc32_u32((uint32_t)crc32_base, (uint32_t)key);
+                uint32_t val = _mm_crc32_u32(hash_seed, (uint32_t)key);
                 return _mm_crc32_u32((uint32_t)val, (uint32_t)index);
             }
+            case HashAlgorithm::murmur:
+                uint32_t val;
+                MurmurHash3_x86_32(&key, sizeof(key), hash_seed, &val);
+                MurmurHash3_x86_32(&index, sizeof(key), val, &val);
+                return val;
             default:
                 return -1;
         }
@@ -91,7 +103,7 @@ class HashBase : public SketchBase<std::vector<T>, true> {
     std::vector<std::unordered_set<T>> hash_values;
     std::uniform_int_distribution<T> rand;
     std::mt19937 rng;
-    uint32_t crc32_base = 341234;
+    uint32_t hash_seed;
 };
 
 
