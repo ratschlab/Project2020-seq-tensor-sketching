@@ -214,7 +214,7 @@ def gen_fig1(data_dir, save_dir):
         data = pd.concat([data, pd.DataFrame(stats)])
     data = data[data.method != 'ED']
     fig, ax = plt.subplots(figsize=figure_size)
-    ax.set_xscale('log')
+    # ax.set_xscale('log')
     g = sns.lineplot(ax=ax, data=data, x='seq_len', y='Sp', hue='method')
     g.set(xlabel='Sequence length', ylabel='Spearman Corr.')
     plt.savefig(os.path.join(save_dir, 'Fig1b.pdf'))
@@ -230,7 +230,7 @@ def gen_fig1(data_dir, save_dir):
     # ax.set_yscale('log')
     data = data[data.method != 'ED']
     g = sns.lineplot(ax=ax, data=data, x='seq_len', y='AbsTime', hue='method')
-    # g.set(xlabel='Sequence length', ylabel='Absolute Time (ms)', ylim=[0.0001, 100])
+    g.set(xlabel='Sequence length', ylabel='Absolute Time (ms)')
     plt.savefig(os.path.join(save_dir, 'Fig1c.pdf'))
 
     dirs = glob(os.path.join(data_dir, 'd', '*'))
@@ -311,7 +311,7 @@ def gen_fig2(data_dir, save_dir):
 
 
 if __name__ == '__main__':
-    root_dir = 'experiments'
+    root_dir = './experiments/old_setup/k12_t3_m0.1_M0.5/'
     save_dir = os.path.join(root_dir, 'figures')
 
     gen_table1(data_dir=os.path.join(root_dir, 'data', 'table1'),
