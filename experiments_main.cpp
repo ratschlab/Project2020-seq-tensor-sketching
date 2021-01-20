@@ -107,12 +107,67 @@ DEFINE_uint32(reruns, 1, "The number of times to rerun sketch algorithms on the 
 
 // individual flags, use global values if 0 (default)
 
-DEFINE_uint32(mh_kmer_size, 0, "Kmer size for MH, 0: set to kmer_size");
-DEFINE_uint32(wmh_kmer_size, 0, "Kmer size for WMH, 0: set to kmer_size");
-DEFINE_uint32(omh_kmer_size, 0, "Kmer size for OMH, 0: set to kmer_size");
-DEFINE_uint32(omh_tuple_length, 0, "Tuple length for OMH, 0: set to tup_len");
+DEFINE_uint32(mh_kmer_size, 0, "Kmer size for MH, default: kmer_size");
+DEFINE_uint32(wmh_kmer_size, 0, "Kmer size for WMH, default: kmer_size");
+DEFINE_uint32(omh_kmer_size, 0, "Kmer size for OMH, default: kmer_size");
 
-DEFINE_int32(tss_dim, 0, "width of of TSS sketch output");
+DEFINE_int32(ts_dim, 0, "embedding dimension for TS sketch output, default: emed_dim");
+DEFINE_int32(tss_dim, 0, "embedding dimension for TSS, default: square root of embed_dim");
+DEFINE_int32(mh_dim, 0, "embedding dimension for MH, default: embed_dim");
+DEFINE_int32(wmh_dim, 0, "embedding dimension for WMH, default: embed_dim");
+DEFINE_int32(omh_dim, 0, "embedding dimension for OMH, default: embed_dim");
+
+DEFINE_uint32(omh_tuple_length, 0, "Tuple length for OMH, default: tup_len");
+DEFINE_uint32(ts_tuple_length, 0, "Tuple length for TS, default: tup_len");
+DEFINE_uint32(tss_tuple_length, 0, "Tuple length for TSS, default: tup_len");
+
+void define_default_uint32(uint32_t &flag, uint32_t val) {
+    if (flag == 0) {
+        flag = val;
+    }
+}
+
+void set_default_flags() {
+    if (FLAGS_max_len == 0) { // 0: automatic computation, based on seq_len
+        FLAGS_max_len = FLAGS_seq_len * 2;
+    }
+    // kmer size
+    if (FLAGS_omh_kmer_size == 0) {
+        FLAGS_omh_kmer_size = FLAGS_kmer_size;
+    }
+    if (FLAGS_mh_kmer_size == 0) {
+        FLAGS_mh_kmer_size = FLAGS_kmer_size;
+    }
+    if (FLAGS_wmh_kmer_size == 0) {
+        FLAGS_wmh_kmer_size = FLAGS_kmer_size;
+    }
+    // embed dim
+    if (FLAGS_tss_dim == 0 ) {
+        FLAGS_tss_dim = ceil(sqrt(FLAGS_embed_dim));
+    }
+    if (FLAGS_ts_dim == 0 ) {
+        FLAGS_ts_dim = FLAGS_embed_dim;
+    }
+    if (FLAGS_omh_dim == 0 ) {
+        FLAGS_omh_dim = FLAGS_embed_dim;
+    }
+    if (FLAGS_wmh_dim == 0 ) {
+        FLAGS_wmh_dim = FLAGS_embed_dim;
+    }
+    if (FLAGS_mh_dim == 0 ) {
+        FLAGS_mh_dim = FLAGS_embed_dim;
+    }
+    // tuple length
+    if (FLAGS_omh_tuple_length == 0) {
+        FLAGS_omh_tuple_length = FLAGS_tuple_length;
+    }
+    if (FLAGS_ts_tuple_length == 0) {
+        FLAGS_ts_tuple_length = FLAGS_tuple_length;
+    }
+    if (FLAGS_tss_tuple_length == 0) {
+        FLAGS_tss_tuple_length = FLAGS_tuple_length;
+    }
+}
 
 using namespace ts;
 
@@ -335,56 +390,38 @@ MakeExperimentRunner(SketchAlgorithms... algorithms) {
     return ExperimentRunner<char_type, kmer_type, SketchAlgorithms...>(algorithms...);
 }
 
-
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    // Infer default flags
-    if (FLAGS_max_len == 0) { // 0: automatic computation, based on seq_len
-        FLAGS_max_len = FLAGS_seq_len * 2;
-    }
     if (FLAGS_num_threads > 0) { // 0: default: use all threads
         omp_set_num_threads(FLAGS_num_threads);
     }
-    if (FLAGS_omh_kmer_size == 0) {
-        FLAGS_omh_kmer_size = FLAGS_kmer_size;
-    }
-    if (FLAGS_mh_kmer_size == 0) {
-        FLAGS_mh_kmer_size = FLAGS_kmer_size;
-    }
-    if (FLAGS_wmh_kmer_size == 0) {
-        FLAGS_wmh_kmer_size = FLAGS_kmer_size;
-    }
-    if (FLAGS_omh_tuple_length == 0) {
-        FLAGS_omh_tuple_length = FLAGS_tuple_length;
-    }
-    if (FLAGS_tss_dim == 0 ) {
-        FLAGS_tss_dim = FLAGS_embed_dim;
-    }
+
+    set_default_flags();
 
     using char_type = uint8_t;
     using kmer_type = uint64_t;
     std::random_device rd;
     auto experiment = MakeExperimentRunner<char_type, kmer_type>(
             MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_mh_kmer_size),
-                               FLAGS_embed_dim, parse_hash_algorithm(FLAGS_hash_alg), rd(), "MH",
+                               FLAGS_mh_dim, parse_hash_algorithm(FLAGS_hash_alg), rd(), "MH",
                                FLAGS_mh_kmer_size),
             WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_wmh_kmer_size),
-                                       FLAGS_embed_dim, FLAGS_max_len,
+                                       FLAGS_wmh_dim, FLAGS_max_len,
                                        parse_hash_algorithm(FLAGS_hash_alg), rd(), "WMH",
                                        FLAGS_wmh_kmer_size),
             OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_omh_kmer_size),
-                                      FLAGS_embed_dim, FLAGS_max_len, FLAGS_omh_tuple_length,
+                                      FLAGS_omh_dim, FLAGS_max_len, FLAGS_omh_tuple_length,
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH",
                                       FLAGS_omh_kmer_size),
-            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_embed_dim, FLAGS_tuple_length, rd(), "TS"),
-            TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tuple_length,
+            Tensor<char_type>(FLAGS_alphabet_size, FLAGS_ts_dim, FLAGS_ts_tuple_length, rd(), "TS"),
+            TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length,
                                    FLAGS_window_size, FLAGS_stride, rd(), "TSS"),
             TensorSlideFlat<char_type, Int32Flattener>(
-                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tuple_length, FLAGS_window_size,
+                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length, FLAGS_window_size,
                     FLAGS_stride, Int32Flattener(FLAGS_embed_dim, FLAGS_tss_dim, FLAGS_seq_len, rd()),
                     rd(), "TSS_flat_int32"),
             TensorSlideFlat<char_type, DoubleFlattener>(
-                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tuple_length, FLAGS_window_size,
+                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length, FLAGS_window_size,
                     FLAGS_stride, DoubleFlattener(FLAGS_embed_dim, FLAGS_tss_dim, FLAGS_seq_len, rd()),
                     rd(), "TSS_flat_double"));
     experiment.run();
