@@ -49,16 +49,18 @@ DEFINE_int32(tuple_length,
              3,
              "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
 
-DEFINE_int32(window_size, 32, "Window length: the size of sliding window in Tensor Slide Sketch");
-
 DEFINE_int32(
         max_len,
-        -1,
+        0,
         "The maximum accepted sequence length for Ordered and Weighted min-hash. Must be larger "
-        "than seq_len + delta, where delta is the number of random insertions, if max_len=-1, "
-        "its value will be set to seq_len (default=-1)");
+        "than seq_len + delta, where delta is the number of random insertions, by default "
+        "its value will be set to 2 * seq_len ");
 
-DEFINE_int32(stride, 8, "Stride for sliding window: shift step for TSS sliding window");
+DEFINE_int32(stride, 0, "Stride for sliding window: shift step for TSS sliding window, "
+             "default: ceil(seq_len / 100)");
+
+DEFINE_int32(window_size, 0, "Window length: the size of sliding window in Tensor Slide Sketch"
+             "default: seq_len / 10");
 
 static bool validatePhylogenyShape(const char *flagname, const std::string &value) {
     if (value == "path" || value == "tree" || value == "star" || value == "pair")
@@ -166,6 +168,12 @@ void set_default_flags() {
     }
     if (FLAGS_tss_tuple_length == 0) {
         FLAGS_tss_tuple_length = FLAGS_tuple_length;
+    }
+    if (FLAGS_window_size == 0) { // = ceil (seq_len/10)
+        FLAGS_window_size = (FLAGS_seq_len + 9) / 10;
+    }
+    if (FLAGS_stride == 0) { // = ceil (seq_len/100)
+        FLAGS_stride = (FLAGS_seq_len + 99) / 100;
     }
 }
 
