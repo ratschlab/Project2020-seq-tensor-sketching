@@ -42,7 +42,7 @@ class TensorSlide : public Tensor<seq_type> {
           win_len(win_len),
           stride(stride) {
         assert(stride <= win_len && "Stride cannot be larger than the window length");
-        assert(tup_len <= stride && "Tuple length (t) cannot be larger than the stride");
+        assert(tup_len <= win_len && "Tuple length (t) cannot be larger than the window length");
     }
 
     /**
