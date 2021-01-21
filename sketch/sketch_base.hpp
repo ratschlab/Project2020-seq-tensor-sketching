@@ -31,10 +31,10 @@ class SketchBase {
 
     explicit SketchBase(std::string name, size_t kmer_size = 1) : name(std::move(name)), kmer_size(kmer_size) {}
 
-    // Must be overridden by implementations.
-    // Calling it will initialize the random hashes, overwriting any previous hash functions.
+    // Calling init will initialize the random hashes, overwriting any previous hash functions.
     // May be called multiple times on the same object to reset the state before running it on a new
     // set of sequences.
+    // Must be overridden by implementations.
     void init() { static_assert(!sizeof(SketchType *), "Sketch type should implement init()."); }
 };
 

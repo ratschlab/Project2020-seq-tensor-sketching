@@ -2,6 +2,7 @@
 
 #include "hash_base.hpp"
 
+#include "util/multivec.hpp"
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
@@ -78,6 +79,21 @@ class MinHash : public HashBase<T> {
     template <typename C>
     std::vector<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
         std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
+        return compute(kmers);
+    }
+
+    /**
+     * Computes the min-hash sketch for the given assembly of sequences.
+     * @param assembly the assembly of sequences to compute the min-hash for
+     * @param k-mer length; the sequence will be transformed into k-mers and the k-mers will be
+     * hashed
+     * @param number of characters in the alphabet over which sequence is defined
+     * @return the min-hash sketch of sequence
+     * @tparam C the type of characters in the sequence
+     */
+    template <typename C>
+    std::vector<T> compute_assembly(const Vec2D<C> &assembly, uint32_t k, uint32_t alphabet_size) {
+        std::vector<T> kmers = assembly2kmer<C, T>(assembly, k, alphabet_size);
         return compute(kmers);
     }
 

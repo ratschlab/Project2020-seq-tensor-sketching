@@ -4,7 +4,6 @@
 
 #include "util/utils.hpp"
 
-#include <bit>
 #include <cstddef>
 #include <vector>
 
@@ -113,6 +112,18 @@ class TensorSlide : public Tensor<seq_type> {
         }
         return sketches;
     }
+
+    Vec2D<double> compute_assembly(const Vec2D<seq_type> &assembly) {
+        assert(!assembly.empty() && "Assembly must not be empty to compute TS.");
+        // TODO(ragnar): We should find the right way to take a weighted average here.
+        Vec2D<double> assembly_sketch;
+        for (const auto &sequence : assembly) {
+            for (std::vector<double> &sketch_row : compute(sequence))
+                assembly_sketch.push_back(std::move(sketch_row));
+        }
+        return assembly_sketch;
+    }
+
 
     double dist(const Vec2D<double> &a, const Vec2D<double> &b) {
         Timer timer("tensor_slide_sketch_dist");

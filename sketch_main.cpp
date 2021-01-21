@@ -135,11 +135,13 @@ class SketchHelper {
     void save_output() {
         std::filesystem::path ofile = std::filesystem::absolute(std::filesystem::path(FLAGS_o));
         std::filesystem::path opath = ofile.parent_path();
+        std::cerr << " DIR " << opath << std::endl;
         if (!std::filesystem::exists(opath) && !std::filesystem::create_directories(opath)) {
             std::cerr << "Could not create output directory: " << opath << std::endl;
             std::exit(1);
         }
 
+        std::cerr << " OUTPUT: " << FLAGS_o << std::endl;
         std::ofstream fo(FLAGS_o);
         if (!fo.is_open()) {
             std::cerr << "Could not open " << ofile << " for writing." << std::endl;
@@ -161,6 +163,7 @@ class SketchHelper {
 
   private:
     Vec2D<seq_type> seqs;
+    Vec3D<seq_type> assemblies;
     std::vector<std::string> seq_names;
     Vec3D<embed_type> sketches;
 

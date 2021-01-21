@@ -79,7 +79,7 @@ class WeightedMinHash : public HashBase<T> {
     }
 
     /**
-     * Computes the ordered min-hash sketch for the given sequence.
+     * Computes the weighted min-hash sketch for the given sequence.
      * @param sequence the sequence to compute the ordered min-hash for
      * @param k-mer length; the sequence will be transformed into k-mers and the k-mers will be
      * hashed
@@ -90,8 +90,13 @@ class WeightedMinHash : public HashBase<T> {
     template <typename C>
     std::vector<T> compute(const std::vector<C> &sequence, uint32_t k, uint32_t alphabet_size) {
         std::vector<T> kmers = seq2kmer<C, T>(sequence, k, alphabet_size);
-        std::vector<T> sketch = compute(kmers);
-        return sketch;
+        return compute(kmers);
+    }
+
+    template <typename C>
+    std::vector<T> compute_assembly(const Vec2D<C> &assembly, uint32_t k, uint32_t alphabet_size) {
+        std::vector<T> kmers = assembly2kmer<C, T>(assembly, k, alphabet_size);
+        return compute(kmers);
     }
 
     static T dist(const std::vector<T> &a, const std::vector<T> &b) {

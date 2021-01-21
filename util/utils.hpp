@@ -46,6 +46,28 @@ std::vector<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8
     return result;
 }
 
+/**
+ * Extracts k-mers from an assembly of sequences.
+ * NOTE: sequences within an assembly are generally unordered, so order of k-mers should not be
+ * relied on when using this.
+ * @tparam chr types of elements in the sequence
+ * @tparam kmer type that stores a kmer
+ * @param assembly the assembly to extract kmers from
+ * @param kmer_size number of characters in a kmer
+ * @param alphabet_size size of the alphabet
+ * @return the extracted kmers, as integers converted from base #alphabet_size
+ */
+template <class chr, class kmer>
+std::vector<kmer>
+assembly2kmer(const Vec2D<chr> &assembly, uint8_t kmer_size, uint8_t alphabet_size) {
+    Timer timer("seq2kmer");
+    std::vector<kmer> kmers;
+    for (const auto &sequence : assembly)
+        for (kmer k : seq2kmer<chr, kmer>(sequence, kmer_size, alphabet_size))
+            kmers.push_back(k);
+    return kmers;
+}
+
 template <class T>
 T l1_dist(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());

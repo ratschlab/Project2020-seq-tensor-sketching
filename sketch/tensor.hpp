@@ -101,6 +101,21 @@ class Tensor : public SketchBase<std::vector<double>, false> {
         return sketch;
     }
 
+    std::vector<double> compute_assembly(const Vec2D<seq_type> &assembly) {
+        assert(!assembly.empty() && "Assembly must not be empty to compute TS.");
+        // TODO(ragnar): We should find the right way to take a weighted average here.
+        std::vector<double> assembly_sketch(sketch_dim, 0);
+        for (const auto &sequence : assembly) {
+            std::vector<double> sequence_sketch = compute(sequence);
+            for (int i = 0; i < sketch_dim; ++i)
+                assembly_sketch[i] += sequence_sketch[i];
+        }
+        for (double &x : assembly_sketch)
+            x /= assembly.size();
+        return assembly_sketch;
+        ;
+    }
+
     /** Sets the hash and sign functions to predetermined values for testing */
     void set_hashes_for_testing(const Vec2D<seq_type> &h, const Vec2D<bool> &s) {
         hashes = h;

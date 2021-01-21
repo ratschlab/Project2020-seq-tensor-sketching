@@ -103,6 +103,13 @@ class OrderedMinHash : public HashBase<T> {
         return compute(seq2kmer<C, T>(sequence, k, alphabet_size));
     }
 
+    template <typename C>
+    std::vector<T> compute_assembly(const Vec2D<C> &assembly, uint32_t k, uint32_t alphabet_size) {
+        assert(assembly.size() == 1 && "Ordered Min Hash does not work on assemblies of more than one sequence, because it would rely on the undefined order of sequences.");
+        std::vector<T> kmers = assembly2kmer<C, T>(assembly, k, alphabet_size);
+        return compute(kmers);
+    }
+
     static T dist(const std::vector<T> &a, const std::vector<T> &b) {
         Timer timer("ordered_minhash_dist");
         return hamming_dist(a, b);
