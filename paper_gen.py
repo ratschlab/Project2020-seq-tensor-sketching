@@ -8,7 +8,9 @@ from matplotlib import pyplot as plt
 from glob import glob
 import seaborn as sns
 
-sns.set(context="paper", style="white", font_scale=1)
+global_color_pallette = "husl"
+
+sns.set(context="paper", style="whitegrid", font_scale=1)
 
 
 def load_results(data_dir, thresh):
@@ -131,21 +133,22 @@ The embedding dimension is set to $D={flags[embed_dim]}$, and individual model p
 
 
 def gen_fig_s1(data_dir, save_dir):
-    flags, dists, _ = load_results(data_dir=data_dir, thresh=[])
+    flags, dists, stats = load_results(data_dir=data_dir, thresh=[])
+    stats = pd.DataFrame(stats)
     fig, axes = plt.subplots(2, 3, figsize=(12, 10))
     dists['ED'] = dists['ED'] / int(flags['seq_len'])     # normalize
     dists['ED_quant'] = pd.qcut(dists['ED'], q=100)
 
     cols = dists.columns[3:8]
     for mi, method in enumerate(cols):
-        g = sns.scatterplot(ax=axes[int(mi / 3), mi % 3],
+        ax = axes[int(mi / 3), mi % 3]
+        g = sns.scatterplot(ax=ax,
                             x=dists['ED'],
                             y=dists[method])
         g.set(xlabel='Normalized edit dist.',
               ylabel='Normalized sketch dist.',
               title=('({}) {}'.format(chr(ord('a') + mi), method)))
-
-
+        # ax.text(0.85, .85, "Spearman corr. {}".format(stats.loc[stats.method==method, "Sp"]))
 
     fig.delaxes(axes[1][2])
     caption = """\\caption{{Sketch distances (normalizied by maximum) versus edit distance 
@@ -158,7 +161,7 @@ def gen_fig_s1(data_dir, save_dir):
     (b) Weighted MinHash $k={flags[wmh_kmer_size]}$,
     (c) Ordered MinHash $k={flags[omh_kmer_size]},t={flags[omh_tuple_length]}$,
     (d) Tensor Sketch $t={flags[ts_tuple_length]}$,
-    (e) Tensor Slide Sketch $w={flags[tss_window_size]},t={flags[tss_tuple_length]}$.
+    (e) Tensor Slide Sketch $w={flags[tss_window_size]},t={flags[tss_tuple_length]}, s={flags[tss_stride]}$.
     }} """
     caption = caption.format(flags=flags)
     plt.savefig(os.path.join(save_dir, 'FigS1.pdf'),bbox_inches='tight')
@@ -168,6 +171,7 @@ def gen_fig_s1(data_dir, save_dir):
 
 
 def gen_fig_s2(data_dir, save_dir, ed_th):
+    sns.set_palette(global_color_pallette)
     flags, dists, stat = load_results(data_dir=data_dir, thresh=ed_th)
     data = {'fpr': [], 'tpr': [], 'method': [], 'th': []}
     for th in ed_th:
@@ -185,6 +189,7 @@ def gen_fig_s2(data_dir, save_dir, ed_th):
     for thi, th in enumerate(ed_th):
         ax = axes[int(thi / 2), thi % 2]
         g = sns.lineplot(ax=ax, data=data[data.th == th], x='fpr', y='tpr', hue='method')
+        ax.legend().set_title('')
         g.set(xlabel='False Positive',
               ylabel='True Positive',
               title='ROC to detect ED<{}'.format(th))
@@ -196,9 +201,8 @@ def gen_fig_s2(data_dir, save_dir, ed_th):
         mutation_rate = "mutation rate uniformly drawn from $[{:.2f},{:.2f}]$".format(Min, Max)
     else:
         mutation_rate = "mutation rate set to {:.2f}".format(Min)
-    caption = """\\caption{{ {flags[pairs]} sequence pairs of length ${flags[seq_len]}$ were generated over an 
-    alphabet of size $\\#\\Abc={flags[alphabet_size]}$. with the {mutation_rate}. 
-    Subplots (a)-(e) show the ROC curve for detecting pairs with edit distance (normalized by length) 
+    caption = """\\caption{{ ROC curves plotted for the dataset in Figure S1, 
+    with subplots (a)-(d) showing the ROC curve for detecting pairs distance (normalized by length) 
     less than ${th[0]},{th[1]},{th[2]},$ and ${th[3]}$ respectively. }} """
     caption = caption.format(flags=flags, th=ed_th, mutation_rate=mutation_rate)
     fo = open(os.path.join(save_dir, 'FigS2.tex'), 'w')
@@ -208,9 +212,10 @@ def gen_fig_s2(data_dir, save_dir, ed_th):
 
 
 def gen_fig1(data_dir, save_dir):
-    figure_size = (5, 5)
+    figure_size = (4, 4)
     flags, dists, stats = load_results(data_dir=data_dir, thresh=[])
 
+    sns.set_palette(global_color_pallette)
     data = {'auc': [], 'method': [], 'th': []}
     for th in np.linspace(.05, .5, 10):
         seq_len = int(flags['seq_len'])
@@ -224,7 +229,8 @@ def gen_fig1(data_dir, save_dir):
     fig, ax = plt.subplots(figsize=figure_size)
     g = sns.lineplot(ax=ax, data=data, x='th', y='auc', hue='method')
     g.set(xlabel='Edit distance threshold', ylabel='AUROC')
-    plt.savefig(os.path.join(save_dir, 'Fig1a.pdf'))
+    ax.legend().set_title('')
+    plt.savefig(os.path.join(save_dir, 'Fig1a.pdf'), bbox_inches='tight')
 
     dirs = glob(os.path.join(data_dir, 'seq_len', '*'))
     data = pd.DataFrame()
@@ -238,7 +244,8 @@ def gen_fig1(data_dir, save_dir):
     g.set(xlabel='Sequence length', ylabel='Spearman Corr.')
     ax.set_xscale('log')
     ax.get_xaxis().get_major_formatter().labelOnlyBase = False
-    plt.savefig(os.path.join(save_dir, 'Fig1b.pdf'))
+    ax.legend().set_title('')
+    plt.savefig(os.path.join(save_dir, 'Fig1b.pdf'), bbox_inches='tight')
 
     fig, ax = plt.subplots(figsize=figure_size)
     g = sns.lineplot(ax=ax, data=data, x='seq_len', y='AbsTime', hue='method')
@@ -247,8 +254,8 @@ def gen_fig1(data_dir, save_dir):
     ax.get_xaxis().get_major_formatter().labelOnlyBase = False
     ax.set_yscale('log')
     ax.get_yaxis().get_major_formatter().labelOnlyBase = False
-    plt.savefig(os.path.join(save_dir, 'Fig1c.pdf'))
-
+    ax.legend().set_title('')
+    plt.savefig(os.path.join(save_dir, 'Fig1c.pdf'),bbox_inches='tight')
 
     dirs = glob(os.path.join(data_dir, 'embed_dim', '*'))
     data = pd.DataFrame()
@@ -262,16 +269,19 @@ def gen_fig1(data_dir, save_dir):
     ax.set_xscale('log')
     ax.get_xaxis().get_major_formatter().labelOnlyBase = False
     g.set(xlabel='Embedding dimension', ylabel='Spearman Corr.')
-    plt.savefig(os.path.join(save_dir, 'Fig1d.pdf'))
+    ax.legend().set_title('')
+    plt.savefig(os.path.join(save_dir, 'Fig1d.pdf'), bbox_inches='tight')
 
     caption = """
     \\caption{{
 The dataset for these experiments consisted of ${flags[num_seqs]}$ sequence pairs independently generated 
 over an alphabet of size ${flags[alphabet_size]}$. The embedding dimension is set to $D={flags[embed_dim]}$, 
-and model-specific parameters are MH $k = {flags[mh_kmer_size]}$, WMH $k={flags[wmh_kmer_size]}$,
-OMH $k={flags[omh_kmer_size]},t={flags[omh_tuple_length]}$,
-TS $t={flags[ts_tuple_length]}$,
-TSS $w={flags[tss_window_size]},t={flags[tss_tuple_length]}$.
+and model-specific parameters are 
+MinHash $k = {flags[mh_kmer_size]}$, 
+Weighted MinHash $k={flags[wmh_kmer_size]}$,
+Ordered MinHash $k={flags[omh_kmer_size]},t={flags[omh_tuple_length]}$,
+Tensor Sketch $t={flags[ts_tuple_length]}$,
+Tensor Slide Sketch $w={flags[tss_window_size]},s={flags[tss_stride]},t={flags[tss_tuple_length]}$.
 (\\ref{{fig:AUROC}}) Area Under the ROC Curve (AUROC), for detection of edit distances below a threshold using the sketch-based approximations.  
 The x-axis, shows which edit distance (normalized) is used, and the y axis shows AUROC for various sketch-based distances.  
 (\\ref{{fig:Spearman_vs_len}}) The Spearman's rank correlation is plotted against the sequence length (logarithmic scale). 
@@ -296,7 +306,7 @@ def gen_fig2(data_dir, save_dir):
     s2 = dists['s2'].astype(int)
     fig, axes = plt.subplots(2, 3, figsize=(12, 8))
     for mi, method in enumerate(cols):
-        d_rank = rankdata(dists[method])
+        d_rank = rankdata(-dists[method]) # reverse order
         for i, d in enumerate(d_rank):
             d_sq[s1[i], s2[i]] = d
             d_sq[s2[i], s1[i]] = d
@@ -324,7 +334,7 @@ def gen_fig2(data_dir, save_dir):
     (c) Weighted MinHash $k={flags[wmh_kmer_size]}$, 
     (d) Ordered MinHash $k={flags[omh_kmer_size]},t={flags[omh_tuple_length]}$, 
     (e) Tensor Sketch $t={flags[ts_tuple_length]}$, 
-    (f) Tensor Slide Sketch $w={flags[tss_window_size]},t={flags[tss_tuple_length]}, D={flags[tss_dim]}$. }} """
+    (f) Tensor Slide Sketch $w={flags[tss_window_size]},t={flags[tss_tuple_length]}, s={flags[tss_stride]}$. }} """
     caption = caption.format(flags=flags, num_generations=num_generations, mutation_rate=mutation_rate)
     fo = open(os.path.join(save_dir, 'Fig2.tex'), 'w')
     plt.savefig(os.path.join(save_dir, 'Fig2.pdf'), bbox_inches='tight')
@@ -390,32 +400,26 @@ def find_optimal_params(data_dir):
     return params
 
 
-def test_optimal_params(experiments_dir, binary_path, num_runs=None, seq_lens=None, embed_dims=None):
-    if num_runs is None:
-        num_runs = 5
-    if embed_dims is None:
-        embed_dims = [4, 16, 32, 64, 256]
-    if seq_lens is None:
-        seq_lens = [2000, 4000, 8000, 16000]
+def run_optimal_params(experiments_dir, binary_path, num_runs, seq_len, embed_dim):
     params = find_optimal_params(data_dir=os.path.join(experiments_dir, 'data', 'grid_search_pairs'))
     print('optimal params (pairs): ', params)
     params.update(default_params_pairs())
     params['o'] = os.path.join(experiments_dir, 'data', 'pairs')
     os.system(binary_path + opts2flags(params))
 
-    for ri in range(10,10+num_runs):
-        for seq_len in seq_lens:
+    for ri in range(num_runs):
+        for l in seq_len:
             params.update(
-                {'o': os.path.join(experiments_dir, 'data', 'pairs', 'seq_len', 'len{}_r{}'.format(seq_len, ri)),
-                 'seq_len': seq_len})
+                {'o': os.path.join(experiments_dir, 'data', 'pairs', 'seq_len', 'len{}_r{}'.format(l, ri)),
+                 'seq_len': l})
             os.system(binary_path + opts2flags(params))
 
     params.update(default_params_pairs())
-    for ri in range(10,10+num_runs):
-        for embed_dim in embed_dims:
+    for ri in range(num_runs):
+        for dim in embed_dim:
             params.update(
-                {'o': os.path.join(experiments_dir, 'data', 'pairs', 'embed_dim', 'dim{}_r{}'.format(embed_dim, ri)),
-                 'embed_dim': embed_dim})
+                {'o': os.path.join(experiments_dir, 'data', 'pairs', 'embed_dim', 'dim{}_r{}'.format(dim, ri)),
+                 'embed_dim': dim})
             os.system(binary_path + opts2flags(params))
 
     tree_params = find_optimal_params(data_dir=os.path.join(experiments_dir, 'data', 'grid_search_tree'))
@@ -425,7 +429,7 @@ def test_optimal_params(experiments_dir, binary_path, num_runs=None, seq_lens=No
     os.system(binary_path + opts2flags(tree_params))
 
 
-def gen_plots(experiments_dir, plots_dir):
+def plot_figures(experiments_dir, plots_dir):
     gen_table1(data_dir=os.path.join(experiments_dir, 'data', 'pairs'),
                save_dir=plots_dir, thresh=[.1, .2, .3, .5])
 
@@ -442,20 +446,17 @@ def gen_plots(experiments_dir, plots_dir):
              save_dir=plots_dir)
 
 
-def grid_search(experiments_dir, binary_path,
-                num_runs = None, k_range=None, t_range=None):
-    if k_range is None:
-        k_range = [1, 2, 3, 4, 6, 8, 10, 12, 14, 16]
-    if t_range is None:
-        t_range = range(2,11)
-    if num_runs is None:
-        num_runs = 3
+def run_grid_search(experiments_dir,
+                    binary_path,
+                    num_runs,
+                    kmer_size,
+                    tuple_length):
     params = {'pairs': default_params_pairs(), 'tree': default_params_tree()}
 
     for grid_type, param in params.items():
         for run in range(num_runs):
-            for k in k_range:
-                for t in t_range:
+            for k in kmer_size:
+                for t in tuple_length:
                     path = os.path.join(experiments_dir, 'data',
                                         'grid_search_{}'.format(grid_type),
                                         'run{}_k{}_t{}'.format(run,k,t))
@@ -465,12 +466,20 @@ def grid_search(experiments_dir, binary_path,
 
 if __name__ == '__main__':
 
-    experiments_dir = './experiments'
-    binary_path = './cmake-build-release/experiments'
+    experiments_dir = './tmp/experiments'
     plots_dir = os.path.join(experiments_dir, 'figures')
+    binary_path = './cmake-build-release/experiments'
 
-    # grid_search(experiments_dir=experiments_dir, binary_path=binary_path)
+    # run_grid_search(experiments_dir=experiments_dir,
+    #                 binary_path=binary_path,
+    #                 num_runs=10,
+    #                 kmer_size=[1, 2, 3, 4, 6, 8, 10, 12, 14, 16],
+    #                 tuple_length=range(2, 11))
     #
-    # test_optimal_params(binary_path=binary_path, experiments_dir=experiments_dir, num_runs=10)
+    # run_optimal_params(binary_path=binary_path,
+    #                    experiments_dir=experiments_dir,
+    #                    num_runs=10,
+    #                    embed_dim=[4, 16, 32, 64, 256],
+    #                    seq_len=[2000, 4000, 8000, 16000])
 
-    gen_plots(experiments_dir=experiments_dir, plots_dir=plots_dir)
+    plot_figures(experiments_dir=experiments_dir, plots_dir=plots_dir)
