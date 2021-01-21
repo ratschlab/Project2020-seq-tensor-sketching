@@ -22,6 +22,7 @@
 #include <memory>
 #include <numeric>
 #include <omp.h>
+#include <random>
 #include <sys/types.h>
 
 DEFINE_uint32(kmer_size, 4, "Kmer size for MH, OMH, WMH");
@@ -56,11 +57,17 @@ DEFINE_int32(
         "than seq_len + delta, where delta is the number of random insertions, by default "
         "its value will be set to 2 * seq_len ");
 
-DEFINE_int32(tss_stride, 0, "shift step for TSS sliding window, "
+DEFINE_int32(tss_stride,
+             0,
+             "shift step for TSS sliding window, "
              "default: ceil(seq_len / 100)");
 
-DEFINE_int32(tss_window_size, 0, "Window length: the size of sliding window in Tensor Slide Sketch"
+DEFINE_int32(tss_window_size,
+             0,
+             "Window length: the size of sliding window in Tensor Slide Sketch"
              "default: seq_len / 10");
+
+DEFINE_uint32(seed, 0, "Seed for randomizes hashes. If 0, std::random_device is used.");
 
 static bool validatePhylogenyShape(const char *flagname, const std::string &value) {
     if (value == "path" || value == "tree" || value == "star" || value == "pair")
@@ -100,9 +107,7 @@ DEFINE_validator(hash_alg, &ValidateHashAlg);
 
 DEFINE_uint32(num_bins, 256, "Number of bins used to discretize, if --transform=disc");
 
-DEFINE_uint32(num_threads,
-              0,
-              "number of OpenMP threads, default: use all available cores");
+DEFINE_uint32(num_threads, 0, "number of OpenMP threads, default: use all available cores");
 
 
 DEFINE_uint32(reruns, 1, "The number of times to rerun sketch algorithms on the same data");
@@ -144,19 +149,19 @@ void set_default_flags() {
         FLAGS_wmh_kmer_size = FLAGS_kmer_size;
     }
     // embed dim
-    if (FLAGS_tss_dim == 0 ) {
+    if (FLAGS_tss_dim == 0) {
         FLAGS_tss_dim = ceil(sqrt(FLAGS_embed_dim));
     }
-    if (FLAGS_ts_dim == 0 ) {
+    if (FLAGS_ts_dim == 0) {
         FLAGS_ts_dim = FLAGS_embed_dim;
     }
-    if (FLAGS_omh_dim == 0 ) {
+    if (FLAGS_omh_dim == 0) {
         FLAGS_omh_dim = FLAGS_embed_dim;
     }
-    if (FLAGS_wmh_dim == 0 ) {
+    if (FLAGS_wmh_dim == 0) {
         FLAGS_wmh_dim = FLAGS_embed_dim;
     }
-    if (FLAGS_mh_dim == 0 ) {
+    if (FLAGS_mh_dim == 0) {
         FLAGS_mh_dim = FLAGS_embed_dim;
     }
     // tuple length
@@ -224,7 +229,8 @@ class ExperimentRunner {
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
             if constexpr (SketchAlgorithm::kmer_input) {
-                sketch[si] = algorithm->compute(seqs[si], algorithm->kmer_size, FLAGS_alphabet_size);
+                sketch[si]
+                        = algorithm->compute(seqs[si], algorithm->kmer_size, FLAGS_alphabet_size);
             } else {
                 sketch[si] = algorithm->compute(seqs[si]);
             }
@@ -408,7 +414,13 @@ int main(int argc, char *argv[]) {
 
     using char_type = uint8_t;
     using kmer_type = uint64_t;
-    std::random_device rd;
+    std::random_device random_device;
+    auto rd = [&] {
+        if (FLAGS_seed)
+            return FLAGS_seed;
+        return random_device();
+    };
+
     auto experiment = MakeExperimentRunner<char_type, kmer_type>(
             MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_mh_kmer_size),
                                FLAGS_mh_dim, parse_hash_algorithm(FLAGS_hash_alg), rd(), "MH",
@@ -425,13 +437,15 @@ int main(int argc, char *argv[]) {
             TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length,
                                    FLAGS_tss_window_size, FLAGS_tss_stride, rd(), "TSS"),
             TensorSlideFlat<char_type, Int32Flattener>(
-                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length, FLAGS_tss_window_size,
-                    FLAGS_tss_stride, Int32Flattener(FLAGS_embed_dim, FLAGS_tss_dim, FLAGS_seq_len, rd()),
-                    rd(), "TSS_flat_int32"),
+                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length,
+                    FLAGS_tss_window_size, FLAGS_tss_stride,
+                    Int32Flattener(FLAGS_embed_dim, FLAGS_tss_dim, FLAGS_seq_len, rd()), rd(),
+                    "TSS_flat_int32"),
             TensorSlideFlat<char_type, DoubleFlattener>(
-                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length, FLAGS_tss_window_size,
-                    FLAGS_tss_stride, DoubleFlattener(FLAGS_embed_dim, FLAGS_tss_dim, FLAGS_seq_len, rd()),
-                    rd(), "TSS_flat_double"));
+                    FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length,
+                    FLAGS_tss_window_size, FLAGS_tss_stride,
+                    DoubleFlattener(FLAGS_embed_dim, FLAGS_tss_dim, FLAGS_seq_len, rd()), rd(),
+                    "TSS_flat_double"));
     experiment.run();
 
     return 0;
