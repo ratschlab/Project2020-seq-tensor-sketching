@@ -12,6 +12,9 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 # Google Flags Library
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 
+# Murmur
+add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/murmur_hash EXCLUDE_FROM_ALL)
+
 file(GLOB util_files "util/*.cpp")
 add_library(util ${util_files})
 target_link_libraries(util gflags OpenMP::OpenMP_CXX)
@@ -22,7 +25,7 @@ target_link_libraries(sequence gflags OpenMP::OpenMP_CXX)
 
 file(GLOB sketch_files "sketch/*.cpp")
 add_library(sketch_lib ${sketch_files})
-target_link_libraries(sketch_lib OpenMP::OpenMP_CXX)
+target_link_libraries(sketch_lib murmur_lib OpenMP::OpenMP_CXX)
 
 
 add_executable(experiments experiments_main.cpp )

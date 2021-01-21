@@ -4,6 +4,8 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
+#include <murmur_hash3.hpp>
+
 #include <algorithm>
 #include <immintrin.h>
 #include <random>
@@ -12,10 +14,13 @@
 
 namespace ts {
 
-enum class HashAlgorithm { uniform, crc32 };
+enum class HashAlgorithm { uniform, crc32, murmur };
 
 HashAlgorithm parse_hash_algorithm(const std::string &name);
 
+/**
+ * @tparam T the type of elements in the hash.
+ */
 template <typename T>
 class HashBase : public SketchBase<std::vector<T>, true> {
   public:
@@ -37,7 +42,8 @@ class HashBase : public SketchBase<std::vector<T>, true> {
     }
 
     void init() {
-        crc32_base = rand(rng);
+        hash_seed = rand(rng);
+        hash_seed2 = rand(rng);
         hashes.assign(sketch_dim, {});
         hash_values.assign(sketch_dim, {});
     }
@@ -50,10 +56,9 @@ class HashBase : public SketchBase<std::vector<T>, true> {
     size_t hash_size;
 
     /**
-     * Returns the hash value for the index-th hash function.
-     * Since the Hashes are generated on demand.
+     * Returns the hash value for the given #key of the #index-th hash function.
      */
-    uint32_t hash(size_t index, size_t key) {
+    T hash(uint64_t index, uint64_t key) {
         switch (hash_algorithm) {
             case HashAlgorithm::uniform: {
                 T val;
@@ -75,8 +80,22 @@ class HashBase : public SketchBase<std::vector<T>, true> {
                 return val;
             }
             case HashAlgorithm::crc32: {
-                T val = _mm_crc32_u32((uint32_t)crc32_base, (uint32_t)key);
-                return _mm_crc32_u32((uint32_t)val, (uint32_t)index);
+                uint32_t val = _mm_crc32_u32(hash_seed, (uint32_t)key);
+                val =  _mm_crc32_u32((uint32_t)val, (uint32_t)index);
+                if constexpr (sizeof(T) <= 4) {
+                   return static_cast<T>(val);
+                } else if constexpr (sizeof(T) <=8) {
+                    uint32_t val2 = _mm_crc32_u32(hash_seed2, (uint32_t)key);
+                    val2 =  _mm_crc32_u32((uint32_t)val2, (uint32_t)index);
+                    return (val << 4) | val2;
+                }
+            }
+            case HashAlgorithm::murmur: {
+                uint64_t to_hash[] = { index, key };
+                uint8_t result[16];
+                MurmurHash3_x86_128(to_hash, 16, hash_seed, result);
+                T v = *((T *)result);
+                return v;
             }
             default:
                 return -1;
@@ -92,7 +111,8 @@ class HashBase : public SketchBase<std::vector<T>, true> {
     std::vector<std::unordered_set<T>> hash_values;
     std::uniform_int_distribution<T> rand;
     std::mt19937 rng;
-    uint32_t crc32_base = 341234;
+    uint32_t hash_seed;
+    uint32_t hash_seed2;
 };
 
 
