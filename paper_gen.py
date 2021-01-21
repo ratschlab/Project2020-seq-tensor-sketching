@@ -351,7 +351,6 @@ def default_params_pairs():
             'max_mutation_rate': 1.0,
             'phylogeny_shape': 'path',
             'embed_dim': 64,
-            'hash_alg': 'crc32',
             'num_threads': 0}
 
 
@@ -360,11 +359,10 @@ def default_params_tree():
             'num_seqs': 64,
             'group_size': 64,
             'seq_len': 10000,
-            'min_mutation_rate': 0.10,
-            'max_mutation_rate': 0.10,
+            'min_mutation_rate': 0.15,
+            'max_mutation_rate': 0.15,
             'phylogeny_shape': 'tree',
             'embed_dim': 64,
-            'hash_alg': 'crc32',
             'num_threads': 0}
 
 
@@ -401,16 +399,16 @@ def find_optimal_params(data_dir):
 
 
 def run_optimal_params(experiments_dir, binary_path, num_runs, seq_len, embed_dim):
-    params = find_optimal_params(data_dir=os.path.join(experiments_dir, 'data', 'grid_search_pairs'))
+    params = find_optimal_params(data_dir=os.path.join(experiments_dir, 'grid_search_pairs'))
     print('optimal params (pairs): ', params)
     params.update(default_params_pairs())
-    params['o'] = os.path.join(experiments_dir, 'data', 'pairs')
+    params['o'] = os.path.join(experiments_dir, 'pairs')
     os.system(binary_path + opts2flags(params))
 
     for ri in range(num_runs):
         for l in seq_len:
             params.update(
-                {'o': os.path.join(experiments_dir, 'data', 'pairs', 'seq_len', 'len{}_r{}'.format(l, ri)),
+                {'o': os.path.join(experiments_dir, 'pairs', 'seq_len', 'len{}_r{}'.format(l, ri)),
                  'seq_len': l})
             os.system(binary_path + opts2flags(params))
 
@@ -418,31 +416,31 @@ def run_optimal_params(experiments_dir, binary_path, num_runs, seq_len, embed_di
     for ri in range(num_runs):
         for dim in embed_dim:
             params.update(
-                {'o': os.path.join(experiments_dir, 'data', 'pairs', 'embed_dim', 'dim{}_r{}'.format(dim, ri)),
+                {'o': os.path.join(experiments_dir, 'pairs', 'embed_dim', 'dim{}_r{}'.format(dim, ri)),
                  'embed_dim': dim})
             os.system(binary_path + opts2flags(params))
 
-    tree_params = find_optimal_params(data_dir=os.path.join(experiments_dir, 'data', 'grid_search_tree'))
+    tree_params = find_optimal_params(data_dir=os.path.join(experiments_dir, 'grid_search_tree'))
     print('optimal params (tree): ', tree_params)
     tree_params.update(default_params_tree())
-    tree_params.update({'o': os.path.join(experiments_dir, 'data', 'tree')})
+    tree_params.update({'o': os.path.join(experiments_dir, 'tree')})
     os.system(binary_path + opts2flags(tree_params))
 
 
 def plot_figures(experiments_dir, plots_dir):
-    gen_table1(data_dir=os.path.join(experiments_dir, 'data', 'pairs'),
+    gen_table1(data_dir=os.path.join(experiments_dir, 'pairs'),
                save_dir=plots_dir, thresh=[.1, .2, .3, .5])
 
-    gen_fig_s1(data_dir=os.path.join(experiments_dir, 'data', 'pairs'),
+    gen_fig_s1(data_dir=os.path.join(experiments_dir, 'pairs'),
                save_dir=plots_dir)
 
-    gen_fig_s2(data_dir=os.path.join(experiments_dir, 'data', 'pairs'),
+    gen_fig_s2(data_dir=os.path.join(experiments_dir, 'pairs'),
                save_dir=plots_dir, ed_th=[.1, .2, .3, .5])
 
-    gen_fig1(data_dir=os.path.join(experiments_dir, 'data', 'pairs'),
+    gen_fig1(data_dir=os.path.join(experiments_dir, 'pairs'),
              save_dir=plots_dir)
 
-    gen_fig2(data_dir=os.path.join(experiments_dir, 'data', 'tree'),
+    gen_fig2(data_dir=os.path.join(experiments_dir, 'tree'),
              save_dir=plots_dir)
 
 
@@ -450,36 +448,40 @@ def run_grid_search(experiments_dir,
                     binary_path,
                     num_runs,
                     kmer_size,
-                    tuple_length):
+                    tuple_length,
+                    hash_alg):
     params = {'pairs': default_params_pairs(), 'tree': default_params_tree()}
-
-    for grid_type, param in params.items():
-        for run in range(num_runs):
-            for k in kmer_size:
-                for t in tuple_length:
-                    path = os.path.join(experiments_dir, 'data',
-                                        'grid_search_{}'.format(grid_type),
-                                        'run{}_k{}_t{}'.format(run,k,t))
-                    params.update({'kmer_size': k, 'tuple_length': t, 'o': path})
-                    os.system(binary_path + opts2flags(param) )
+    for alg in hash_alg:
+        for grid_type, param in params.items():
+            for run in range(num_runs):
+                for k in kmer_size:
+                    for t in tuple_length:
+                        path = os.path.join(experiments_dir,
+                                            'grid_search_{}'.format(grid_type),
+                                            'run{}_k{}_t{}_{}'.format(run,k,t,alg))
+                        param.update({'kmer_size': k,
+                                       'tuple_length': t,
+                                       'o': path,
+                                       'hash_alg': alg})
+                        os.system(binary_path + opts2flags(param) )
 
 
 if __name__ == '__main__':
-
-    experiments_dir = './tmp/experiments'
-    plots_dir = os.path.join(experiments_dir, 'figures')
+    experiments_dir = './experiments'
+    plots_dir = './figures'
     binary_path = './cmake-build-release/experiments'
 
-    # run_grid_search(experiments_dir=experiments_dir,
-    #                 binary_path=binary_path,
-    #                 num_runs=10,
-    #                 kmer_size=[1, 2, 3, 4, 6, 8, 10, 12, 14, 16],
-    #                 tuple_length=range(2, 11))
-    #
-    # run_optimal_params(binary_path=binary_path,
-    #                    experiments_dir=experiments_dir,
-    #                    num_runs=10,
-    #                    embed_dim=[4, 16, 32, 64, 256],
-    #                    seq_len=[2000, 4000, 8000, 16000])
+    run_grid_search(experiments_dir=experiments_dir,
+                    binary_path=binary_path,
+                    num_runs=5,
+                    kmer_size=[1, 2, 3, 4, 6, 8, 10, 12, 14, 16],
+                    tuple_length=[2, 3, 4, 5, 6, 7, 8, 9, 10],
+                    hash_alg=['crc32', 'murmur'])
+
+    run_optimal_params(binary_path=binary_path,
+                       experiments_dir=experiments_dir,
+                       num_runs=5,
+                       embed_dim=[4, 16, 32, 64, 256],
+                       seq_len=[2000, 4000, 8000, 16000, 32000])
 
     plot_figures(experiments_dir=experiments_dir, plots_dir=plots_dir)
