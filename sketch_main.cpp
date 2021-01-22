@@ -58,7 +58,6 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel for num_threads(FLAGS_t)
         for (uint32_t i = 0; i < epoch * BLOCK_SIZE; ++i) {
             for (uint32_t j = epoch * BLOCK_SIZE; j < max_ind; ++j) {
-                //std::cout << sequences[i].second << "," << sequences[j].second << std::endl;
                 distances[i * BLOCK_SIZE + j - epoch * BLOCK_SIZE]
                         = edit_distance(sequences[i].first, sequences[j].first);
             }
@@ -68,7 +67,6 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel for num_threads(FLAGS_t)
         for (uint32_t i = epoch * BLOCK_SIZE; i < max_ind; ++i) {
             for (uint32_t j = i + 1; j < max_ind; ++j) {
-                //std::cout << sequences[i].second << "," << sequences[j].second << std::endl;
                 distances2[(i - epoch * BLOCK_SIZE)][j - epoch * BLOCK_SIZE]
                         = edit_distance(sequences[i].first, sequences[j].first);
             }
