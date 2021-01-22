@@ -133,16 +133,13 @@ class SketchHelper {
     }
 
     void save_output() {
-        std::cerr << " OUTPUT " << std::endl;
         std::filesystem::path ofile = std::filesystem::absolute(std::filesystem::path(FLAGS_o));
         std::filesystem::path opath = ofile.parent_path();
-        std::cerr << " DIR " << opath << std::endl;
         if (!std::filesystem::exists(opath) && !std::filesystem::create_directories(opath)) {
             std::cerr << "Could not create output directory: " << opath << std::endl;
             std::exit(1);
         }
 
-        std::cerr << " OUTPUT: " << FLAGS_o << std::endl;
         std::ofstream fo(FLAGS_o);
         if (!fo.is_open()) {
             std::cerr << "Could not open " << ofile << " for writing." << std::endl;
@@ -164,7 +161,6 @@ class SketchHelper {
 
   private:
     Vec2D<seq_type> seqs;
-    Vec3D<seq_type> assemblies;
     std::vector<std::string> seq_names;
     Vec3D<embed_type> sketches;
 
@@ -175,6 +171,8 @@ class SketchHelper {
 // Some global constant types.
 using char_type = uint8_t;
 
+// Run the given sketch method on input specified by the command line arguments, and write a
+// triangular distance matrix to the output file.
 template <class SketchAlgorithm>
 void run_triangle(SketchAlgorithm &algorithm) {
     std::cerr << "Reading input .." << std::endl;
@@ -235,16 +233,15 @@ void run_triangle(SketchAlgorithm &algorithm) {
     fo.close();
 };
 
-// Runs function f on the algorithm specified by the command line options.
+// Runs function f on the sketch method specified by the command line options.
 template <typename F>
-void run_algorithm(F f) {
+void run_function_on_algorithm(F f) {
     using kmer_type = uint64_t;
 
     auto kmer_word_size = int_pow<kmer_type>(alphabet_size, FLAGS_kmer_length);
 
     std::random_device rd;
     if (FLAGS_sketch_method == "ED") {
-        std::cerr << " ALGO: ED" << std::endl;
         f(EditDistance<char_type>());
         return;
     }
@@ -257,22 +254,6 @@ void run_algorithm(F f) {
                                  FLAGS_window_size, FLAGS_stride, rd()));
         return;
     }
-    /*
-    if (FLAGS_sketch_method == "MH") {
-        f(MinHash<kmer_type>(kmer_word_size, FLAGS_embed_dim, HashAlgorithm::uniform, rd()));
-        return;
-    }
-    if (FLAGS_sketch_method == "WMH") {
-        f(WeightedMinHash<kmer_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                     HashAlgorithm::uniform, rd()));
-        return;
-    }
-    if (FLAGS_sketch_method == "OMH") {
-        f(OrderedMinHash<kmer_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                    FLAGS_tuple_length, HashAlgorithm::uniform, rd()));
-        return;
-    }
-    */
 }
 
 
@@ -294,7 +275,7 @@ int main(int argc, char *argv[]) {
     std::random_device rd;
 
     if (FLAGS_action == "triangle") {
-        run_algorithm([](auto x) { run_triangle(x); });
+        run_function_on_algorithm([](auto x) { run_triangle(x); });
         return 0;
     }
 
