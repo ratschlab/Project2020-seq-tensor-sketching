@@ -6,25 +6,36 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <string>
+#include <iterator>
 #include <sstream>
+#include <string>
 
 namespace ts { // ts = Tensor Sketch
 
+// Represents the contents of a single Fasta file.
+// All the sequences in a file should be treated as a single assembly and should be sketched as a
+// whole.
+template <typename seq_type>
+struct FastaFile {
+    std::string id;
+    std::vector<std::string> comments;
+    std::vector<std::vector<seq_type>> sequences;
+};
+
 /**
- * Reads a fasta file and returns its contents as a tuple of <test_id, sequences, names>.
+ * Reads a fasta file and returns its contents as a tuple of <sequences, names>.
  * @tparam seq_type type used for storing a character of the fasta file, typically uint8_t
  */
 template <typename seq_type>
-std::pair<Vec2D<seq_type>, std::vector<std::string>> read_fasta(const std::string &file_name,
-                                                                const std::string &input_format) {
+FastaFile<seq_type> read_fasta(const std::string &file_name, const std::string &input_format) {
+    FastaFile<seq_type> f;
+    f.id = std::filesystem::path(file_name).filename();
+
     if (!std::filesystem::exists(file_name)) {
         std::cerr << "Input file does not exist: " << file_name << std::endl;
         std::exit(1);
     }
-    std::string test_id;
-    Vec2D<seq_type> seqs;
-    std::vector<std::string> seq_names;
+
     std::ifstream infile(file_name);
     if (!infile.is_open()) {
         std::cout << "Could not open " + file_name << std::endl;
@@ -34,30 +45,64 @@ std::pair<Vec2D<seq_type>, std::vector<std::string>> read_fasta(const std::strin
     std::vector<seq_type> seq;
     while (std::getline(infile, line)) {
         if (line[0] == '>') {
-            seq_names.push_back(line);
+            if (seq.size()) {
+                f.sequences.push_back(std::move(seq));
+                seq.clear();
+            }
+            // Drop the leading '>'.
+            f.comments.emplace_back(line.begin() + 1, line.end());
         } else if (!line.empty()) {
             if (input_format == "fasta") {
                 for (char c : line) {
                     seq.push_back(char2int(c));
                 }
-                seqs.push_back(seq);
             } else if (input_format == "csv") {
                 std::stringstream ss(line);
                 std::string item;
                 while (std::getline(ss, item, ',')) {
                     seq.push_back(std::stoi(item, 0, 16));
                 }
-                seq_names.push_back("seq" + std::to_string(seqs.size()));
-                seqs.push_back(seq);
+                f.comments.push_back("seq" + std::to_string(f.sequences.size()));
+                f.sequences.push_back(std::move(seq));
+                seq.clear();
             } else {
                 std::cerr << "Invalid input foramt: " << input_format << std::endl;
                 exit(1);
             }
-            seq.clear();
         }
     }
-    assert(seqs.size() == seq_names.size());
-    return { seqs, seq_names };
+    if (seq.size()) {
+        f.sequences.push_back(std::move(seq));
+        seq.clear();
+    }
+    // std::cerr << file_name << ": " << seqs.size() << "\t" << seq_names.size() << std::endl;
+    assert(f.sequences.size() == f.comments.size());
+    return f;
+}
+
+/**
+ * Reads all .fasta and .fna files in the given directory and returns a tuple of <sequences, names>.
+ * Note that this reads each file into an assembly of sequences.
+ * @tparam seq_type type used for storing a character of the fasta file, typically uint8_t
+ */
+template <typename seq_type>
+std::vector<FastaFile<seq_type>> read_directory(const std::string &directory_name,
+                                                const std::string &input_format) {
+    assert(input_format == "fasta_directory");
+    if (!std::filesystem::exists(directory_name)) {
+        std::cerr << "Input directory does not exist: " << directory_name << std::endl;
+        std::exit(1);
+    }
+    std::vector<FastaFile<seq_type>> files;
+
+    for (const auto &f : std::filesystem::directory_iterator(directory_name)) {
+        const std::filesystem::path ext = f.path().extension();
+        if (ext == ".fna" || ext == ".fasta") {
+            files.emplace_back(read_fasta<seq_type>(f.path(), "fasta"));
+        }
+    }
+
+    return files;
 }
 
 template <class seq_type>
