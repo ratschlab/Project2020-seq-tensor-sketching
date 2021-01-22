@@ -17,19 +17,22 @@ namespace ts { // ts = Tensor Sketch
 // whole.
 template <typename seq_type>
 struct FastaFile {
-    std::string id;
+    // The name of the file
+    std::string filename;
+    // The leading comment before each sequence. Always has the same length as sequences.
     std::vector<std::string> comments;
+    // The sequences in the file
     std::vector<std::vector<seq_type>> sequences;
 };
 
 /**
- * Reads a fasta file and returns its contents as a tuple of <sequences, names>.
+ * Reads a fasta file and returns its contents.
  * @tparam seq_type type used for storing a character of the fasta file, typically uint8_t
  */
 template <typename seq_type>
 FastaFile<seq_type> read_fasta(const std::string &file_name, const std::string &input_format) {
     FastaFile<seq_type> f;
-    f.id = std::filesystem::path(file_name).filename();
+    f.filename = std::filesystem::path(file_name).filename();
 
     if (!std::filesystem::exists(file_name)) {
         std::cerr << "Input file does not exist: " << file_name << std::endl;
@@ -75,14 +78,12 @@ FastaFile<seq_type> read_fasta(const std::string &file_name, const std::string &
         f.sequences.push_back(std::move(seq));
         seq.clear();
     }
-    // std::cerr << file_name << ": " << seqs.size() << "\t" << seq_names.size() << std::endl;
     assert(f.sequences.size() == f.comments.size());
     return f;
 }
 
 /**
- * Reads all .fasta and .fna files in the given directory and returns a tuple of <sequences, names>.
- * Note that this reads each file into an assembly of sequences.
+ * Reads all .fasta and .fna files in the given directory and returns them.
  * @tparam seq_type type used for storing a character of the fasta file, typically uint8_t
  */
 template <typename seq_type>
