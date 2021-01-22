@@ -1,4 +1,5 @@
 #include "sequence/fasta_io.hpp"
+#include "sketch/edit_distance.hpp"
 #include "sketch/hash_base.hpp"
 #include "sketch/hash_min.hpp"
 #include "sketch/hash_ordered.hpp"
@@ -6,6 +7,7 @@
 #include "sketch/tensor.hpp"
 #include "sketch/tensor_slide.hpp"
 #include "util/multivec.hpp"
+#include "util/progress.hpp"
 #include "util/utils.hpp"
 
 #include <gflags/gflags.h>
@@ -15,6 +17,8 @@
 #include <random>
 #include <sstream>
 #include <utility>
+
+DEFINE_string(action, "", "Which action to do. One of: triangle");
 
 DEFINE_string(alphabet,
               "dna4",
@@ -32,7 +36,7 @@ DEFINE_string(o, "", "Output file, containing the sketches for each sequence");
 
 DEFINE_string(i, "", "Input file, containing the sequences to be sketched in .fa format");
 
-DEFINE_string(input_format, "fasta", "Input format: 'fasta', 'csv'");
+DEFINE_string(input_format, "fasta", "Input format: 'fasta', 'csv', 'fasta_directory'");
 DEFINE_string(f, "fasta", "Short hand for --input_format");
 
 DEFINE_int32(embed_dim, 4, "Embedding dimension, used for all sketching methods");
@@ -90,9 +94,8 @@ using namespace ts;
 template <typename seq_type, class kmer_type, class embed_type>
 class SketchHelper {
   public:
-    SketchHelper(
-            std::function<std::vector<embed_type>(const std::vector<kmer_type> &)> sketcher,
-            std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher)
+    SketchHelper(std::function<std::vector<embed_type>(const std::vector<kmer_type> &)> sketcher,
+                 std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher)
         : sketcher(std::move(sketcher)), slide_sketcher(std::move(slide_sketcher)) {}
 
     void compute_sketches() {
@@ -124,17 +127,22 @@ class SketchHelper {
     }
 
     void read_input() {
-        std::tie(seqs, seq_names) = read_fasta<seq_type>(FLAGS_i, FLAGS_input_format);
+        FastaFile<seq_type> file = read_fasta<seq_type>(FLAGS_i, FLAGS_input_format);
+        seqs = std::move(file.sequences);
+        seq_names = std::move(file.comments);
     }
 
     void save_output() {
-        std::filesystem::path ofile(FLAGS_o);
+        std::cerr << " OUTPUT " << std::endl;
+        std::filesystem::path ofile = std::filesystem::absolute(std::filesystem::path(FLAGS_o));
         std::filesystem::path opath = ofile.parent_path();
+        std::cerr << " DIR " << opath << std::endl;
         if (!std::filesystem::exists(opath) && !std::filesystem::create_directories(opath)) {
             std::cerr << "Could not create output directory: " << opath << std::endl;
             std::exit(1);
         }
 
+        std::cerr << " OUTPUT: " << FLAGS_o << std::endl;
         std::ofstream fo(FLAGS_o);
         if (!fo.is_open()) {
             std::cerr << "Could not open " << ofile << " for writing." << std::endl;
@@ -156,12 +164,117 @@ class SketchHelper {
 
   private:
     Vec2D<seq_type> seqs;
+    Vec3D<seq_type> assemblies;
     std::vector<std::string> seq_names;
     Vec3D<embed_type> sketches;
 
     std::function<std::vector<embed_type>(const std::vector<kmer_type> &)> sketcher;
     std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher;
 };
+
+// Some global constant types.
+using char_type = uint8_t;
+
+template <class SketchAlgorithm>
+void run_triangle(SketchAlgorithm &algorithm) {
+    std::cerr << "Reading input .." << std::endl;
+    std::vector<FastaFile<char_type>> files
+            = read_directory<char_type>(FLAGS_i, FLAGS_input_format);
+    std::cerr << "Read " << files.size() << " files" << std::endl;
+
+    const size_t n = files.size();
+
+    std::vector<typename SketchAlgorithm::sketch_type> sketches(n);
+
+    std::cerr << "Sketching .." << std::endl;
+    progress_bar::init(n);
+#pragma omp parallel for default(shared)
+    for (size_t i = 0; i < n; ++i) {
+        assert(files[i].sequences.size() == 1
+               && "Each input file must contain exactly one sequence!");
+        sketches[i] = algorithm.compute(files[i].sequences[0]);
+        progress_bar::iter();
+    }
+
+    std::cerr << "Computing all pairwise distances .." << std::endl;
+
+    std::vector<std::pair<int, int>> pairs;
+    for (size_t i = 0; i < n; ++i)
+        for (size_t j = 0; j < i; ++j)
+            pairs.emplace_back(i, j);
+
+    std::vector<std::vector<double>> distances(n);
+    for (size_t i = 0; i < n; ++i)
+        distances[i].resize(i);
+
+    progress_bar::init(n * (n - 1) / 2);
+#pragma omp parallel for default(shared)
+    for (auto it = pairs.begin(); it < pairs.end(); ++it) { // NOLINT
+        auto [i, j] = *it;
+        distances[i][j] = algorithm.dist(sketches[i], sketches[j]);
+        progress_bar::iter();
+    }
+
+    std::cerr << "Writing distances triangle to " << FLAGS_o << " .." << std::endl;
+    std::filesystem::path ofile = std::filesystem::absolute(std::filesystem::path(FLAGS_o));
+
+    std::ofstream fo(ofile);
+    if (!fo.is_open()) {
+        std::cerr << "Could not open " << FLAGS_o << " for writing." << std::endl;
+        std::exit(1);
+    }
+
+    // MASH adds an extra tab before the number of lines, so mirror that.
+    fo << "\t" << n << '\n';
+    for (size_t i = 0; i < n; ++i) {
+        fo << files[i].id;
+        for (size_t j = 0; j < i; ++j)
+            fo << '\t' << distances[i][j];
+        fo << '\n';
+    }
+    fo.close();
+};
+
+// Runs function f on the algorithm specified by the command line options.
+template <typename F>
+void run_algorithm(F f) {
+    using kmer_type = uint64_t;
+
+    auto kmer_word_size = int_pow<kmer_type>(alphabet_size, FLAGS_kmer_length);
+
+    std::random_device rd;
+    if (FLAGS_sketch_method == "ED") {
+        std::cerr << " ALGO: ED" << std::endl;
+        f(EditDistance<char_type>());
+        return;
+    }
+    if (FLAGS_sketch_method == "TS") {
+        f(Tensor<char_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length, rd()));
+        return;
+    }
+    if (FLAGS_sketch_method == "TSS") {
+        f(TensorSlide<char_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
+                                 FLAGS_window_size, FLAGS_stride, rd()));
+        return;
+    }
+    /*
+    if (FLAGS_sketch_method == "MH") {
+        f(MinHash<kmer_type>(kmer_word_size, FLAGS_embed_dim, HashAlgorithm::uniform, rd()));
+        return;
+    }
+    if (FLAGS_sketch_method == "WMH") {
+        f(WeightedMinHash<kmer_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
+                                     HashAlgorithm::uniform, rd()));
+        return;
+    }
+    if (FLAGS_sketch_method == "OMH") {
+        f(OrderedMinHash<kmer_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
+                                    FLAGS_tuple_length, HashAlgorithm::uniform, rd()));
+        return;
+    }
+    */
+}
+
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -174,9 +287,16 @@ int main(int argc, char *argv[]) {
         std::exit(1);
     }
 
-    uint64_t kmer_word_size = int_pow<uint64_t>(alphabet_size, FLAGS_kmer_length);
+    auto kmer_word_size = int_pow<uint64_t>(alphabet_size, FLAGS_kmer_length);
 
-	std::random_device rd;
+    // using char_type = uint8_t;
+
+    std::random_device rd;
+
+    if (FLAGS_action == "triangle") {
+        run_algorithm([](auto x) { run_triangle(x); });
+        return 0;
+    }
 
     if (FLAGS_sketch_method.substr(FLAGS_sketch_method.size() - 2, 2) == "MH") {
         std::function<std::vector<uint64_t>(const std::vector<uint64_t> &)> sketcher;
@@ -184,9 +304,9 @@ int main(int argc, char *argv[]) {
         if (FLAGS_sketch_method == "MH") {
             // The hash function is part of the lambda state.
             sketcher = [&,
-                        min_hash = MinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim,
-                                                     HashAlgorithm::uniform, rd())](
-                               const std::vector<uint64_t> &seq) mutable {
+                        min_hash
+                        = MinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, HashAlgorithm::uniform,
+                                            rd())](const std::vector<uint64_t> &seq) mutable {
                 return min_hash.compute(seq);
             };
         } else if (FLAGS_sketch_method == "WMH") {
@@ -199,9 +319,9 @@ int main(int argc, char *argv[]) {
             };
         } else if (FLAGS_sketch_method == "OMH") {
             sketcher = [&,
-                        omin_hash
-                        = OrderedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim, FLAGS_max_len,
-                                                   FLAGS_tuple_length, HashAlgorithm::uniform, rd())](
+                        omin_hash = OrderedMinHash<uint64_t>(kmer_word_size, FLAGS_embed_dim,
+                                                             FLAGS_max_len, FLAGS_tuple_length,
+                                                             HashAlgorithm::uniform, rd())](
                                const std::vector<uint64_t> &seq) mutable {
                 return omin_hash.compute(seq);
             };
