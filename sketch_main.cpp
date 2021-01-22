@@ -14,6 +14,7 @@ DEFINE_string(o, "", "Output file");
 
 DEFINE_string(i, "", "Input directory");
 
+DEFINE_int32(t, 4, "Thread count");
 
 static bool ValidateInput(const char * /*unused*/, const std::string &value) {
     if (!value.empty()) {
@@ -53,18 +54,20 @@ int main(int argc, char *argv[]) {
     for (uint32_t epoch = 0; epoch < (sequences.size() - 1) / BLOCK_SIZE + 1; ++epoch) {
         std::vector<size_t> distances(epoch * BLOCK_SIZE * BLOCK_SIZE);
         size_t max_ind = std::min((epoch + 1) * BLOCK_SIZE, sequences.size());
-#pragma omp parallel for
+#pragma omp parallel for num_threads(FLAGS_t)
         for (uint32_t i = 0; i < epoch * BLOCK_SIZE; ++i) {
             for (uint32_t j = epoch * BLOCK_SIZE; j < max_ind; ++j) {
+                std::cout << sequences[i].second << "," << sequences[j].second << std::endl;
                 distances[i * BLOCK_SIZE + j - epoch * BLOCK_SIZE]
                         = edit_distance(sequences[i].first, sequences[j].first);
             }
         }
         std::cout << ".";
         std::vector<std::vector<size_t>> distances2(BLOCK_SIZE, std::vector<size_t>(BLOCK_SIZE));
-#pragma omp parallel for
+#pragma omp parallel for num_threads(FLAGS_t)
         for (uint32_t i = epoch * BLOCK_SIZE; i < max_ind; ++i) {
             for (uint32_t j = i + 1; j < max_ind; ++j) {
+                std::cout << sequences[i].second << "," << sequences[j].second << std::endl;
                 distances2[(i - epoch * BLOCK_SIZE)][j - epoch * BLOCK_SIZE]
                         = edit_distance(sequences[i].first, sequences[j].first);
             }
