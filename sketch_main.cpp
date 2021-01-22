@@ -16,6 +16,8 @@ DEFINE_string(i, "", "Input directory");
 
 DEFINE_int32(t, 4, "Thread count");
 
+DEFINE_int32(b, 32, "Block size");
+
 static bool ValidateInput(const char * /*unused*/, const std::string &value) {
     if (!value.empty()) {
         return true;
@@ -41,7 +43,6 @@ int main(int argc, char *argv[]) {
         if (p.is_directory()) {
             continue;
         }
-        std::cout << p.path().filename() << std::endl;
         FastaFile<uint8_t> ff = read_fasta<uint8_t>(p.path().string(), "fasta");
         sequences.push_back({ ff.sequences[0], p.path().filename() });
     }
@@ -50,7 +51,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Read " << sequences.size() << " files" << std::endl;
 
     fs::remove_all(FLAGS_o);
-    constexpr size_t BLOCK_SIZE = 4;
+    const size_t BLOCK_SIZE = FLAGS_b;
     for (uint32_t epoch = 0; epoch < (sequences.size() - 1) / BLOCK_SIZE + 1; ++epoch) {
         std::vector<size_t> distances(epoch * BLOCK_SIZE * BLOCK_SIZE);
         size_t max_ind = std::min((epoch + 1) * BLOCK_SIZE, sequences.size());
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]) {
                         = edit_distance(sequences[i].first, sequences[j].first);
             }
         }
-        std::cout << ".";
+        std::cout << "Epoch 1.1 done";
         std::vector<std::vector<size_t>> distances2(BLOCK_SIZE, std::vector<size_t>(BLOCK_SIZE));
 #pragma omp parallel for num_threads(FLAGS_t)
         for (uint32_t i = epoch * BLOCK_SIZE; i < max_ind; ++i) {
@@ -87,6 +88,6 @@ int main(int argc, char *argv[]) {
         }
         f.close();
 
-        std::cout << ".";
+        std::cout << "Epoch 1.2 done";;
     }
 }

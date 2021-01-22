@@ -136,7 +136,6 @@ size_t lcs_distance(const std::vector<seq_type> &s1, const std::vector<seq_type>
 
 template <class seq_type>
 size_t edit_distance(const std::vector<seq_type> &s1, const std::vector<seq_type> &s2) {
-    Timer timer("edit_distance");
     const size_t m(s1.size());
     const size_t n(s2.size());
 
@@ -145,20 +144,18 @@ size_t edit_distance(const std::vector<seq_type> &s1, const std::vector<seq_type
     if (n == 0)
         return m;
 
-    auto costs = std::vector<size_t>(n + 1);
+    std::vector<uint32_t> costs(n + 1);
 
     for (size_t k = 0; k <= n; k++)
         costs[k] = k;
 
-    size_t i = 0;
-    for (auto it1 = s1.begin(); it1 != s1.end(); ++it1, ++i) {
+    for (uint32_t i = 0; i < s1.size(); ++i) {
         costs[0] = i + 1;
         size_t corner = i;
 
-        size_t j = 0;
-        for (auto it2 = s2.begin(); it2 != s2.end(); ++it2, ++j) {
+        for (uint32_t j = 0; j < s2.size(); ++j) {
             size_t upper = costs[j + 1];
-            if (*it1 == *it2) {
+            if (s1[i] == s2[j]) {
                 costs[j + 1] = corner;
             } else {
                 size_t t(upper < corner ? upper : corner);
@@ -169,9 +166,7 @@ size_t edit_distance(const std::vector<seq_type> &s1, const std::vector<seq_type
         }
     }
 
-    size_t result = costs[n];
-
-    return result;
+    return costs[n];
 }
 
 template <class T, class = is_u_integral<T>>
@@ -194,14 +189,14 @@ std::string flag_values(char delimiter = ' ', bool skip_empty = false);
 // A simple wrapper around std::apply that applies a given lambda on each element of a tuple.
 template <typename F, typename T>
 void apply_tuple(F &&f, T &tuple_t) {
-    std::apply([&](auto &...t) { (f(t), ...); }, tuple_t);
+    std::apply([&](auto &... t) { (f(t), ...); }, tuple_t);
 }
 
 
 // A simple wrapper around std::apply that applies f on pairs of elements of two tuples.
 template <typename F, typename T, typename U>
 void apply_tuple(F &&f, T &tuple_t, U &tuple_u) {
-    std::apply([&](auto &...t) { std::apply([&](auto &...u) { (f(t, u), ...); }, tuple_u); },
+    std::apply([&](auto &... t) { std::apply([&](auto &... u) { (f(t, u), ...); }, tuple_u); },
                tuple_t);
 }
 
