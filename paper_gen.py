@@ -4,7 +4,7 @@ from itertools import product
 import os, math
 import numpy as np
 import pandas as pd
-from scipy.stats import spearmanr, rankdata
+from scipy.stats import rankdata, pearsonr
 from sklearn import metrics
 from matplotlib import pyplot as plt
 from glob import glob
@@ -40,10 +40,7 @@ def load_results(data_dir, thresh):
 
     sp_corr = []
     for m in methods:
-        if len(pd.unique(dists[m])) == 1:  # check if dists[m] is a constant vector
-            sr = 0
-        else:
-            sr = spearmanr(dists['ED'], dists[m]).correlation
+        sr = pearsonr(rankdata(dists['ED'], method='ordinal'), rankdata(dists[m], method='ordinal'))[0]
         sp_corr.append(sr)
 
     stats = {'method': methods, 'Sp': sp_corr}
@@ -310,7 +307,7 @@ def gen_fig1(data_dir, save_dir):
     data = data[data.method != 'ED']
     fig, ax = plt.subplots(figsize=figure_size)
     g = sns.lineplot(ax=ax, data=data, x='seq_len', y='Sp', hue='method', markers=True)
-    g.set(xlabel='Sequence length', ylabel='Spearman Corr.')
+    g.set(xlabel='Sequence length', ylabel='Spearman Corr.', ylim=(0,1))
     ax.set_xscale('log')
     ax.grid(b=True, which='minor', lw=.25)
     ax.legend().set_title('')
@@ -336,9 +333,9 @@ def gen_fig1(data_dir, save_dir):
     data = data[data.method != 'ED']
     fig, ax = plt.subplots(figsize=figure_size)
     g = sns.lineplot(ax=ax, data=data, x='embed_dim', y='Sp', hue='method', markers=True)
+    g.set(xlabel='Embedding dimension', ylabel='Spearman Corr.',ylim=(0,1))
     ax.set_xscale('log')
     ax.grid(b=True, which='minor', lw=.25)
-    g.set(xlabel='Embedding dimension', ylabel='Spearman Corr.')
     ax.legend().set_title('')
     plt.savefig(os.path.join(save_dir, 'Fig1d.pdf'), bbox_inches='tight')
     fig.show()
@@ -572,8 +569,8 @@ if __name__ == '__main__':
     run_optimal_params(binary_path=binary_path,
                        experiments_dir=experiments_dir,
                        num_runs=5,
-                       embed_dim=[32, 64, 128, 256, 512, 1024, 2048],
-                       seq_len=[2000, 4000, 8000, 16000, 32000, 64000])
+                       embed_dim=[ 64, 128, 256, 512, 1024,2048],
+                       seq_len=[4000, 8000, 16000, 32000, 64000])
 
     plot_figures(experiments_dir=experiments_dir, plots_dir=plots_dir)
 
