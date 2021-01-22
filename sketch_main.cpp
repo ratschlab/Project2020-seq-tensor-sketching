@@ -169,15 +169,14 @@ class SketchHelper {
 };
 
 // Some global constant types.
-using char_type = uint8_t;
+using seq_type = uint8_t;
 
 // Run the given sketch method on input specified by the command line arguments, and write a
 // triangular distance matrix to the output file.
 template <class SketchAlgorithm>
 void run_triangle(SketchAlgorithm &algorithm) {
     std::cerr << "Reading input .." << std::endl;
-    std::vector<FastaFile<char_type>> files
-            = read_directory<char_type>(FLAGS_i, FLAGS_input_format);
+    std::vector<FastaFile<seq_type>> files = read_directory<seq_type>(FLAGS_i, FLAGS_input_format);
     std::cerr << "Read " << files.size() << " files" << std::endl;
 
     const size_t n = files.size();
@@ -225,7 +224,7 @@ void run_triangle(SketchAlgorithm &algorithm) {
     // MASH adds an extra tab before the number of lines, so mirror that.
     fo << "\t" << n << '\n';
     for (size_t i = 0; i < n; ++i) {
-        fo << files[i].id;
+        fo << files[i].filename;
         for (size_t j = 0; j < i; ++j)
             fo << '\t' << distances[i][j];
         fo << '\n';
@@ -242,16 +241,16 @@ void run_function_on_algorithm(F f) {
 
     std::random_device rd;
     if (FLAGS_sketch_method == "ED") {
-        f(EditDistance<char_type>());
+        f(EditDistance<seq_type>());
         return;
     }
     if (FLAGS_sketch_method == "TS") {
-        f(Tensor<char_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length, rd()));
+        f(Tensor<seq_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length, rd()));
         return;
     }
     if (FLAGS_sketch_method == "TSS") {
-        f(TensorSlide<char_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
-                                 FLAGS_window_size, FLAGS_stride, rd()));
+        f(TensorSlide<seq_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
+                                FLAGS_window_size, FLAGS_stride, rd()));
         return;
     }
 }
@@ -269,8 +268,6 @@ int main(int argc, char *argv[]) {
     }
 
     auto kmer_word_size = int_pow<uint64_t>(alphabet_size, FLAGS_kmer_length);
-
-    // using char_type = uint8_t;
 
     std::random_device rd;
 
