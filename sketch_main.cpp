@@ -33,18 +33,16 @@ int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     init_alphabet("DNA5");
 
-    Vec2D<uint8_t> seqs;
-    std::vector<std::string> seq_names;
     std::vector<std::pair<std::vector<uint8_t>, std::string>> sequences;
 
-    std::cout << "Reading fast files..." << std::endl;
+    std::cout << "Reading fasta files..." << std::endl;
     for (auto &p : fs::directory_iterator(FLAGS_i)) {
         if (p.is_directory()) {
             continue;
         }
-        std::tie(seqs, seq_names) = read_fasta<uint8_t>(p.path().string(), "fasta");
-        assert(seqs.size() == 1);
-        sequences.push_back({ seqs[0], p.path().filename() });
+        std::cout << p.path().filename() << std::endl;
+        FastaFile<uint8_t> ff = read_fasta<uint8_t>(p.path().string(), "fasta");
+        sequences.push_back({ ff.sequences[0], p.path().filename() });
     }
     std::sort(sequences.begin(), sequences.end(),
               [](auto &a, auto &b) { return a.second < b.second; });
