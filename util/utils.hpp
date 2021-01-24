@@ -51,22 +51,24 @@ T l1_dist(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     T res = 0;
     for (size_t i = 0; i < a.size(); i++) {
-        auto el = std::abs(a[i] - b[i]);
-        res += el;
+        if constexpr (std::is_unsigned_v<T>) {
+            res += std::abs(static_cast<std::make_signed_t<T>>(a[i] - b[i]));
+        } else {
+            res += std::abs(a[i] - b[i]);
+        }
     }
     return res;
 }
 
-
 template <class T>
-T l2_dist(const std::vector<T> &a, const std::vector<T> &b) {
+double l2_dist(const std::vector<T> &a, const std::vector<T> &b) {
     assert(a.size() == b.size());
     T res = 0;
     for (size_t i = 0; i < a.size(); i++) {
-        auto el = std::abs(a[i] - b[i]);
+        double el = (double)a[i] - (double)b[i];
         res += el * el;
     }
-    return res;
+    return sqrt(res);
 }
 
 

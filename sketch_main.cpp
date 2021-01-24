@@ -31,10 +31,26 @@ DEFINE_validator(i, &ValidateInput);
 using namespace ts;
 
 namespace fs = std::filesystem;
+using Tensor23 = std::pair<std::vector<uint32_t>, std::vector<uint32_t>>;
+Tensor23 tensor23(std::vector<uint8_t> &seq) {
+    Tensor23 result({ std::vector<uint32_t>(16), std::vector<uint32_t>(64) });
+    std::transform(seq.begin(), seq.end(), seq.begin(), [](uint8_t a) { return (a > 3) ? 0 : a; });
+    for (uint32_t i = 0; i < seq.size(); ++i) {
+        const uint32_t idx1 = 16 * seq[i];
+        for (uint32_t j = i + 1; j < seq.size(); ++j) {
+            const uint32_t idx2 = idx1 + 4 * seq[j];
+            for (uint32_t k = j + 1; k < seq.size(); ++k) {
+                result.second[idx2 + seq[k]]++;
+            }
+            result.first[(seq[i] << 2) + seq[j]]++;
+        }
+    }
+    return result;
+}
 
 int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    init_alphabet("DNA5");
+    init_alphabet("DNA4");
 
     std::vector<std::pair<std::vector<uint8_t>, std::string>> sequences;
 
@@ -52,40 +68,23 @@ int main(int argc, char *argv[]) {
 
     fs::remove_all(FLAGS_o);
     const size_t BLOCK_SIZE = FLAGS_b;
+    std::vector<Tensor23> tensors(sequences.size());
     for (uint32_t epoch = 0; epoch < (sequences.size() - 1) / BLOCK_SIZE + 1; ++epoch) {
-        std::vector<size_t> distances(epoch * BLOCK_SIZE * BLOCK_SIZE);
         size_t max_ind = std::min((epoch + 1) * BLOCK_SIZE, sequences.size());
 #pragma omp parallel for num_threads(FLAGS_t)
-        for (uint32_t i = 0; i < epoch * BLOCK_SIZE; ++i) {
-            for (uint32_t j = epoch * BLOCK_SIZE; j < max_ind; ++j) {
-                distances[i * BLOCK_SIZE + j - epoch * BLOCK_SIZE]
-                        = edit_distance(sequences[i].first, sequences[j].first);
-            }
-        }
-        std::cout << "Epoch 1.1 done";
-        std::vector<std::vector<size_t>> distances2(BLOCK_SIZE, std::vector<size_t>(BLOCK_SIZE));
-#pragma omp parallel for num_threads(FLAGS_t)
         for (uint32_t i = epoch * BLOCK_SIZE; i < max_ind; ++i) {
-            for (uint32_t j = i + 1; j < max_ind; ++j) {
-                distances2[(i - epoch * BLOCK_SIZE)][j - epoch * BLOCK_SIZE]
-                        = edit_distance(sequences[i].first, sequences[j].first);
+            tensors[i] = tensor23(sequences[i].first);
+        }
+        std::ofstream f2(FLAGS_o + "2");
+        std::ofstream f3(FLAGS_o + "3");
+        for (uint32_t j = 0; j < max_ind; ++j) {
+            for (uint32_t k = j + 1; k < max_ind; ++k) {
+                f2 << sequences[j].second << "," << sequences[k].second << ", "
+                   << l2_dist(tensors[j].first, tensors[k].first) << std::endl;
+                f3 << sequences[j].second << "," << sequences[k].second << ", "
+                   << l2_dist(tensors[j].second, tensors[k].second) << std::endl;
             }
         }
-        std::ofstream f(FLAGS_o, std::ios::app);
-        for (uint32_t i = 0; i < epoch * BLOCK_SIZE; ++i) {
-            for (uint32_t j = epoch * BLOCK_SIZE; j < max_ind; ++j) {
-                f << sequences[i].second << "," << sequences[j].second << ", "
-                  << distances[i * BLOCK_SIZE + j - epoch * BLOCK_SIZE] << std::endl;
-            }
-        }
-        for (uint32_t i = epoch * BLOCK_SIZE; i < max_ind; ++i) {
-            for (uint32_t j = i + 1; j < max_ind; ++j) {
-                f << sequences[i].second << "," << sequences[j].second << ", "
-                  << distances2[(i - epoch * BLOCK_SIZE)][j - epoch * BLOCK_SIZE] << std::endl;
-            }
-        }
-        f.close();
-
-        std::cout << "Epoch 1.2 done";;
+        std::cout << "Epoch " << epoch << " done." << std::endl;
     }
 }
