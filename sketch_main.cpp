@@ -52,15 +52,16 @@ int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     init_alphabet("DNA4");
 
-
-    std::cout << "Reading fasta files..." << std::endl;
     std::vector<std::string> names;
     for (auto &p : fs::directory_iterator(FLAGS_i)) {
-        if (p.is_directory() || p.path().filename().string().find(".fa") == std::string::npos) {
+        if (p.is_directory()
+            || (p.path().filename().string().find(".fa") == std::string::npos
+                && p.path().filename().string().find(".fna.gz") == std::string::npos)) {
             continue;
         }
         names.push_back(p.path().string());
     }
+    std::cout << "Found " << names.size() << " fasta files" << std::endl;
     std::vector<std::pair<std::vector<uint8_t>, std::string>> sequences(names.size());
 #pragma omp parallel for num_threads(FLAGS_t)
     for (uint32_t i = 0; i < names.size(); ++i) {
@@ -69,7 +70,11 @@ int main(int argc, char *argv[]) {
     }
     std::sort(sequences.begin(), sequences.end(),
               [](auto &a, auto &b) { return a.second < b.second; });
-    std::cout << "Read " << sequences.size() << " files" << std::endl;
+    std::cout << "Read " << sequences.size() << " fasta files" << std::endl;
+
+    if (sequences.empty()) {
+        std::exit(0);
+    }
 
     fs::remove_all(FLAGS_o);
     const size_t BLOCK_SIZE = FLAGS_b;
