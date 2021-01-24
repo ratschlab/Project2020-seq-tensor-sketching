@@ -52,15 +52,20 @@ int main(int argc, char *argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     init_alphabet("DNA4");
 
-    std::vector<std::pair<std::vector<uint8_t>, std::string>> sequences;
 
     std::cout << "Reading fasta files..." << std::endl;
+    std::vector<std::string> names;
     for (auto &p : fs::directory_iterator(FLAGS_i)) {
-        if (p.is_directory()) {
+        if (p.is_directory() || p.path().filename().string().find(".fa") == std::string::npos) {
             continue;
         }
-        FastaFile<uint8_t> ff = read_fasta<uint8_t>(p.path().string(), "fasta");
-        sequences.push_back({ ff.sequences[0], p.path().filename() });
+        names.push_back(p.path().string());
+    }
+    std::vector<std::pair<std::vector<uint8_t>, std::string>> sequences(names.size());
+#pragma omp parallel for num_threads(FLAGS_t)
+    for (uint32_t i = 0; i < names.size(); ++i) {
+        FastaFile<uint8_t> ff = read_fasta<uint8_t>(names[i], "fasta");
+        sequences[i] = { ff.sequences[0], fs::path(names[i]).filename() };
     }
     std::sort(sequences.begin(), sequences.end(),
               [](auto &a, auto &b) { return a.second < b.second; });
