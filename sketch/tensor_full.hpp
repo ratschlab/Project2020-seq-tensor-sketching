@@ -11,6 +11,7 @@
 #include <bits/stdint-uintn.h>
 #include <cassert>
 #include <cmath>
+#include <iostream>
 #include <random>
 
 namespace ts { // ts = Tensor Sketch
@@ -32,7 +33,7 @@ class FullTensor : public SketchBase<std::vector<double>, false> {
      * @param normalize when true the counts will be normalized to relative frequencies with sum 1.
      */
     FullTensor(seq_type alphabet_size,
-               uint32_t sequence_len,
+               int32_t sequence_len,
                const std::string &name = "Tensor",
                bool normalize = true)
         : SketchBase<std::vector<double>, false>(name),
@@ -62,9 +63,11 @@ class FullTensor : public SketchBase<std::vector<double>, false> {
         ts[0][0] = 1;
 
         for (auto s : seq) {
-            assert(0 <= s and s < alphabet_size);
+            // TODO(ragnar): Figure out a nice way to deal with uncertain reads.
+            if (s < 0 || s >= alphabet_size)
+                continue;
             for (int i = sequence_len - 1; i >= 0; --i)
-                for (int j = 0; j < ts[i].size(); ++j)
+                for (size_t j = 0; j < ts[i].size(); ++j)
                     ts[i + 1][alphabet_size * j + s] += ts[i][j];
         }
 
@@ -90,7 +93,7 @@ class FullTensor : public SketchBase<std::vector<double>, false> {
     const seq_type alphabet_size;
 
     /** The length of the subsequences considered for sketching, denoted by t in the paper */
-    const uint32_t sequence_len;
+    const int32_t sequence_len;
 
     /** Whether to normalize the counts to relative frequencies with sum 1. */
     const bool normalize;

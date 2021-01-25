@@ -5,6 +5,7 @@
 #include "sketch/hash_ordered.hpp"
 #include "sketch/hash_weighted.hpp"
 #include "sketch/tensor.hpp"
+#include "sketch/tensor_full.hpp"
 #include "sketch/tensor_slide.hpp"
 #include "util/multivec.hpp"
 #include "util/progress.hpp"
@@ -245,6 +246,10 @@ void run_function_on_algorithm(F f) {
     std::random_device rd;
     if (FLAGS_sketch_method == "ED") {
         f(EditDistance<seq_type>());
+        return;
+    }
+    if (FLAGS_sketch_method == "T") {
+        f(FullTensor<seq_type>(kmer_word_size, FLAGS_tuple_length));
         return;
     }
     if (FLAGS_sketch_method == "TS") {
