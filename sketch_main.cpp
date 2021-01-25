@@ -76,7 +76,8 @@ int main(int argc, char *argv[]) {
         std::exit(0);
     }
 
-    fs::remove_all(FLAGS_o);
+    fs::remove_all(FLAGS_o + "2");
+    fs::remove_all(FLAGS_o + "3");
     const size_t BLOCK_SIZE = FLAGS_b;
     std::vector<Tensor23> tensors(sequences.size());
     for (uint32_t epoch = 0; epoch < (sequences.size() - 1) / BLOCK_SIZE + 1; ++epoch) {
