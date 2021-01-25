@@ -18,7 +18,10 @@
 #include <sstream>
 #include <utility>
 
-DEFINE_string(action, "", "Which action to do. One of: triangle");
+// The main command this program should perform.
+// Triangle: compute a triangular distance matrix.
+// More actions will be added.
+DEFINE_string(action, "", "Which action to do. One of: triangle, none");
 
 DEFINE_string(alphabet,
               "dna4",
@@ -36,7 +39,7 @@ DEFINE_string(o, "", "Output file, containing the sketches for each sequence");
 
 DEFINE_string(i, "", "Input file, containing the sequences to be sketched in .fa format");
 
-DEFINE_string(input_format, "fasta", "Input format: 'fasta', 'csv', 'fasta_directory'");
+DEFINE_string(input_format, "fasta", "Input format: 'fasta', 'csv'");
 DEFINE_string(f, "fasta", "Short hand for --input_format");
 
 DEFINE_int32(embed_dim, 4, "Embedding dimension, used for all sketching methods");
@@ -176,7 +179,7 @@ using seq_type = uint8_t;
 template <class SketchAlgorithm>
 void run_triangle(SketchAlgorithm &algorithm) {
     std::cerr << "Reading input .." << std::endl;
-    std::vector<FastaFile<seq_type>> files = read_directory<seq_type>(FLAGS_i, FLAGS_input_format);
+    std::vector<FastaFile<seq_type>> files = read_directory<seq_type>(FLAGS_i);
     std::cerr << "Read " << files.size() << " files" << std::endl;
 
     const size_t n = files.size();
