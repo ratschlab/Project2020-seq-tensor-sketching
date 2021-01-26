@@ -19,6 +19,8 @@
 #include <sstream>
 #include <utility>
 
+using namespace ts;
+
 // The main command this program should perform.
 // Triangle: compute a triangular distance matrix.
 // More actions will be added.
@@ -91,9 +93,10 @@ void adjust_short_names() {
     if (!gflags::GetCommandLineFlagInfoOrDie("s").is_default) {
         FLAGS_stride = FLAGS_s;
     }
+    if (!gflags::GetCommandLineFlagInfoOrDie("t").is_default) {
+        FLAGS_tuple_length = FLAGS_t;
+    }
 }
-
-using namespace ts;
 
 template <typename seq_type, class kmer_type, class embed_type>
 class SketchHelper {
@@ -219,6 +222,7 @@ void run_triangle(SketchAlgorithm &algorithm) {
     std::cerr << "Writing distances triangle to " << FLAGS_o << " .." << std::endl;
     std::filesystem::path ofile = std::filesystem::absolute(std::filesystem::path(FLAGS_o));
 
+    write_output_meta();
     std::ofstream fo(ofile);
     if (!fo.is_open()) {
         std::cerr << "Could not open " << FLAGS_o << " for writing." << std::endl;
