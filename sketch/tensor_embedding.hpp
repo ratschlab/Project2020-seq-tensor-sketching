@@ -18,20 +18,22 @@ namespace ts { // ts = Tensor Sketch
 /**
  * Computes the tensor of subsequence counts for a given sequence as described in
  * https://www.biorxiv.org/content/10.1101/2020.11.13.381814v1.
+ * In contrast with TensorSketch, this class does not do any sketching and preserves the full
+ * tensor.
  * @tparam seq_type the type of elements in the sequences to be sketched.
  */
 template <class seq_type>
-class FullTensor : public SketchBase<std::vector<double>, false> {
+class TensorEmbedding : public SketchBase<std::vector<double>, false> {
   public:
     /**
      * @param alphabet_size the number of elements in the alphabet S over which sequences are
      * defined (e.g. 4 for DNA)
      * @param normalize when true the counts will be normalized to relative frequencies with sum 1.
      */
-    FullTensor(seq_type alphabet_size,
-               uint32_t t,
-               const std::string &name = "Tensor",
-               bool normalize = true)
+    TensorEmbedding(seq_type alphabet_size,
+                    uint32_t t,
+                    const std::string &name = "Tensor",
+                    bool normalize = true)
         : SketchBase<std::vector<double>, false>(name),
           alphabet_size(alphabet_size),
           t(t),
