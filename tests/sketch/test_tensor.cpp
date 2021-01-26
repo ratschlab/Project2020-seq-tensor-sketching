@@ -1,8 +1,8 @@
 #include "sketch/tensor.hpp"
 #include "util/utils.hpp"
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -29,7 +29,7 @@ void rand_init(uint32_t sketch_size, Vec2D<set_type> *hashes, Vec2D<bool> *signs
 }
 
 TEST(Tensor, Empty) {
-    Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length, /*seed=*/ 31415);
+    Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length, /*seed=*/31415);
     std::vector<double> sketch = under_test.compute(std::vector<uint8_t>());
     ASSERT_EQ(sketch.size(), sketch_dim);
     ASSERT_THAT(sketch, ElementsAre(0, 0));
@@ -37,7 +37,7 @@ TEST(Tensor, Empty) {
 
 /** The sequence has one char, which is shorter than the tuple length, so the sketch will be 0 */
 TEST(Tensor, OneChar) {
-    Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length, /*seed=*/ 31415);
+    Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length, /*seed=*/31415);
     for (uint8_t c = 0; c < alphabet_size; ++c) {
         std::vector<double> sketch = under_test.compute({ c });
         ASSERT_THAT(sketch, ElementsAre(0, 0));
@@ -48,7 +48,7 @@ TEST(Tensor, OneChar) {
  * h(seq[0]) */
 TEST(Tensor, OneCharTuple1) {
     constexpr uint32_t tuple_len = 1;
-    Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_len, /*seed=*/ 31415);
+    Tensor<uint8_t> under_test(alphabet_size, sketch_dim, tuple_len, /*seed=*/31415);
 
     Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
     Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
@@ -71,7 +71,7 @@ TEST(Tensor, OneCharTuple1) {
 TEST(Tensor, FullStringDistinctChars) {
     for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
         for (uint32_t tuple_len = 2; tuple_len < 10; ++tuple_len) {
-            Tensor<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len, /*seed=*/ 31415);
+            Tensor<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len, /*seed=*/31415);
             std::vector<uint8_t> sequence(tuple_len);
             std::iota(sequence.begin(), sequence.end(), 0U);
             std::vector<double> sketch = under_test.compute(sequence);
@@ -94,7 +94,7 @@ TEST(Tensor, FullStringRandomChars) {
     for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
         for (uint32_t tuple_len = 2; tuple_len < 10; ++tuple_len) {
             std::uniform_int_distribution<uint8_t> rand_char(0, tuple_len - 1);
-            Tensor<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len, /*seed=*/ 31415);
+            Tensor<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len, /*seed=*/31415);
             std::vector<uint8_t> sequence(tuple_len);
             for (uint8_t &c : sequence) {
                 c = rand_char(gen);
@@ -120,7 +120,7 @@ TEST(Tensor, SameChars) {
     std::uniform_int_distribution<uint8_t> rand_seq_len(0, 100);
     for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
         for (uint32_t tuple_len = 2; tuple_len < 10; ++tuple_len) {
-            Tensor<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len, /*seed=*/ 31415);
+            Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len, /*seed=*/31415);
             uint8_t sequence_length = tuple_len + rand_seq_len(gen);
             std::vector<uint8_t> sequence(sequence_length, rand_char(gen));
             std::vector<double> sketch = under_test.compute(sequence);
@@ -144,7 +144,7 @@ TEST(Tensor, DistinctCharsTuple1) {
     std::vector<uint8_t> sequence(alphabet_size);
     std::iota(sequence.begin(), sequence.end(), 0);
     for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
-        Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len, /*seed=*/ 31415);
+        Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len, /*seed=*/31415);
 
         std::vector<double> sketch = under_test.compute(sequence);
         ASSERT_EQ(sketch.size(), sketch_dimension);
@@ -167,7 +167,7 @@ TEST(Tensor, DistinctCharsTupleTMinus1) {
         std::vector<uint8_t> sequence(alphabet_size);
         std::iota(sequence.begin(), sequence.end(), 0);
         for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
-            Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len, /*seed=*/ 31415);
+            Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len, /*seed=*/31415);
 
             std::vector<double> sketch = under_test.compute(sequence);
             std::vector<double> sketch2 = under_test.compute(sequence);

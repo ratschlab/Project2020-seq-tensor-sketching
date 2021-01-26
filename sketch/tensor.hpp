@@ -9,6 +9,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <iostream>
 #include <random>
 
 namespace ts { // ts = Tensor Sketch
@@ -78,12 +79,16 @@ class Tensor : public SketchBase<std::vector<double>, false> {
         // the initial condition states that the sketch for the empty string is (1,0,..)
         Tp[0][0] = 1;
         for (uint32_t i = 0; i < seq.size(); i++) {
+            const seq_type c = seq[i];
+            if (c < 0 or c >= alphabet_size) {
+                continue;
+            }
             // must traverse in reverse order, to avoid overwriting the values of Tp and Tm before
             // they are used in the recurrence
             for (uint32_t p = std::min(i + 1, (uint32_t)subsequence_len); p >= 1; --p) {
-                double z = p / (i + 1.0); // probability that the last index is i
-                seq_type r = hashes[p - 1][seq[i]];
-                bool s = signs[p - 1][seq[i]];
+                const double z = p / (i + 1.0); // probability that the last index is i
+                const seq_type r = hashes[p - 1][c];
+                const bool s = signs[p - 1][c];
                 if (s) {
                     this->shift_sum_inplace(Tp[p], Tp[p - 1], r, z);
                     this->shift_sum_inplace(Tm[p], Tm[p - 1], r, z);
@@ -119,7 +124,7 @@ class Tensor : public SketchBase<std::vector<double>, false> {
                                          seq_type shift,
                                          double z) {
         assert(a.size() == b.size());
-        size_t len = a.size();
+        const size_t len = a.size();
         std::vector<double> result(a.size());
         for (uint32_t i = 0; i < a.size(); i++) {
             result[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
