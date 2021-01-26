@@ -189,7 +189,12 @@ T int_pow(T x, T pow) {
     return result;
 }
 
-std::string flag_values(char delimiter = ' ', bool skip_empty = false);
+std::string
+flag_values(char delimiter = ' ', bool skip_empty = false, bool include_flagfile = true);
+
+// If the -o output flag is set, this writes a small shell script <output>.meta containing the
+// command line used to generate the output.
+void write_output_meta();
 
 // A simple wrapper around std::apply that applies a given lambda on each element of a tuple.
 template <typename F, typename T>
