@@ -74,7 +74,7 @@ class FullTensor : public SketchBase<std::vector<double>, false> {
 
         if (normalize) {
             double nchooset = 1;
-            for (int i = 0; i < t; ++i) {
+            for (uint32_t i = 0; i < t; ++i) {
                 nchooset = nchooset * (length - i) / (i + 1);
             }
 
