@@ -236,6 +236,40 @@ void run_triangle(SketchAlgorithm &algorithm) {
     fo.close();
 };
 
+void normalize() {
+    // Read triangle from -i flag.
+    std::ifstream input(FLAGS_i);
+    uint32_t n;
+    input >> n;
+    Vec2D<double> triangle(n);
+    std::vector<std::string> names(n);
+    for (uint32_t i = 0; i < n; ++i) {
+        input >> names[i];
+        triangle[i].resize(i);
+        for (auto &d : triangle[i])
+            input >> d;
+    }
+
+    // Read files, assuming the file names are relative to the current working directory.
+    std::vector<FastaFile<seq_type>> files(n);
+    for (uint32_t i = 0; i < n; ++i) {
+        files[i] = read_fasta<seq_type>(names[i], "fasta");
+    }
+
+    // Print normalized triangle to -o flag.
+    std::ofstream output(FLAGS_o);
+    output << "\t" << n << "\n";
+    for (uint32_t i = 0; i < n; ++i) {
+        output << names[i];
+        for (uint32_t j = 0; j < i; ++j) {
+            output << "\t"
+                   << triangle[i][j]
+                            / std::max(files[i].sequences[0].size(), files[j].sequences[0].size());
+        }
+        output << "\n";
+    }
+}
+
 // Runs function f on the sketch method specified by the command line options.
 template <typename F>
 void run_function_on_algorithm(F f) {
@@ -281,6 +315,12 @@ int main(int argc, char *argv[]) {
 
     if (FLAGS_action == "triangle") {
         run_function_on_algorithm([](auto x) { run_triangle(x); });
+        return 0;
+    }
+
+
+    if (FLAGS_action == "normalize") {
+        normalize();
         return 0;
     }
 
