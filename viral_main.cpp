@@ -190,7 +190,7 @@ class ExperimentRunner {
         progress_bar::init(seqs.size());
 #pragma omp parallel for default(shared)
         for (uint32_t si = 0; si < seqs.size(); si++) {
-            if constexpr (algorithm->kmer_input) {
+            if constexpr (SketchAlgorithm::kmer_input) {
                 sketch[si]
                         = algorithm->compute(seqs[si], algorithm->kmer_length, alphabet_size);
             } else {

@@ -260,7 +260,7 @@ class ExperimentRunner {
         for (size_t i = 0; i < cmp_pairs.size(); i++) {
             auto [si, sj] = cmp_pairs[i];
 
-            dists[i] += algorithm->conv_dist(sketch[si], sketch[sj]);
+            dists[i] += algorithm->dist(sketch[si], sketch[sj]);
             progress_bar::iter();
         }
 
