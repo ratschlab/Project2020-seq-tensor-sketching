@@ -13,10 +13,10 @@
 namespace ts { // ts = Tensor Sketch
 
 /**
- * Represents the contents of a single Fasta file.
- * All the sequences in a file should be treated as a single assembly and should be sketched as a
- * whole.
- */
+* Represents the contents of a single Fasta file.
+* All the sequences in a file should be treated as a single assembly and should be sketched as a
+* whole.
+*/
 template <typename seq_type>
 struct FastaFile {
     /** The name of the file. */
@@ -28,9 +28,9 @@ struct FastaFile {
 };
 
 /**
- * Reads a fasta file and returns its contents.
- * @tparam seq_type type used for storing a character of the fasta file, typically uint8_t
- */
+* Reads a fasta file and returns its contents.
+* @tparam seq_type type used for storing a character of the fasta file, typically uint8_t
+*/
 template <typename seq_type>
 FastaFile<seq_type> read_fasta(const std::string &file_name, const std::string &input_format) {
     FastaFile<seq_type> f;
@@ -56,22 +56,12 @@ FastaFile<seq_type> read_fasta(const std::string &file_name, const std::string &
                 f.sequences.push_back(std::move(seq));
                 seq.clear();
             }
-            // Drop the leading '>'.
-            f.comments.emplace_back(line.begin() + 1, line.end());
+            f.comments.emplace_back(line.begin() + 1, line.end());      // Drop the leading '>'.
         } else if (!line.empty()) {
             if (input_format == "fasta") {
                 for (char c : line) {
                     seq.push_back(char2int(c));
                 }
-            } else if (input_format == "csv") {
-                std::stringstream ss(line);
-                std::string item;
-                while (std::getline(ss, item, ',')) {
-                    seq.push_back(std::stoi(item, 0, 16));
-                }
-                f.comments.push_back("seq" + std::to_string(f.sequences.size()));
-                f.sequences.push_back(std::move(seq));
-                seq.clear();
             } else {
                 std::cerr << "Invalid input foramt: " << input_format << std::endl;
                 exit(1);
@@ -86,10 +76,44 @@ FastaFile<seq_type> read_fasta(const std::string &file_name, const std::string &
     return f;
 }
 
+
 /**
- * Reads all .fasta and .fna files in the given directory and returns them.
- * @tparam seq_type type used for storing a character of the fasta file, typically uint8_t
- */
+* Reads a csv file and returns its contents.
+*/
+Vec2D<std::string> read_csv(const std::string &file_name) {
+    Vec2D<std::string> data;
+
+    if (!std::filesystem::exists(file_name)) {
+        std::cerr << "Input file does not exist: " << file_name << std::endl;
+        std::exit(1);
+    }
+
+    std::ifstream infile(file_name);
+    if (!infile.is_open()) {
+        std::cout << "Could not open " + file_name << std::endl;
+        std::exit(1);
+    }
+
+    std::string line;
+    while (std::getline(infile, line)) {
+        std::vector<std::string> row;
+         if (!line.empty()) {
+             size_t i = 0, j=0;
+             while (i < line.size()) {
+                 while(j<line.size() && line[j]!=',') j++;
+                 row.push_back(line.substr(i,j-i));
+                 i = ++j;
+             }
+             data.push_back(row);
+        }
+    }
+    return data;
+}
+
+/**
+* Reads all .fasta and .fna files in the given directory and returns them.
+* @tparam seq_type type used for storing a character of the fasta file, typically uint8_t
+*/
 template <typename seq_type>
 std::vector<FastaFile<seq_type>> read_directory(const std::string &directory_name) {
     if (!std::filesystem::exists(directory_name)) {
@@ -112,6 +136,7 @@ std::vector<FastaFile<seq_type>> read_directory(const std::string &directory_nam
 
     return files;
 }
+
 
 template <class seq_type>
 void write_fasta(const std::string &file_name, const Vec2D<seq_type> &sequences, bool Abc = false) {
