@@ -118,9 +118,9 @@ TEST(Tensor, SameChars) {
     std::mt19937 gen(342111);
     std::uniform_int_distribution<uint8_t> rand_char(0, alphabet_size - 1);
     std::uniform_int_distribution<uint8_t> rand_seq_len(0, 100);
-    for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
+    for (uint32_t sketch_dimension = 3; sketch_dimension < 20; ++sketch_dimension) {
         for (uint32_t tuple_len = 2; tuple_len < 10; ++tuple_len) {
-            Tensor<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len, /*seed=*/ 31415);
+            Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len, /*seed=*/ 31415);
             uint8_t sequence_length = tuple_len + rand_seq_len(gen);
             std::vector<uint8_t> sequence(sequence_length, rand_char(gen));
             std::vector<double> sketch = under_test.compute(sequence);
