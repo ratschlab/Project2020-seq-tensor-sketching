@@ -34,11 +34,11 @@ class SeqGen {
 
     /**
      * Generate sequences divided into independent groups of size `group_size`, and store
-     * ingroup_pairs within each group in `ingroup_pairs`
+     * cmp_pairs within each group in `cmp_pairs`
      * @tparam T character type
      * @tparam C index type
      * @param seqs generated sequences
-     * @param pairs sequence ingroup_pairs within each group
+     * @param pairs sequence cmp_pairs within each group
      */
     template <class T>
     Vec2D<T> generate_seqs() {
