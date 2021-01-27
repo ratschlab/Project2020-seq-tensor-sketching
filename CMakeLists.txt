@@ -16,7 +16,7 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/gflags EXCLUDE_FROM_ALL)
 add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/murmur_hash EXCLUDE_FROM_ALL)
 
 file(GLOB util_files "util/*.cpp")
-add_library(util ${util_files})
+add_library(util ${util_files} util/efficient_edit_distance.cpp)
 target_link_libraries(util gflags OpenMP::OpenMP_CXX)
 
 file(GLOB sequence_files "sequence/*.cpp")
@@ -27,6 +27,8 @@ file(GLOB sketch_files "sketch/*.cpp")
 add_library(sketch_lib ${sketch_files})
 target_link_libraries(sketch_lib murmur_lib OpenMP::OpenMP_CXX)
 
+add_executable(viral_main viral_main.cpp )
+target_link_libraries(viral_main sequence util sketch_lib)
 
 add_executable(experiments experiments_main.cpp )
 target_link_libraries(experiments sequence util sketch_lib)
