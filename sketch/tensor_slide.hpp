@@ -7,6 +7,7 @@
 #include <bit>
 #include <cstddef>
 #include <vector>
+#include <cmath>
 
 namespace ts {
 /**
@@ -116,11 +117,73 @@ class TensorSlide : public Tensor<seq_type> {
 
     double dist(const Vec2D<double> &a, const Vec2D<double> &b) {
         Timer timer("tensor_slide_sketch_dist");
-        return l2_dist2D_minlen(a, b);
+        return l2_dist2D_minlen(a, b) / std::min(a.size(), b.size());
+//        return conv_dist(&a, &b);
+//        return dist_ed(a, b);
+    }
+
+    double conv_dist(const Vec2D<double> *a, const Vec2D<double> *b) {
+        if (a->size() < b->size())  // make sure a points to longer sequence
+            std::swap(a,b);
+        size_t l1 = a->size(), l2 = b->size(), step = l1/20;
+//        double min_val = std::numeric_limits<double>::max();
+        std::vector<double> vals;
+        for (size_t shift=0; shift < l1; shift += step) { // offset in b
+            double val = 0;
+            size_t i = 0; // effective len
+            for (i=0; shift + i < l1 && i < l2; i++) {
+                for (size_t d=0; d < this->sketch_dim; d++) {
+                    auto el = (*a)[shift + i][d] - (*b)[i][d];
+                    val += el * el;
+                }
+            }
+            val = val / i ; // normalize val by length i & sketch dimension
+//            min_val = std::min(val, min_val);
+            vals.push_back(val);
+        }
+
+//        double ratio = (double)l2/l1;
+//        return min_val * ratio + (1-ratio);
+        std::sort(vals.begin(), vals.end());
+//        return vals[0] * ratio + (1-ratio) * vals[vals.size()-1];
+        return vals[vals.size()/2];
+    }
+
+    double dist_ed(const Vec2D<double> &a, const Vec2D<double> &b) {
+        Vec2D<double> M = new2D<double>(a.size()+1, b.size()+1);
+        size_t step = this->win_len / this->stride;
+        step = std::min(step, std::min(a.size(), b.size()));
+        step = 1;
+
+        for (size_t i=1; i<=a.size(); i++) {
+            for (size_t j=0; j<step; j++) {
+                M[i][j] = l2_norm(a[i-1]) + M[i-1][j];
+            }
+        }
+        for (size_t i=1; i<=b.size(); i++) {
+            for (size_t j=0; j<step; j++) {
+                M[j][i] = l2_norm(b[i-1]) + M[j][i-1];
+            }
+        }
+        for (size_t i=step; i<=a.size(); i++) {
+            for (size_t j=step; j<=b.size(); j++) {
+                double track = l2_dist(a[i-1], b[j-1]), ci = M[i][0], cj=M[0][j];
+                M[i][j] = std::min(track + M[i-step][j-step], std::min(ci + M[i-step][j], cj+M[i][j-step] ) );
+            }
+        }
+        return M[a.size()][b.size()] / std::max(a.size(), b.size());
     }
 
 
   private:
+    double l2_norm(const std::vector<double> &a) {
+        return sqrt(std::inner_product(a.begin(), a.end(), a.begin(), (double)0));
+    }
+
+    double l2_dist(const std::vector<double> &a, const std::vector<double> &b) {
+        return l2_norm(diff(a,b));
+    }
+
     std::vector<double> diff(const std::vector<double> &a, const std::vector<double> &b) {
         assert(a.size() == b.size());
         std::vector<double> result(a.size());
