@@ -14,7 +14,7 @@ struct KmerModule : public BasicModules {
 
     void override_pre() override {
         original_alphabet_size = alphabet_size;
-        alphabet_size = int_pow<size_t>(alphabet_size, kmer_size);
+        alphabet_size = int_pow<size_t>(alphabet_size, kmer_length);
     }
 
     void override_post() override {
@@ -50,7 +50,7 @@ struct TestModule1 {
         kmer_seqs.resize(num_seqs);
         slide_sketch.resize(num_seqs);
         for (int si = 0; si < num_seqs; si++) {
-            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.alphabet_size);
+            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_length, basicModules.alphabet_size);
             tensor_slide_sketch(kmer_seqs[si], slide_sketch[si], kmerModules.tensor_slide_params);
         }
     }

@@ -25,7 +25,7 @@
 #include <random>
 #include <sys/types.h>
 
-DEFINE_uint32(kmer_size, 4, "Kmer size for MH, OMH, WMH");
+DEFINE_uint32(kmer_length, 4, "Kmer size for MH, OMH, WMH");
 
 DEFINE_int32(alphabet_size, 4, "size of alphabet for synthetic sequence generation");
 
@@ -114,9 +114,9 @@ DEFINE_uint32(reruns, 1, "The number of times to rerun sketch algorithms on the 
 
 // individual flags, use global values if 0 (default)
 
-DEFINE_uint32(mh_kmer_size, 0, "Kmer size for MH, default: kmer_size");
-DEFINE_uint32(wmh_kmer_size, 0, "Kmer size for WMH, default: kmer_size");
-DEFINE_uint32(omh_kmer_size, 0, "Kmer size for OMH, default: kmer_size");
+DEFINE_uint32(mh_kmer_length, 0, "Kmer size for MH, default: kmer_length");
+DEFINE_uint32(wmh_kmer_length, 0, "Kmer size for WMH, default: kmer_length");
+DEFINE_uint32(omh_kmer_length, 0, "Kmer size for OMH, default: kmer_length");
 
 DEFINE_int32(ts_dim, 0, "embedding dimension for TS sketch output, default: emed_dim");
 DEFINE_int32(tss_dim, 0, "embedding dimension for TSS, default: square root of embed_dim");
@@ -139,14 +139,14 @@ void set_default_flags() {
         FLAGS_max_len = FLAGS_seq_len * 2;
     }
     // kmer size
-    if (FLAGS_omh_kmer_size == 0) {
-        FLAGS_omh_kmer_size = FLAGS_kmer_size;
+    if (FLAGS_omh_kmer_length == 0) {
+        FLAGS_omh_kmer_length = FLAGS_kmer_length;
     }
-    if (FLAGS_mh_kmer_size == 0) {
-        FLAGS_mh_kmer_size = FLAGS_kmer_size;
+    if (FLAGS_mh_kmer_length == 0) {
+        FLAGS_mh_kmer_length = FLAGS_kmer_length;
     }
-    if (FLAGS_wmh_kmer_size == 0) {
-        FLAGS_wmh_kmer_size = FLAGS_kmer_size;
+    if (FLAGS_wmh_kmer_length == 0) {
+        FLAGS_wmh_kmer_length = FLAGS_kmer_length;
     }
     // embed dim
     if (FLAGS_tss_dim == 0) {
@@ -199,7 +199,7 @@ class ExperimentRunner {
     std::tuple<SketchAlgorithms...> algorithms;
 
     Vec2D<char_type> seqs;
-    std::vector<std::pair<uint32_t, uint32_t>> ingroup_pairs;
+    std::vector<std::pair<uint32_t, uint32_t>> cmp_pairs;
 
     std::vector<double> edit_dists;
     using Distances = std::array<std::vector<double>, NumAlgorithms>;
@@ -230,7 +230,7 @@ class ExperimentRunner {
         for (uint32_t si = 0; si < seqs.size(); si++) {
             if constexpr (SketchAlgorithm::kmer_input) {
                 sketch[si]
-                        = algorithm->compute(seqs[si], algorithm->kmer_size, FLAGS_alphabet_size);
+                        = algorithm->compute(seqs[si], algorithm->kmer_length, FLAGS_alphabet_size);
             } else {
                 sketch[si] = algorithm->compute(seqs[si]);
             }
@@ -254,13 +254,13 @@ class ExperimentRunner {
         // Compute pairwise distances.
         std::cout << "\t"
                   << "Compute distances ... ";
-        std::vector<double> dists(ingroup_pairs.size(), 0);
-        progress_bar::init(ingroup_pairs.size());
+        std::vector<double> dists(cmp_pairs.size(), 0);
+        progress_bar::init(cmp_pairs.size());
 #pragma omp parallel for default(shared)
-        for (size_t i = 0; i < ingroup_pairs.size(); i++) {
-            auto [si, sj] = ingroup_pairs[i];
+        for (size_t i = 0; i < cmp_pairs.size(); i++) {
+            auto [si, sj] = cmp_pairs[i];
 
-            dists[i] += algorithm->dist(sketch[si], sketch[sj]);
+            dists[i] += algorithm->conv_dist(sketch[si], sketch[sj]);
             progress_bar::iter();
         }
 
@@ -295,7 +295,7 @@ class ExperimentRunner {
                     // Spearman coefficients is reported, as well as the Spearman coefficient
                     // obtained from using the median and average of the distances of all runs.
                     std::vector<double> spearman_coefficients(FLAGS_reruns);
-                    Vec2D<double> dists_per_run = new2D<double>(FLAGS_reruns, ingroup_pairs.size());
+                    Vec2D<double> dists_per_run = new2D<double>(FLAGS_reruns, cmp_pairs.size());
 
                     for (uint32_t rerun = 0; rerun < FLAGS_reruns; ++rerun) {
                         spearman_coefficients[rerun]
@@ -305,7 +305,7 @@ class ExperimentRunner {
                     if (FLAGS_reruns > 1) {
                         // Transpose of dists_per_run.
                         Vec2D<double> runs_per_dist
-                                = new2D<double>(ingroup_pairs.size(), FLAGS_reruns);
+                                = new2D<double>(cmp_pairs.size(), FLAGS_reruns);
                         for (size_t i = 0; i < FLAGS_reruns; ++i)
                             for (size_t j = 0; j < dists_per_run[i].size(); ++j)
                                 runs_per_dist[j][i] = dists_per_run[i][j];
@@ -319,21 +319,21 @@ class ExperimentRunner {
                                   << "Average  Corr.: " << avg << " \t (σ=" << sd
                                   << ", n=" << FLAGS_reruns << ")" << std::endl;
 
-                        dist.resize(ingroup_pairs.size());
+                        dist.resize(cmp_pairs.size());
 
-                        for (size_t i = 0; i < ingroup_pairs.size(); ++i)
+                        for (size_t i = 0; i < cmp_pairs.size(); ++i)
                             dist[i] = median(runs_per_dist[i]);
                         double sc_on_med_dist = spearman(edit_dists, dist);
                         std::cout << "\t"
-                                  << "SC on med dist: " << sc_on_med_dist << std::endl;
+                                  << "SC on med conv_dist: " << sc_on_med_dist << std::endl;
 
-                        for (size_t i = 0; i < ingroup_pairs.size(); ++i)
+                        for (size_t i = 0; i < cmp_pairs.size(); ++i)
                             dist[i] = std::accumulate(begin(runs_per_dist[i]),
                                                       end(runs_per_dist[i]), 0.0)
                                     / FLAGS_reruns;
                         double sc_on_avg_dist = spearman(edit_dists, dist);
                         std::cout << "\t"
-                                  << "SC on avg dist: " << sc_on_avg_dist << std::endl;
+                                  << "SC on avg conv_dist: " << sc_on_avg_dist << std::endl;
 
                         std::cout << std::endl;
                     } else {
@@ -351,15 +351,15 @@ class ExperimentRunner {
                            FLAGS_phylogeny_shape);
 
         seqs = seq_gen.generate_seqs<char_type>();
-        seq_gen.ingroup_pairs(ingroup_pairs);
+        seq_gen.ingroup_pairs(cmp_pairs);
     }
 
     void compute_edit_distance() {
-        edit_dists.resize(ingroup_pairs.size());
-        progress_bar::init(ingroup_pairs.size());
+        edit_dists.resize(cmp_pairs.size());
+        progress_bar::init(cmp_pairs.size());
 #pragma omp parallel for default(shared)
-        for (size_t i = 0; i < ingroup_pairs.size(); i++) {
-            size_t si = ingroup_pairs[i].first, sj = ingroup_pairs[i].second;
+        for (size_t i = 0; i < cmp_pairs.size(); i++) {
+            size_t si = cmp_pairs[i].first, sj = cmp_pairs[i].second;
             edit_dists[i] = edit_distance(seqs[si], seqs[sj]);
             progress_bar::iter();
         }
@@ -385,8 +385,8 @@ class ExperimentRunner {
         fo << "s1,s2,ED";
         apply_tuple([&](const auto &algo) { fo << "," << algo.name; }, algorithms);
         fo << "\n";
-        for (uint32_t pi = 0; pi < ingroup_pairs.size(); pi++) {
-            fo << ingroup_pairs[pi].first << "," << ingroup_pairs[pi].second; // seq 1 & 2 indices
+        for (uint32_t pi = 0; pi < cmp_pairs.size(); pi++) {
+            fo << cmp_pairs[pi].first << "," << cmp_pairs[pi].second; // seq 1 & 2 indices
 
             fo << "," << edit_dists[pi];
             for (const auto &dist : dists)
@@ -422,17 +422,17 @@ int main(int argc, char *argv[]) {
     };
 
     auto experiment = MakeExperimentRunner<char_type, kmer_type>(
-            MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_mh_kmer_size),
+            MinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_mh_kmer_length),
                                FLAGS_mh_dim, parse_hash_algorithm(FLAGS_hash_alg), rd(), "MH",
-                               FLAGS_mh_kmer_size),
-            WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_wmh_kmer_size),
+                               FLAGS_mh_kmer_length),
+            WeightedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_wmh_kmer_length),
                                        FLAGS_wmh_dim, FLAGS_max_len,
                                        parse_hash_algorithm(FLAGS_hash_alg), rd(), "WMH",
-                                       FLAGS_wmh_kmer_size),
-            OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_omh_kmer_size),
+                                       FLAGS_wmh_kmer_length),
+            OrderedMinHash<kmer_type>(int_pow<uint32_t>(FLAGS_alphabet_size, FLAGS_omh_kmer_length),
                                       FLAGS_omh_dim, FLAGS_max_len, FLAGS_omh_tuple_length,
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH",
-                                      FLAGS_omh_kmer_size),
+                                      FLAGS_omh_kmer_length),
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_ts_dim, FLAGS_ts_tuple_length, rd(), "TS"),
             TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length,
                                    FLAGS_tss_window_size, FLAGS_tss_stride, rd(), "TSS"),

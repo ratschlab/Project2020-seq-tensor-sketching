@@ -33,7 +33,7 @@ DEFINE_string(sketch_method,
 DEFINE_string(m, "TensorSlide", "Short hand for --sketch_method");
 
 DEFINE_uint32(kmer_length, 1, "The kmer length for: MH, WMH, OMH");
-DEFINE_uint32(k, 3, "Short hand for --kmer_size");
+DEFINE_uint32(k, 3, "Short hand for --kmer_length");
 
 DEFINE_string(o, "", "Output file, containing the sketches for each sequence");
 

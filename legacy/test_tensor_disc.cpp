@@ -14,7 +14,7 @@ struct KmerModule : public BasicModules {
 
     void override_pre() override {
         original_alphabet_size = alphabet_size;
-        alphabet_size = int_pow<size_t>(alphabet_size, kmer_size);
+        alphabet_size = int_pow<size_t>(alphabet_size, kmer_length);
     }
 
     void override_post() override {
@@ -112,7 +112,7 @@ struct TestModule1 {
         for (auto &l : lay2)
             l.rand_init();
         for (int si = 0; si < num_seqs; si++) {
-            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_size, basicModules.alphabet_size);
+            seq2kmer(seqs[si], kmer_seqs[si], basicModules.kmer_length, basicModules.alphabet_size);
             minhash(kmer_seqs[si], mh_sketch[si], kmerModules.mh_params);
             weighted_minhash(kmer_seqs[si], wmh_sketch[si], kmerModules.wmh_params);
             ordered_minhash(kmer_seqs[si], omh_sketch[si], kmerModules.omh_params);

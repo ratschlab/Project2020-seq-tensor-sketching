@@ -18,21 +18,21 @@ namespace ts { // ts = Tensor Sketch
  * @tparam chr types of elements in the sequence
  * @tparam kmer type that stores a kmer
  * @param seq the sequence to extract kmers from
- * @param kmer_size number of characters in a kmer
+ * @param kmer_length number of characters in a kmer
  * @param alphabet_size size of the alphabet
  * @return the extracted kmers, as integers converted from base #alphabet_size
  */
 template <class chr, class kmer>
-std::vector<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8_t alphabet_size) {
+std::vector<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_length, uint8_t alphabet_size) {
     Timer timer("seq2kmer");
-    if (seq.size() < (size_t)kmer_size) {
+    if (seq.size() < (size_t)kmer_length) {
         return std::vector<kmer>();
     }
 
-    std::vector<kmer> result(seq.size() - kmer_size + 1, 0);
+    std::vector<kmer> result(seq.size() - kmer_length + 1, 0);
 
     kmer c = 1;
-    for (uint8_t i = 0; i < kmer_size; i++) {
+    for (uint8_t i = 0; i < kmer_length; i++) {
         result[0] += c * seq[i];
         c *= alphabet_size;
     }
@@ -41,7 +41,7 @@ std::vector<kmer> seq2kmer(const std::vector<chr> &seq, uint8_t kmer_size, uint8
     for (size_t i = 0; i < result.size() - 1; i++) {
         kmer base = result[i] - seq[i];
         assert(base % alphabet_size == 0);
-        result[i + 1] = base / alphabet_size + seq[i + kmer_size] * c;
+        result[i + 1] = base / alphabet_size + seq[i + kmer_length] * c;
     }
     return result;
 }

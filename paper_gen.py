@@ -115,9 +115,9 @@ The time column shows normalized time in milliseconds, i.e., total time divided 
 while the relative time shows the ratio of sketch-based time to the time for computing exact edit distance. 
 The values shown are average over independent trials followed by their standard deviation. 
 The embedding dimension is set to $D={flags[embed_dim]}$, and individual model parameters are
-(a) MinHash $k = {flags[mh_kmer_size]}$,
-(b) Weighted MinHash $k={flags[wmh_kmer_size]}$,
-(c) Ordered MinHash $k={flags[omh_kmer_size]},t={flags[omh_tuple_length]}$,
+(a) MinHash $k = {flags[mh_kmer_length]}$,
+(b) Weighted MinHash $k={flags[wmh_kmer_length]}$,
+(c) Ordered MinHash $k={flags[omh_kmer_length]},t={flags[omh_tuple_length]}$,
 (d) Tensor Sketch $t={flags[ts_tuple_length]}$,
 (e) Tensor Slide Sketch $w={flags[tss_window_size]},s={flags[tss_stride]},t={flags[tss_tuple_length]}$. }}
     """
@@ -174,9 +174,9 @@ def gen_fig_s1(data_dir, save_dir):
     from $({flags[min_mutation_rate]},{flags[max_mutation_rate]})$, to generate a spectrum of edit distances. Subplot 
     (a-e) show the sketch-based distances, normalized by their max value vs. edit distances, normalized by the 
     sequence length. The embedding dimension is set to $D={flags[embed_dim]}$, and models parameters are
-    (a) MinHash $k = {flags[mh_kmer_size]}$,
-    (b) Weighted MinHash $k={flags[wmh_kmer_size]}$,
-    (c) Ordered MinHash $k={flags[omh_kmer_size]},t={flags[omh_tuple_length]}$,
+    (a) MinHash $k = {flags[mh_kmer_length]}$,
+    (b) Weighted MinHash $k={flags[wmh_kmer_length]}$,
+    (c) Ordered MinHash $k={flags[omh_kmer_length]},t={flags[omh_tuple_length]}$,
     (d) Tensor Sketch $t={flags[ts_tuple_length]}$,
     (e) Tensor Slide Sketch $w={flags[tss_window_size]},t={flags[tss_tuple_length]}, s={flags[tss_stride]}$.
     }} """
@@ -235,14 +235,14 @@ def gen_fig_s2(data_dir, save_dir, ed_th):
 
 
 def gen_fig_s3(data_dir, save_dir):
-    data = load_grid_results(data_dir=data_dir, grid_flags=['kmer_size', 'tuple_length', 'hash_alg'])
+    data = load_grid_results(data_dir=data_dir, grid_flags=['kmer_length', 'tuple_length', 'hash_alg'])
     fig, axes = plt.subplots(2, 3, figsize=(12, 8))
 
     model_info = {
-        'MH': {'x': 'kmer_size', 'hue': 'hash_alg', 'style': None},
-        'WMH': {'x': 'kmer_size', 'hue': 'hash_alg', 'style': None},
-        'OMH,crc32': {'x': 'kmer_size', 'hue': 'tuple_length', 'style': None},
-        'OMH,murmur': {'x': 'kmer_size', 'hue': 'tuple_length', 'style': None},
+        'MH': {'x': 'kmer_length', 'hue': 'hash_alg', 'style': None},
+        'WMH': {'x': 'kmer_length', 'hue': 'hash_alg', 'style': None},
+        'OMH,crc32': {'x': 'kmer_length', 'hue': 'tuple_length', 'style': None},
+        'OMH,murmur': {'x': 'kmer_length', 'hue': 'tuple_length', 'style': None},
         'TS': {'x': 'tuple_length', 'hue': None, 'style': None},
         'TSS': {'x': 'tuple_length', 'hue': None, 'style': None}
     }
@@ -265,7 +265,7 @@ def gen_fig_s3(data_dir, save_dir):
         else:
             sns.set_palette(global_color_pallette, 1)
         g = sns.lineplot(ax=ax, data=df, x=info['x'], y='Sp', hue=info['hue'], style=info['style'], markers=True)
-        g.set_xticklabels(list(data.kmer_size.unique()))
+        g.set_xticklabels(list(data.kmer_length.unique()))
         g.set(xlabel=info['x'].replace('_', ' '), ylabel='Spearman Corr.', ylim=(0,1),
               title='({}) {}'.format(chr(ord('a') + mi), method))
 
@@ -345,9 +345,9 @@ def gen_fig1(data_dir, save_dir):
 The dataset for these experiments consisted of ${flags[num_seqs]}$ sequence pairs independently generated 
 over an alphabet of size ${flags[alphabet_size]}$. The embedding dimension is set to $D={flags[embed_dim]}$, 
 and model-specific parameters are 
-MinHash $k = {flags[mh_kmer_size]}$, 
-Weighted MinHash $k={flags[wmh_kmer_size]}$,
-Ordered MinHash $k={flags[omh_kmer_size]},t={flags[omh_tuple_length]}$,
+MinHash $k = {flags[mh_kmer_length]}$, 
+Weighted MinHash $k={flags[wmh_kmer_length]}$,
+Ordered MinHash $k={flags[omh_kmer_length]},t={flags[omh_tuple_length]}$,
 Tensor Sketch $t={flags[ts_tuple_length]}$,
 Tensor Slide Sketch $t={flags[tss_tuple_length]}$, with window and stride set to $10\\%$ and $1\\%$ of the sequence length, 
 and its embedding dimension is set to the square root of $D$. 
@@ -406,9 +406,9 @@ def gen_fig2(data_dir, save_dir):
     overall. The {mutation_rate}. 
     The embedding dimension is set to $\\EDim={flags[embed_dim]}$, 
     and individual model parameters are set to 
-    (b) MinHash $k = {flags[mh_kmer_size]}$, 
-    (c) Weighted MinHash $k={flags[wmh_kmer_size]}$, 
-    (d) Ordered MinHash $k={flags[omh_kmer_size]},t={flags[omh_tuple_length]}$, 
+    (b) MinHash $k = {flags[mh_kmer_length]}$, 
+    (c) Weighted MinHash $k={flags[wmh_kmer_length]}$, 
+    (d) Ordered MinHash $k={flags[omh_kmer_length]},t={flags[omh_tuple_length]}$, 
     (e) Tensor Sketch $t={flags[ts_tuple_length]}$, 
     (f) Tensor Slide Sketch $t={flags[tss_tuple_length]}, w={flags[tss_window_size]}, s={flags[tss_stride]}$. }} """
     caption = caption.format(flags=flags, num_generations=num_generations, mutation_rate=mutation_rate)
@@ -453,20 +453,20 @@ def opts2flags(flags: dict):
 
 
 def find_optimal_params(data_dir):
-    data = load_grid_results(data_dir=data_dir, grid_flags=['kmer_size', 'tuple_length'])
+    data = load_grid_results(data_dir=data_dir, grid_flags=['kmer_length', 'tuple_length'])
 
     params = dict()
     # find optimal parameters according to Spearman Corr.
     Metric = "Sp"
-    med_acc = data[data.method == "OMH"].groupby(["kmer_size", "tuple_length"])[Metric].median()
+    med_acc = data[data.method == "OMH"].groupby(["kmer_length", "tuple_length"])[Metric].median()
     k, t = med_acc.idxmax()
-    params.update({'omh_kmer_size': k, 'omh_tuple_length': t})
-    med_acc = data[data.method == "MH"].groupby(["kmer_size"])[Metric].median()
+    params.update({'omh_kmer_length': k, 'omh_tuple_length': t})
+    med_acc = data[data.method == "MH"].groupby(["kmer_length"])[Metric].median()
     k = med_acc.idxmax()
-    params.update({'mh_kmer_size': k})
-    med_acc = data[data.method == "WMH"].groupby(["kmer_size"])[Metric].median()
+    params.update({'mh_kmer_length': k})
+    med_acc = data[data.method == "WMH"].groupby(["kmer_length"])[Metric].median()
     k = med_acc.idxmax()
-    params.update({'wmh_kmer_size': k})
+    params.update({'wmh_kmer_length': k})
     med_acc = data[data.method == "TS"].groupby(["tuple_length"])[Metric].median()
     t = med_acc.idxmax()
     params.update({'ts_tuple_length': t})
@@ -535,19 +535,19 @@ def plot_figures(experiments_dir, plots_dir):
 def run_grid_search(experiments_dir,
                     binary_path,
                     num_runs,
-                    kmer_size,
+                    kmer_length,
                     tuple_length,
                     hash_alg):
     params = {'pairs': default_params_pairs(), 'tree': default_params_tree()}
     for alg in hash_alg:
         for grid_type, param in params.items():
             for run in range(num_runs):
-                for k in kmer_size:
+                for k in kmer_length:
                     for t in tuple_length:
                         path = os.path.join(experiments_dir,
                                             'grid_search_{}'.format(grid_type),
                                             'run{}_k{}_t{}_{}'.format(run,k,t,alg))
-                        param.update({'kmer_size': k,
+                        param.update({'kmer_length': k,
                                       'tuple_length': t,
                                       'o': path,
                                       'hash_alg': alg})
@@ -562,7 +562,7 @@ if __name__ == '__main__':
     run_grid_search(experiments_dir=experiments_dir,
                     binary_path=binary_path,
                     num_runs=5,
-                    kmer_size=[1, 2, 3, 4, 6, 8, 10, 12, 14, 16],
+                    kmer_length=[1, 2, 3, 4, 6, 8, 10, 12, 14, 16],
                     tuple_length=[2, 3, 4, 5, 6, 7, 8, 9, 10],
                     hash_alg=['crc32', 'murmur'])
 

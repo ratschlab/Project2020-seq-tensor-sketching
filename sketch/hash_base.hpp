@@ -30,8 +30,8 @@ class HashBase : public SketchBase<std::vector<T>, true> {
              HashAlgorithm hash_algorithm,
              uint32_t seed,
              const std::string &name = "HashBase",
-             size_t kmer_size = 1)
-        : SketchBase<std::vector<T>, true>(name, kmer_size),
+             size_t kmer_length = 1)
+        : SketchBase<std::vector<T>, true>(name, kmer_length),
           set_size(set_size),
           sketch_dim(sketch_dim),
           hash_size(2 * hash_size),
