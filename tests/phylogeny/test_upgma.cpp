@@ -2,6 +2,10 @@
 
 #include <gtest/gtest.h>
 
+namespace {
+
+using namespace ts;
+
 TEST(upgma, empty) {
     ASSERT_TRUE(upgma({}).empty());
 }
@@ -30,3 +34,5 @@ TEST(upgma, some_values) {
         ASSERT_EQ(graph[i].age, 0);
     }
 }
+
+} // namespace

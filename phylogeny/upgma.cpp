@@ -3,18 +3,20 @@
 #include <unordered_set>
 #include <vector>
 
-Tree upgma(const std::vector<std::vector<double>> &dist_mat) {
-    Tree result;
+namespace ts {
 
+Tree upgma(const std::vector<std::vector<double>> &dist_mat) {
     if (dist_mat.empty()) {
-        return result;
+        return {};
     }
 
-    std::unordered_map<uint32_t, uint32_t> roots;  // {nodeId, nodeCount} pairs of all the cluster roots
+    Tree result(2 * dist_mat.size() - 1);
+    // {nodeId, nodeCount} pairs of all the cluster roots
+    std::unordered_map<uint32_t, uint32_t> roots;
     std::unordered_map<uint32_t, std::unordered_map<uint32_t, double>> D;
     for (uint32_t i = 0; i < dist_mat.size(); ++i) {
-        roots.insert({i, 1});
-        result[i] = {0, NO_CHILD, NO_CHILD};
+        roots.insert({ i, 1 });
+        result[i] = { 0, NO_CHILD, NO_CHILD };
         for (uint32_t j = 0; j < dist_mat.size(); ++j) {
             D[i][j] = dist_mat[i][j];
         }
@@ -37,11 +39,12 @@ Tree upgma(const std::vector<std::vector<double>> &dist_mat) {
         }
         uint32_t new_node = dist_mat.size() + step;
 
-        result[new_node] = {minDist / 2., min_i, min_j };
+        result[new_node] = { minDist / 2., min_i, min_j };
         // update D
         for (const auto &root : roots) {
-            D[new_node][root.first] = (D[min_i][root.first] * roots[min_i] + D[min_j][root.first] * roots[min_j]) /
-                    (roots[min_i] + roots[min_j]);
+            D[new_node][root.first]
+                    = (D[min_i][root.first] * roots[min_i] + D[min_j][root.first] * roots[min_j])
+                    / (roots[min_i] + roots[min_j]);
             D[root.first][new_node] = D[new_node][root.first];
         }
         D.erase(min_i);
@@ -56,3 +59,5 @@ Tree upgma(const std::vector<std::vector<double>> &dist_mat) {
     }
     return result;
 }
+
+} // namespace ts
