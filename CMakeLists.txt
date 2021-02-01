@@ -27,6 +27,8 @@ file(GLOB sketch_files "sketch/*.cpp")
 add_library(sketch_lib ${sketch_files})
 target_link_libraries(sketch_lib murmur_lib OpenMP::OpenMP_CXX)
 
+file(GLOB phylogeny_files "phylogeny/*.cpp")
+add_library(phylogeny_lib ${phylogeny_files})
 
 add_executable(experiments experiments_main.cpp )
 target_link_libraries(experiments sequence util sketch_lib)
@@ -51,7 +53,7 @@ target_compile_options(gtest PRIVATE -w)
 file(GLOB test_files "tests/**/*.cpp")
 
 add_executable(tests ${test_files})
-target_link_libraries(tests gtest_main gtest gmock util sketch_lib)
+target_link_libraries(tests gtest_main gtest gmock util sketch_lib phylogeny_lib)
 target_include_directories(tests PRIVATE "include")
 
 gtest_discover_tests(tests)
