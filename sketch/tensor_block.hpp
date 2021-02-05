@@ -43,7 +43,7 @@ class TensorBlock : public SketchBase<std::vector<double>, false> {
                 size_t sketch_dim,
                 size_t subsequence_len,
                 uint32_t seed,
-                const std::string &name = "TS")
+                const std::string &name = "TSB")
         : SketchBase<std::vector<double>, false>(name),
           block_size(block_size),
           alphabet_size(alphabet_size),

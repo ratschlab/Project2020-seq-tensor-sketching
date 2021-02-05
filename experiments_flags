@@ -1,16 +1,17 @@
 # sequence generation
 --alphabet_size=4
---seq_len=10000
---num_seqs=1000
+--seq_len=1000
+--num_seqs=100
 --group_size=2
 --phylogeny_shape=path
 --fix_len=true
---max_mutation_rate=1.0
+--max_mutation_rate=0.1
 --min_mutation_rate=0.0
 # sketching methods
 --embed_dim=16
---kmer_size=4
---tuple_length=3
+--kmer_size=9
+--tuple_length=12
+--block_size=6
 --window_size=2000
 --stride=1000
 --tss_dim=4
