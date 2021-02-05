@@ -86,26 +86,39 @@ TEST(Tensor, FullStringDistinctChars) {
 }
 
 /**
- * The size of the sequence equals the size of the tuple, so the sketch will be 1 in one position
- * (position H(x)), and 0 in all the other positions
+ * The size of the sequence equals the size of the tuple, so the sketch will be 1 or -1 in one
+ * position (position H(x)), and 0 in all the other positions.
  */
 TEST(Tensor, FullStringRandomChars) {
     std::mt19937 gen(1234567);
     for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
         for (uint32_t tuple_len = 2; tuple_len < 10; ++tuple_len) {
-            std::uniform_int_distribution<uint8_t> rand_char(0, tuple_len - 1);
-            Tensor<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len, /*seed=*/31415);
+            std::uniform_int_distribution<uint8_t> rand_char(0, alphabet_size - 1);
+            Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len, /*seed=*/31415);
+
+            Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
+            Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
+            rand_init(sketch_dim, &hashes, &signs);
+            under_test.set_hashes_for_testing(hashes, signs);
+
             std::vector<uint8_t> sequence(tuple_len);
             for (uint8_t &c : sequence) {
                 c = rand_char(gen);
             }
             std::vector<double> sketch = under_test.compute(sequence);
+
+            uint32_t pos = 0; // the position where the sketch must be one
+            int8_t s = 1; // the sign of the sketch
+            for (uint32_t i = 0; i < sequence.size(); ++i) {
+                pos += hashes[i][sequence[i]];
+                s *= signs[i][sequence[i]] ? 1 : -1;
+            }
+            pos %= sketch_dimension;
+
             ASSERT_EQ(sketch.size(), sketch_dimension);
             for (uint32_t i = 0; i < sketch_dimension; ++i) {
-                ASSERT_TRUE(std::abs(sketch[i]) == 0 || std::abs(sketch[i]) == 1);
+                ASSERT_EQ(i == pos ? s : 0, sketch[i]);
             }
-            ASSERT_EQ(1, std::abs(std::accumulate(sketch.begin(), sketch.end(), 0)))
-                    << "Dim=" << sketch_dimension << " t=" << tuple_len;
         }
     }
 }
@@ -135,7 +148,7 @@ TEST(Tensor, SameChars) {
 }
 
 /**
- * If a sequence contains distinct characters, the the tensor sketch for t=1 will contain multiples
+ * If a sequence contains distinct characters, then the tensor sketch for t=1 will contain multiples
  * of (1/alphabet_size), because T(a)=1/alphabet_size for all characters a.
  */
 TEST(Tensor, DistinctCharsTuple1) {
@@ -150,15 +163,15 @@ TEST(Tensor, DistinctCharsTuple1) {
         ASSERT_EQ(sketch.size(), sketch_dimension);
         for (uint32_t i = 0; i < sketch_dimension; ++i) {
             double factor = sketch[i] / (1. / alphabet_size);
-            ASSERT_NEAR(0, std::round(factor) - factor, 1e-3);
+            ASSERT_NEAR(factor, std::round(factor), 1e-3);
         }
     }
 }
 
 /**
- * If a sequence of length seq_len contains distinct characters, the the tensor sketch for
- * t=seq_len-1 will contain multiples of (1/t), because T(a)=1/t for all the seq_len subsequences of
- * length seq_len-1
+ * If a sequence of length seq_len contains distinct characters, then the tensor sketch for
+ * t=seq_len-1 will contain multiples of (1/seq_len), because T(a)=1/seq_len for all the seq_len
+ * subsequences of length seq_len-1.
  */
 TEST(Tensor, DistinctCharsTupleTMinus1) {
     std::mt19937 gen(321567);
@@ -170,12 +183,10 @@ TEST(Tensor, DistinctCharsTupleTMinus1) {
             Tensor<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len, /*seed=*/31415);
 
             std::vector<double> sketch = under_test.compute(sequence);
-            std::vector<double> sketch2 = under_test.compute(sequence);
             ASSERT_EQ(sketch.size(), sketch_dimension);
-            ASSERT_EQ(sketch2.size(), sketch_dimension);
             for (uint32_t i = 0; i < sketch_dimension; ++i) {
                 double factor = sketch[i] / (1. / alphabet_size);
-                ASSERT_NEAR(0, std::round(factor) - factor, 1e-3);
+                ASSERT_NEAR(factor, std::round(factor), 1e-3);
             }
         }
     }

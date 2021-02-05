@@ -6,6 +6,7 @@
 #include "sketch/hash_ordered.hpp"
 #include "sketch/hash_weighted.hpp"
 #include "sketch/tensor.hpp"
+#include "sketch/tensor_block.hpp"
 #include "sketch/tensor_slide.hpp"
 #include "sketch/tensor_slide_flat.hpp"
 #include "util/multivec.hpp"

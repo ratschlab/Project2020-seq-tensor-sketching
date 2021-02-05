@@ -9,7 +9,6 @@
 
 #include <cassert>
 #include <cmath>
-#include <iostream>
 #include <random>
 
 namespace ts { // ts = Tensor Sketch
@@ -118,21 +117,6 @@ class Tensor : public SketchBase<std::vector<double>, false> {
     }
 
   protected:
-    /** Computes (1-z)*a + z*b_shift */
-    inline std::vector<double> shift_sum(const std::vector<double> &a,
-                                         const std::vector<double> &b,
-                                         seq_type shift,
-                                         double z) {
-        assert(a.size() == b.size());
-        const size_t len = a.size();
-        std::vector<double> result(a.size());
-        for (uint32_t i = 0; i < a.size(); i++) {
-            result[i] = (1 - z) * a[i] + z * b[(len + i - shift) % len];
-            assert(result[i] <= 1 + 1e-5 && result[i] >= -1e-5);
-        }
-        return result;
-    }
-
     /** Computes (1-z)*a + z*b_shift */
     void shift_sum_inplace(std::vector<double> &a,
                            const std::vector<double> &b,
