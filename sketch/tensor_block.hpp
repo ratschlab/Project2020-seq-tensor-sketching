@@ -125,7 +125,7 @@ class TensorBlock : public SketchBase<std::vector<double>, false> {
             Tm.push_back(std::move(nTm));
             nTp = std::move(Tp.front());
             nTm = std::move(Tm.front());
-            for (uint32_t j = 0; j < subsequence_len + 1; ++j) {
+            for (uint8_t j = 0; j < subsequence_len + 1; ++j) {
                 std::fill(nTp[j].begin(), nTp[j].end(), 0);
                 std::fill(nTm[j].begin(), nTm[j].end(), 0);
             }
