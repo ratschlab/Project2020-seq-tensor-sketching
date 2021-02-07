@@ -38,10 +38,10 @@ class TensorBlock : public SketchBase<std::vector<double>, false> {
      * @param seed the seed to initialize the random number generator used for the random hash
      * functions.
      */
-    TensorBlock(uint8_t block_size,
-                seq_type alphabet_size,
+    TensorBlock(seq_type alphabet_size,
                 size_t sketch_dim,
                 size_t subsequence_len,
+                uint8_t block_size,
                 uint32_t seed,
                 const std::string &name = "TSB")
         : SketchBase<std::vector<double>, false>(name),

@@ -448,8 +448,8 @@ int main(int argc, char *argv[]) {
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH",
                                       FLAGS_omh_kmer_size),
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_ts_dim, FLAGS_ts_tuple_length, rd(), "TS"),
-            TensorBlock<char_type>(FLAGS_block_size, FLAGS_alphabet_size, FLAGS_ts_dim,
-                                   FLAGS_ts_tuple_length, rd(), "TSB"),
+            TensorBlock<char_type>(FLAGS_alphabet_size, FLAGS_ts_dim, FLAGS_ts_tuple_length,
+                                   FLAGS_block_size, rd(), "TSB"),
             TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length,
                                    FLAGS_tss_window_size, FLAGS_tss_stride, rd(), "TSS"),
             TensorSlideFlat<char_type, Int32Flattener>(

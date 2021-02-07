@@ -31,7 +31,7 @@ void rand_init(uint32_t sketch_size, Vec2D<set_type> *hashes, Vec2D<bool> *signs
 }
 
 TEST(TensorBlock, Empty) {
-    TensorBlock<uint8_t> under_test(1, alphabet_size, sketch_dim, tuple_length, /*seed=*/31415);
+    TensorBlock<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length, 1, /*seed=*/31415);
     std::vector<double> sketch = under_test.compute(std::vector<uint8_t>());
     ASSERT_EQ(sketch.size(), sketch_dim);
     ASSERT_THAT(sketch, ElementsAre(0, 0));
@@ -39,7 +39,7 @@ TEST(TensorBlock, Empty) {
 
 /** The sequence has one char, which is shorter than the tuple length, so the sketch will be 0 */
 TEST(TensorBlock, OneChar) {
-    TensorBlock<uint8_t> under_test(1, alphabet_size, sketch_dim, tuple_length, /*seed=*/31415);
+    TensorBlock<uint8_t> under_test(alphabet_size, sketch_dim, tuple_length, 1, /*seed=*/31415);
     for (uint8_t c = 0; c < alphabet_size; ++c) {
         std::vector<double> sketch = under_test.compute({ c });
         ASSERT_THAT(sketch, ElementsAre(0, 0));
@@ -50,7 +50,7 @@ TEST(TensorBlock, OneChar) {
  * position h(seq[0]) */
 TEST(TensorBlock, OneCharTuple1) {
     constexpr uint32_t tuple_len = 1;
-    TensorBlock<uint8_t> under_test(1, alphabet_size, sketch_dim, tuple_len, /*seed=*/31415);
+    TensorBlock<uint8_t> under_test(alphabet_size, sketch_dim, tuple_len, 1, /*seed=*/31415);
 
     Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
     Vec2D<bool> signs = new2D<bool>(tuple_len, alphabet_size);
@@ -79,7 +79,8 @@ TEST(TensorBlock, FullStringRandomChars) {
                     continue;
                 }
                 std::uniform_int_distribution<uint8_t> rand_char(0, alphabet_size - 1);
-                TensorBlock<uint8_t> under_test(block_size, alphabet_size, sketch_dimension, tuple_len,
+                TensorBlock<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len,
+                                                block_size,
                                                 /*seed=*/31415);
 
                 Vec2D<uint8_t> hashes = new2D<uint8_t>(tuple_len, alphabet_size);
@@ -125,7 +126,7 @@ TEST(TensorBlock, SameChars) {
                 if (tuple_len % block_size != 0) {
                     continue;
                 }
-                TensorBlock<uint8_t> under_test(block_size, tuple_len, sketch_dimension, tuple_len,
+                TensorBlock<uint8_t> under_test(tuple_len, sketch_dimension, tuple_len, block_size,
                                                 /*seed=*/127383);
                 uint8_t sequence_length = tuple_len + rand_seq_len(gen);
                 std::vector<uint8_t> sequence(sequence_length, rand_char(gen));
@@ -152,7 +153,7 @@ TEST(TensorBlock, DistinctCharsTuple1) {
     std::vector<uint8_t> sequence(alphabet_size);
     std::iota(sequence.begin(), sequence.end(), 0);
     for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
-        TensorBlock<uint8_t> under_test(1, alphabet_size, sketch_dimension, tuple_len,
+        TensorBlock<uint8_t> under_test(alphabet_size, sketch_dimension, tuple_len, 1,
                                         /*seed=*/31415);
 
         std::vector<double> sketch = under_test.compute(sequence);
@@ -180,8 +181,8 @@ TEST(TensorBlock, DistinctCharsTupleTMinus1) {
                 if (tuple_len % block_size != 0) {
                     continue;
                 }
-                TensorBlock<uint8_t> under_test(block_size, alphabet_sz, sketch_dimension,
-                                                tuple_len, /*seed=*/31415);
+                TensorBlock<uint8_t> under_test(alphabet_sz, sketch_dimension, tuple_len,
+                                                block_size, /*seed=*/31415);
                 std::vector<double> sketch = under_test.compute(sequence);
 
                 ASSERT_EQ(sketch.size(), sketch_dimension);
@@ -210,7 +211,7 @@ TEST(TensorBlock, SameAsTensorSketchForBlockSizeOne) {
         std::vector<uint8_t> sequence(std::uniform_int_distribution<uint8_t>(0, 100)(gen));
         std::generate(sequence.begin(), sequence.end(), [&]() { return rand_char(gen); });
         for (uint32_t sketch_dimension = 3; sketch_dimension < 10; ++sketch_dimension) {
-            TensorBlock<uint8_t> block(1, alphabet_sz, sketch_dimension, tuple_len, /*seed=*/31415);
+            TensorBlock<uint8_t> block(alphabet_sz, sketch_dimension, tuple_len, 1, /*seed=*/31415);
             Tensor<uint8_t> sketch(alphabet_sz, sketch_dimension, tuple_len, /*seed=*/31415);
 
             std::vector<double> sketch1 = block.compute(sequence);
