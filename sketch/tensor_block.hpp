@@ -84,6 +84,7 @@ class TensorBlock : public SketchBase<std::vector<double>, false> {
         // k=block_size positions behind, we need to always keep the last block_size Tp and Tm
         // matrices. At each iteration we create a new pair of Tp and Tm and then discard the oldest
         // Tp/Tn pair.
+        //TODO(ddanciu): use a circular queue on top of vector instead
         std::deque<Vec2D<double>> Tp;
         std::deque<Vec2D<double>> Tm;
         for (uint32_t i = 0; i < block_size; ++i) {
