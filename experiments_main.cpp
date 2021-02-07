@@ -6,6 +6,7 @@
 #include "sketch/hash_ordered.hpp"
 #include "sketch/hash_weighted.hpp"
 #include "sketch/tensor.hpp"
+#include "sketch/tensor_block.hpp"
 #include "sketch/tensor_slide.hpp"
 #include "sketch/tensor_slide_flat.hpp"
 #include "util/multivec.hpp"
@@ -49,6 +50,19 @@ DEFINE_int32(embed_dim, 30, "Embedding dimension, used for all sketching methods
 DEFINE_int32(tuple_length,
              3,
              "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
+
+
+static bool ValidateBlockSize(const char *flagname, int32_t value) {
+    if (FLAGS_tuple_length % value == 0) {
+        return true;
+    }
+    printf("Invalid value for --%s: %d. Must be a divisor of --tuple_len\n", flagname, value);
+    return false;
+}
+DEFINE_int32(block_size,
+             1,
+             "Only consider tuples made out of block-size continuous characters for Tensor sketch");
+DEFINE_validator(block_size, &ValidateBlockSize);
 
 DEFINE_int32(
         max_len,
@@ -434,6 +448,8 @@ int main(int argc, char *argv[]) {
                                       parse_hash_algorithm(FLAGS_hash_alg), rd(), "OMH",
                                       FLAGS_omh_kmer_size),
             Tensor<char_type>(FLAGS_alphabet_size, FLAGS_ts_dim, FLAGS_ts_tuple_length, rd(), "TS"),
+            TensorBlock<char_type>(FLAGS_alphabet_size, FLAGS_ts_dim, FLAGS_ts_tuple_length,
+                                   FLAGS_block_size, rd(), "TSB"),
             TensorSlide<char_type>(FLAGS_alphabet_size, FLAGS_tss_dim, FLAGS_tss_tuple_length,
                                    FLAGS_tss_window_size, FLAGS_tss_stride, rd(), "TSS"),
             TensorSlideFlat<char_type, Int32Flattener>(

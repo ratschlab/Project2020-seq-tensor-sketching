@@ -11,6 +11,7 @@
 --embed_dim=16
 --kmer_size=4
 --tuple_length=3
+--block_size=2
 --window_size=2000
 --stride=1000
 --tss_dim=4
