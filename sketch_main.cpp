@@ -244,13 +244,11 @@ void run_triangle(SketchAlgorithm &algorithm) {
         std::exit(1);
     }
 
-    // MASH adds an extra tab before the number of lines, so mirror that.
-    fo << "\t" << n << '\n';
     for (size_t i = 0; i < n; ++i) {
-        fo << files[i].filename;
-        for (size_t j = 0; j < i; ++j)
-            fo << '\t' << distances[i][j];
-        fo << '\n';
+        for (size_t j = 0; j < i; ++j) {
+            fo << files[i].filename << ", " << files[j].filename;
+            fo << ", " << distances[i][j] << std::endl;
+        }
     }
     fo.close();
 };
