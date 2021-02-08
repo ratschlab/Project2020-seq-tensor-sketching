@@ -75,6 +75,8 @@ DEFINE_int32(max_len, 32, "The maximum accepted sequence length for Ordered and 
 DEFINE_int32(stride, 8, "Stride for sliding window: shift step for sliding window");
 DEFINE_int32(s, 8, "Short hand for --stride");
 
+DEFINE_uint32(num_threads, 0, "number of OpenMP threads, default: use all available cores");
+
 static bool ValidateInput(const char * /*unused*/, const std::string &value) {
     if (!value.empty()) {
         return true;
@@ -207,7 +209,7 @@ void run_triangle(SketchAlgorithm &algorithm) {
 
     std::cerr << "Sketching .." << std::endl;
     progress_bar::init(n);
-#pragma omp parallel for default(shared)
+#pragma omp parallel for default(shared) num_threads(FLAGS_num_threads)
     for (size_t i = 0; i < n; ++i) {
         assert(files[i].sequences.size() == 1
                && "Each input file must contain exactly one sequence!");
@@ -227,7 +229,7 @@ void run_triangle(SketchAlgorithm &algorithm) {
         distances[i].resize(i);
 
     progress_bar::init(n * (n - 1) / 2);
-#pragma omp parallel for default(shared)
+#pragma omp parallel for default(shared) num_threads(FLAGS_num_threads)
     for (auto it = pairs.begin(); it < pairs.end(); ++it) { // NOLINT
         auto [i, j] = *it;
         distances[i][j] = algorithm.dist(sketches[i], sketches[j]);
@@ -250,10 +252,11 @@ void run_triangle(SketchAlgorithm &algorithm) {
     }
 
     for (size_t i = 0; i < n; ++i) {
+        fo << files[i].filename;
         for (size_t j = 0; j < i; ++j) {
-            fo << files[i].filename << ", " << files[j].filename;
-            fo << ", " << distances[i][j] << std::endl;
+            fo << '\t' << distances[i][j];
         }
+        fo << '\n';
     }
     fo.close();
 };
