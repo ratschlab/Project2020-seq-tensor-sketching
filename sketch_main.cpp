@@ -5,6 +5,7 @@
 #include "sketch/hash_ordered.hpp"
 #include "sketch/hash_weighted.hpp"
 #include "sketch/tensor.hpp"
+#include "sketch/tensor_block.hpp"
 #include "sketch/tensor_embedding.hpp"
 #include "sketch/tensor_slide.hpp"
 #include "util/multivec.hpp"
@@ -32,15 +33,17 @@ DEFINE_string(alphabet,
 
 DEFINE_string(sketch_method,
               "TensorSlide",
-              "The sketching method to use: MH, WMH, OMH, TensorSketch or TensorSlide");
-DEFINE_string(m, "TensorSlide", "Short hand for --sketch_method");
+              "The sketching method to use: MH, WMH, OMH, TS, TSB or TSS");
+DEFINE_string(m, "TSS", "Short hand for --sketch_method");
 
 DEFINE_uint32(kmer_length, 1, "The kmer length for: MH, WMH, OMH");
 DEFINE_uint32(k, 3, "Short hand for --kmer_size");
 
 DEFINE_string(o, "", "Output file, containing the sketches for each sequence");
 
-DEFINE_string(i, "", "Input file, containing the sequences to be sketched in .fa format");
+DEFINE_string(i,
+              "",
+              "Input file or directory, containing the sequences to be sketched in .fa format");
 
 DEFINE_string(input_format, "fasta", "Input format: 'fasta', 'csv'");
 DEFINE_string(f, "fasta", "Short hand for --input_format");
@@ -51,6 +54,18 @@ DEFINE_int32(tuple_length,
              3,
              "Ordered tuple length, used in ordered MinHash and Tensor-based sketches");
 DEFINE_int32(t, 3, "Short hand for --tuple_length");
+
+static bool ValidateBlockSize(const char *flagname, int32_t value) {
+    if (FLAGS_tuple_length % value == 0 || FLAGS_t % value == 0) {
+        return true;
+    }
+    printf("Invalid value for --%s: %d. Must be a divisor of --tuple_len\n", flagname, value);
+    return false;
+}
+DEFINE_int32(block_size,
+             1,
+             "Only consider tuples made out of block-size continuous characters for Tensor sketch");
+DEFINE_validator(block_size, &ValidateBlockSize);
 
 DEFINE_int32(window_size, 32, "Window length: the size of sliding window in Tensor Slide Sketch");
 DEFINE_int32(w, 32, "Short hand for --window_size");
@@ -260,6 +275,11 @@ void run_function_on_algorithm(F f) {
         f(Tensor<seq_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length, rd()));
         return;
     }
+    if (FLAGS_sketch_method == "TSB") {
+        f(TensorBlock<seq_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
+                                FLAGS_block_size, rd()));
+        return;
+    }
     if (FLAGS_sketch_method == "TSS") {
         f(TensorSlide<seq_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
                                 FLAGS_window_size, FLAGS_stride, rd()));
@@ -322,18 +342,23 @@ int main(int argc, char *argv[]) {
         sketch_helper.read_input();
         sketch_helper.compute_sketches();
         sketch_helper.save_output();
-    } else if (FLAGS_sketch_method.rfind("Tensor", 0) == 0) {
+    } else if (FLAGS_sketch_method.rfind("TS", 0) == 0) {
         Tensor<uint64_t> tensor_sketch(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length, rd());
+        TensorBlock<uint64_t> tensor_block(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
+                                           FLAGS_block_size, rd());
         TensorSlide<uint64_t> tensor_slide(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length,
                                            FLAGS_window_size, FLAGS_stride, rd());
         std::function<std::vector<double>(const std::vector<uint64_t> &)> sketcher
-                = [&](const std::vector<uint64_t> &seq) { return tensor_sketch.compute(seq); };
+                = [&](const std::vector<uint64_t> &seq) {
+                      return FLAGS_block_size == 1 ? tensor_sketch.compute(seq)
+                                                   : tensor_block.compute(seq);
+                  };
         std::function<Vec2D<double>(const std::vector<uint64_t> &)> slide_sketcher
                 = [&](const std::vector<uint64_t> &seq) { return tensor_slide.compute(seq); };
         SketchHelper<uint8_t, uint64_t, double> sketch_helper(sketcher, slide_sketcher);
         sketch_helper.read_input();
-        FLAGS_sketch_method == "TensorSlide" ? sketch_helper.compute_slide()
-                                             : sketch_helper.compute_sketches();
+        FLAGS_sketch_method == "TSS" ? sketch_helper.compute_slide()
+                                     : sketch_helper.compute_sketches();
         sketch_helper.save_output();
     } else {
         std::cerr << "Unkknown method: " << FLAGS_sketch_method << std::endl;
