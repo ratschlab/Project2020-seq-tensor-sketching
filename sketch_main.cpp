@@ -205,60 +205,70 @@ void run_triangle(SketchAlgorithm &algorithm) {
 
     const size_t n = files.size();
 
-    std::vector<typename SketchAlgorithm::sketch_type> sketches(n);
+    for (uint32_t k = 3; k < 42; ++k) {
+        for (uint32_t b = 1; b <= k / 2; ++b) {
+            if (k % b != 0) {
+                continue;
+            }
+            FLAGS_tuple_length = k;
+            FLAGS_block_size = b;
 
-    std::cerr << "Sketching .." << std::endl;
-    progress_bar::init(n);
+            std::vector<typename SketchAlgorithm::sketch_type> sketches(n);
+
+            std::cerr << "Sketching .." << std::endl;
+            progress_bar::init(n);
 #pragma omp parallel for default(shared) num_threads(FLAGS_num_threads)
-    for (size_t i = 0; i < n; ++i) {
-        assert(files[i].sequences.size() == 1
-               && "Each input file must contain exactly one sequence!");
-        sketches[i] = algorithm.compute(files[i].sequences[0]);
-        progress_bar::iter();
-    }
+            for (size_t i = 0; i < n; ++i) {
+                assert(files[i].sequences.size() == 1
+                       && "Each input file must contain exactly one sequence!");
+                sketches[i] = algorithm.compute(files[i].sequences[0]);
+                progress_bar::iter();
+            }
 
-    std::cerr << "Computing all pairwise distances .." << std::endl;
+            std::cerr << "Computing all pairwise distances .." << std::endl;
 
-    std::vector<std::pair<int, int>> pairs;
-    for (size_t i = 0; i < n; ++i)
-        for (size_t j = 0; j < i; ++j)
-            pairs.emplace_back(i, j);
+            std::vector<std::pair<int, int>> pairs;
+            for (size_t i = 0; i < n; ++i)
+                for (size_t j = 0; j < i; ++j)
+                    pairs.emplace_back(i, j);
 
-    std::vector<std::vector<double>> distances(n);
-    for (size_t i = 0; i < n; ++i)
-        distances[i].resize(i);
+            std::vector<std::vector<double>> distances(n);
+            for (size_t i = 0; i < n; ++i)
+                distances[i].resize(i);
 
-    progress_bar::init(n * (n - 1) / 2);
+            progress_bar::init(n * (n - 1) / 2);
 #pragma omp parallel for default(shared) num_threads(FLAGS_num_threads)
-    for (auto it = pairs.begin(); it < pairs.end(); ++it) { // NOLINT
-        auto [i, j] = *it;
-        distances[i][j] = algorithm.dist(sketches[i], sketches[j]);
-        progress_bar::iter();
-    }
+            for (auto it = pairs.begin(); it < pairs.end(); ++it) { // NOLINT
+                auto [i, j] = *it;
+                distances[i][j] = algorithm.dist(sketches[i], sketches[j]);
+                progress_bar::iter();
+            }
 
 
-    std::string suffix
-            = "_" + std::to_string(FLAGS_tuple_length) + "_" + std::to_string(FLAGS_block_size);
-    std::filesystem::path ofile
-            = std::filesystem::absolute(std::filesystem::path(FLAGS_o + suffix));
-    std::cerr << "Writing distances triangle to " << ofile << " .." << std::endl;
+            std::string suffix = "_" + std::to_string(FLAGS_tuple_length) + "_"
+                    + std::to_string(FLAGS_block_size);
+            std::filesystem::path ofile
+                    = std::filesystem::absolute(std::filesystem::path(FLAGS_o + suffix));
+            std::cerr << "Writing distances triangle to " << ofile << " .." << std::endl;
 
 
-    write_output_meta();
-    std::ofstream fo(ofile);
-    if (!fo.is_open()) {
-        std::cerr << "Could not open " << FLAGS_o << " for writing." << std::endl;
-        std::exit(1);
-    }
+            write_output_meta();
+            std::ofstream fo(ofile);
+            if (!fo.is_open()) {
+                std::cerr << "Could not open " << FLAGS_o << " for writing." << std::endl;
+                std::exit(1);
+            }
 
-    for (size_t i = 0; i < n; ++i) {
-        fo << files[i].filename;
-        for (size_t j = 0; j < i; ++j) {
-            fo << '\t' << distances[i][j];
+            for (size_t i = 0; i < n; ++i) {
+                fo << files[i].filename;
+                for (size_t j = 0; j < i; ++j) {
+                    fo << '\t' << distances[i][j];
+                }
+                fo << '\n';
+            }
+            fo.close();
         }
-        fo << '\n';
     }
-    fo.close();
 };
 
 // Runs function f on the sketch method specified by the command line options.
@@ -310,16 +320,7 @@ int main(int argc, char *argv[]) {
     std::random_device rd;
 
     if (FLAGS_action == "triangle") {
-        for (uint32_t k = 3; k < 42; ++k) {
-            for (uint32_t b = 1; b <= k / 2; ++b) {
-                if (k % b != 0) {
-                    continue;
-                }
-                FLAGS_tuple_length = k;
-                FLAGS_block_size = b;
-                run_function_on_algorithm([](auto x) { run_triangle(x); });
-            }
-        }
+        run_function_on_algorithm([](auto x) { run_triangle(x); });
         return 0;
     }
 
