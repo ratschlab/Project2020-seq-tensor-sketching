@@ -308,6 +308,8 @@ int main(int argc, char *argv[]) {
     if (FLAGS_action == "triangle") {
         std::cerr << "Reading input .." << std::endl;
         std::vector<FastaFile<seq_type>> files = read_directory<seq_type>(FLAGS_i);
+        std::sort(files.begin(), files.end(),
+                  [](const auto &a, const auto &b) { return a.filename < b.filename; });
         std::cerr << "Read " << files.size() << " files" << std::endl;
 
         for (uint32_t k = 3; k < 42; ++k) {
