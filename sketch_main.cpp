@@ -234,8 +234,13 @@ void run_triangle(SketchAlgorithm &algorithm) {
         progress_bar::iter();
     }
 
-    std::cerr << "Writing distances triangle to " << FLAGS_o << " .." << std::endl;
-    std::filesystem::path ofile = std::filesystem::absolute(std::filesystem::path(FLAGS_o));
+
+    std::string suffix
+            = "_" + std::to_string(FLAGS_tuple_length) + "_" + std::to_string(FLAGS_block_size);
+    std::filesystem::path ofile
+            = std::filesystem::absolute(std::filesystem::path(FLAGS_o + suffix));
+    std::cerr << "Writing distances triangle to " << ofile << " .." << std::endl;
+
 
     write_output_meta();
     std::ofstream fo(ofile);
@@ -302,7 +307,16 @@ int main(int argc, char *argv[]) {
     std::random_device rd;
 
     if (FLAGS_action == "triangle") {
-        run_function_on_algorithm([](auto x) { run_triangle(x); });
+        for (uint32_t k = 3; k < 42; ++k) {
+            for (uint32_t b = 1; b <= k / 2; ++b) {
+                if (k % b != 0) {
+                    continue;
+                }
+                FLAGS_tuple_length = k;
+                FLAGS_block_size = b;
+                run_function_on_algorithm([](auto x) { run_triangle(x); });
+            }
+        }
         return 0;
     }
 
