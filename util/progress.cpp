@@ -22,12 +22,13 @@ void progress_bar::init(size_t total_iterations, size_t len) {
 void progress_bar::iter() {
 #pragma omp critical
     {
-        it++;
+        ++it;
         auto step = (it * bar_len) / total;
         while (step > bar_step) {
-            bar_step++;
-            std::cout << "\b\b\b\b"
-                      << "#" << std::setw(3) << (int)(100.0 * it / total) << "%" << std::flush;
+            if (bar_step > 0)
+                std::cout << "\b\b\b\b";
+            ++bar_step;
+            std::cout << "#" << std::setw(3) << (int)(100.0 * it / total) << "%" << std::flush;
         }
         if (it == total) {
             std::cout << "\033[2K\r" << std::flush;
