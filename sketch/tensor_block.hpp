@@ -7,7 +7,6 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
-#include <bits/stdint-uintn.h>
 #include <cassert>
 #include <cmath>
 #include <deque>
