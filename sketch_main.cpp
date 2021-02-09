@@ -32,7 +32,7 @@ DEFINE_string(alphabet,
               "The alphabet over which sequences are defined (dna4, dna5, protein)");
 
 DEFINE_string(sketch_method,
-              "TensorSlide",
+              "TSS",
               "The sketching method to use: MH, WMH, OMH, TS, TSB or TSS");
 DEFINE_string(m, "TSS", "Short hand for --sketch_method");
 
@@ -216,22 +216,16 @@ void run_triangle(const std::vector<FastaFile<seq_type>> &files, SketchAlgorithm
     std::cerr << "Computing all pairwise distances .." << std::endl;
 
     std::vector<std::pair<int, int>> pairs;
-    for (size_t i = 0; i < n; ++i)
-        for (size_t j = 0; j < i; ++j)
-            pairs.emplace_back(i, j);
-
     std::vector<std::vector<double>> distances(n);
-    for (size_t i = 0; i < n; ++i)
-        distances[i].resize(i);
-
     progress_bar::init(n * (n - 1) / 2);
 #pragma omp parallel for default(shared) num_threads(FLAGS_num_threads)
-    for (auto it = pairs.begin(); it < pairs.end(); ++it) { // NOLINT
-        auto [i, j] = *it;
-        distances[i][j] = algorithm.dist(sketches[i], sketches[j]);
-        progress_bar::iter();
+    for (size_t i = 0; i < n; ++i) {
+        distances[i].resize(i);
+        for (size_t j = 0; j < i; ++j) {
+            distances[i][j] = algorithm.dist(sketches[i], sketches[j]);
+            progress_bar::iter();
+        }
     }
-
 
     std::string suffix
             = "_" + std::to_string(FLAGS_tuple_length) + "_" + std::to_string(FLAGS_block_size);
@@ -312,7 +306,7 @@ int main(int argc, char *argv[]) {
                   [](const auto &a, const auto &b) { return a.filename < b.filename; });
         std::cerr << "Read " << files.size() << " files" << std::endl;
 
-        for (uint32_t k = 3; k < 42; ++k) {
+        for (uint32_t k = 2; k < 42; ++k) {
             for (uint32_t b = 1; b <= k / 2; ++b) {
                 if (k % b != 0) {
                     continue;
