@@ -207,19 +207,14 @@ void run_function_on_algorithm(F f) {
                                     FLAGS_tuple_length, HashAlgorithm::murmur, rd()));
         return;
     }
-
     if (FLAGS_sketch_method == "ED") {
         f(EditDistance<seq_type>());
         return;
     }
-
-    /*
     if (FLAGS_sketch_method == "TE") {
-        f(TensorEmbedding<seq_type>(kmer_word_size, FLAGS_tuple_length, "TensorEmbedding", true,
-                                    false));
+        f(TensorEmbedding<seq_type>(alphabet_size, FLAGS_tuple_length, "TensorEmbedding"));
         return;
     }
-    */
     if (FLAGS_sketch_method == "TS") {
         f(Tensor<seq_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length, rd()));
         return;
