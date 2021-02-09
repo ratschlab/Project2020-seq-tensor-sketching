@@ -7,6 +7,7 @@
 #include "util/timer.hpp"
 #include "util/utils.hpp"
 
+#include <bits/stdint-uintn.h>
 #include <cassert>
 #include <cmath>
 #include <deque>
@@ -84,20 +85,23 @@ class TensorBlock : public SketchBase<std::vector<double>, false> {
         // k=block_size positions behind, we need to always keep the last block_size Tp and Tm
         // matrices. At each iteration we create a new pair of Tp and Tm and then discard the oldest
         // Tp/Tn pair.
-        //TODO(ddanciu): use a circular queue on top of vector instead
+        // TODO(ddanciu): use a circular queue on top of vector instead
         std::deque<Vec2D<double>> Tp;
         std::deque<Vec2D<double>> Tm;
+
+        // The number of blocks.
+        uint32_t m = subsequence_len / block_size;
+
         for (uint32_t i = 0; i < block_size; ++i) {
-            Tp.push_back(new2D<double>(subsequence_len + 1, sketch_dim, 0));
-            Tm.push_back(new2D<double>(subsequence_len + 1, sketch_dim, 0));
+            Tp.push_back(new2D<double>(m + 1, sketch_dim, 0));
+            Tm.push_back(new2D<double>(m + 1, sketch_dim, 0));
             // the initial condition states that the sketch for the empty string is (1,0,..)
             Tp.back()[0][0] = 1;
         }
 
-        uint32_t m = subsequence_len / block_size;
         // the are the "new" Tp and Tm, computed at every iteration and appended to Tp and Tm
-        auto nTp = new2D<double>(subsequence_len + 1, sketch_dim, 0);
-        auto nTm = new2D<double>(subsequence_len + 1, sketch_dim, 0);
+        auto nTp = new2D<double>(m + 1, sketch_dim, 0);
+        auto nTm = new2D<double>(m + 1, sketch_dim, 0);
         for (uint32_t i = block_size - 1; i < seq.size(); i++) {
             uint32_t block_count = std::min(m, (i + 1) / block_size);
             // must traverse in reverse order, to avoid overwriting the values of Tp and Tm before
@@ -114,11 +118,11 @@ class TensorBlock : public SketchBase<std::vector<double>, false> {
                 }
                 r %= sketch_dim;
                 if (s) {
-                    nTp[p] = this->shift_sum(Tp.back()[p], Tp[0][p - block_size], r, z);
-                    nTm[p] = this->shift_sum(Tm.back()[p], Tm[0][p - block_size], r, z);
+                    nTp[bc] = this->shift_sum(Tp.back()[bc], Tp[0][bc - 1], r, z);
+                    nTm[bc] = this->shift_sum(Tm.back()[bc], Tm[0][bc - 1], r, z);
                 } else {
-                    nTp[p] = this->shift_sum(Tp.back()[p], Tm[0][p - block_size], r, z);
-                    nTm[p] = this->shift_sum(Tm.back()[p], Tp[0][p - block_size], r, z);
+                    nTp[bc] = this->shift_sum(Tp.back()[bc], Tm[0][bc - 1], r, z);
+                    nTm[bc] = this->shift_sum(Tm.back()[bc], Tp[0][bc - 1], r, z);
                 }
             }
             nTp[0][0] = 1;
@@ -126,7 +130,7 @@ class TensorBlock : public SketchBase<std::vector<double>, false> {
             Tm.push_back(std::move(nTm));
             nTp = std::move(Tp.front());
             nTm = std::move(Tm.front());
-            for (uint8_t j = 0; j < subsequence_len + 1; ++j) {
+            for (uint32_t j = 0; j < m + 1; ++j) {
                 std::fill(nTp[j].begin(), nTp[j].end(), 0);
                 std::fill(nTm[j].begin(), nTm[j].end(), 0);
             }
@@ -135,7 +139,7 @@ class TensorBlock : public SketchBase<std::vector<double>, false> {
         }
         std::vector<double> sketch(sketch_dim, 0);
         for (uint32_t l = 0; l < sketch_dim; l++) {
-            sketch[l] = Tp.back()[subsequence_len][l] - Tm.back()[subsequence_len][l];
+            sketch[l] = Tp.back()[m][l] - Tm.back()[m][l];
         }
 
         return sketch;
