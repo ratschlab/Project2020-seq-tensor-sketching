@@ -185,6 +185,80 @@ void run_triangle(SketchAlgorithm &algorithm) {
     fo.close();
 };
 
+// Sketch the input sequences using the given algorithm and write corresponding .sketch files.
+template <class SketchAlgorithm>
+void run_sketch(SketchAlgorithm &algorithm) {
+    std::cerr << "Reading input .." << std::endl;
+    std::vector<FastaFile<seq_type>> files = read_directory<seq_type>(FLAGS_i);
+    std::cerr << "Read " << files.size() << " files" << std::endl;
+
+    const size_t n = files.size();
+
+    std::cerr << "Sketching .." << std::endl;
+    progress_bar::init(n);
+    std::cout << n << std::endl;
+#pragma omp parallel for default(shared)
+    for (size_t i = 0; i < n; ++i) {
+        assert(files[i].sequences.size() == 1
+               && "Each input file must contain exactly one sequence!");
+        // NOTE: Currently this only supports algorithms returning a one dimensional vector.
+        typename SketchAlgorithm::sketch_type sketch;
+        if constexpr (SketchAlgorithm::kmer_input) {
+            sketch = algorithm.compute(files[i].sequences[0], FLAGS_kmer_length, alphabet_size);
+        } else {
+            sketch = algorithm.compute(files[i].sequences[0]);
+        }
+
+        std::array<double, 4> acgt {};
+        for (auto &s : files[i].sequences[0])
+            if (s < 4)
+                acgt[s]++;
+        const auto sum = std::accumulate(begin(acgt), end(acgt), 0.0);
+        for (auto &x : acgt)
+            x /= sum;
+
+        if constexpr (std::is_same_v<std::vector<double>, typename SketchAlgorithm::sketch_type>) {
+            // TODO(ragnar): Add flag to set this extension.
+            // TODO(ragnar): Write parameters of the sketch method, so these can be checked to be
+            // equal when comparing sketches.
+            //
+            // Current output format:
+            // <sketch algorithm>
+            // <sketch length>
+            // <list of sketch values>
+            // <list of ACGT frequencies>
+            // <list of ACGT freq. normalized sketch values>
+            std::ofstream output(std::filesystem::path(FLAGS_i) / (files[i].filename + ".sketch"));
+            output << algorithm.name << '\n';
+            output << files[i].sequences[0].size() << '\n';
+            output << sketch.size() << '\n';
+            int ws = 0;
+            for (const auto x : sketch) {
+                output << (ws++ ? "\t" : "") << x;
+            }
+            output << '\n';
+            ws = 0;
+            for (const auto &x : acgt) {
+                output << (ws++ ? "\t" : "") << x;
+            }
+            output << '\n';
+
+            for (size_t i = 0; i < sketch.size(); ++i) {
+                if (i > 0)
+                    output << "\t";
+                auto value = sketch[i];
+                for (int j = 0; j < FLAGS_tuple_length; ++j) {
+                    value /= acgt[(i >> (2 * j)) & 3];
+                }
+                output << value;
+            }
+            output << '\n';
+        }
+
+        progress_bar::iter();
+    }
+};
+
 // Runs function f on the sketch method specified by the command line options.
 template <typename F>
 void run_function_on_algorithm(F f) {
@@ -207,14 +281,19 @@ void run_function_on_algorithm(F f) {
                                     FLAGS_tuple_length, HashAlgorithm::murmur, rd()));
         return;
     }
+
     if (FLAGS_sketch_method == "ED") {
         f(EditDistance<seq_type>());
         return;
     }
+
+    /*
     if (FLAGS_sketch_method == "TE") {
-        f(TensorEmbedding<seq_type>(alphabet_size, FLAGS_tuple_length, "TensorEmbedding"));
+        f(TensorEmbedding<seq_type>(kmer_word_size, FLAGS_tuple_length, "TensorEmbedding", true,
+                                    false));
         return;
     }
+    */
     if (FLAGS_sketch_method == "TS") {
         f(Tensor<seq_type>(kmer_word_size, FLAGS_embed_dim, FLAGS_tuple_length, rd()));
         return;
@@ -246,6 +325,11 @@ int main(int argc, char *argv[]) {
 
     if (FLAGS_action == "triangle") {
         run_function_on_algorithm([](auto x) { run_triangle(x); });
+        return 0;
+    }
+
+    if (FLAGS_action == "sketch") {
+        run_function_on_algorithm([](auto x) { run_sketch(x); });
         return 0;
     }
 
