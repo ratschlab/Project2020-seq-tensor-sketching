@@ -76,7 +76,9 @@ T l2_dist(const std::vector<T> &a, const std::vector<T> &b) {
 /**
  * Return the probability p that maximizes the probability of the given observations under the
  * assumption that the input is i.i.d. distributed as A~Norm(0, sigma), and the output is
- * distributed as B~p * A + (1-p) * Norm(0, sigma).
+ * distributed as B ~ p * A + (1-p) * Norm(0, sigma).
+ *
+ * For symmetry, we maximise the likelyhood of getting both A from B and B from A.
  */
 template <class T>
 T exp_dist(const std::vector<T> &a, const std::vector<T> &b) {
