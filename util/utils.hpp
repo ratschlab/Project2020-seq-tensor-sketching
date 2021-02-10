@@ -3,11 +3,15 @@
 #include "util/multivec.hpp"
 #include "util/timer.hpp"
 
+#include <gflags/gflags.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <numeric>
 #include <vector>
+
+DECLARE_string(dist);
 
 namespace ts { // ts = Tensor Sketch
 
@@ -67,6 +71,43 @@ T l2_dist(const std::vector<T> &a, const std::vector<T> &b) {
         res += el * el;
     }
     return res;
+}
+
+/**
+ * Return the probability p that maximizes the probability of the given observations under the
+ * assumption that the input is i.i.d. distributed as A~Norm(0, sigma), and the output is
+ * distributed as B~p * A + (1-p) * Norm(0, sigma).
+ */
+template <class T>
+T exp_dist(const std::vector<T> &a, const std::vector<T> &b) {
+    // p minimizes 1/(1-p)^2 * ( (1+p)^2 (sum_i a_i^2 + b_i^2) - 4 (sum_i a_i b_i))
+    // C = sum_i a_i^2 + b_i^2
+    // D = sum_i a_i b_i
+    // p = (4D - C)/C
+    assert(a.size() == b.size());
+    T C = 0;
+    T D = 0;
+    for (size_t i = 0; i < a.size(); i++) {
+        C += a[i] * a[i] + b[i] * b[i];
+        D += a[i] * b[i];
+    }
+    double p = (4 * D - C) / C;
+    assert(p <= 1);
+    // p < 0 does happen occasionally.
+    // p = max(p,T(0));
+    return 1 - p;
+}
+
+template <class T>
+T sketch_dist(const std::vector<T> &a, const std::vector<T> &b) {
+    assert(a.size() == b.size());
+    if (FLAGS_dist == "l1")
+        return l1_dist(a, b);
+    if (FLAGS_dist == "l2")
+        return l2_dist(a, b);
+    if (FLAGS_dist == "exp")
+        return exp_dist(a, b);
+    assert(false && "Value of dist flag is not value. Must be one of l1|l2|exp");
 }
 
 
