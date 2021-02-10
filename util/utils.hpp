@@ -76,28 +76,27 @@ T l2_dist(const std::vector<T> &a, const std::vector<T> &b) {
 /**
  * Return the probability p that maximizes the probability of the given observations under the
  * assumption that the input is i.i.d. distributed as A~Norm(0, sigma), and the output is
- * distributed as B ~ p * A + (1-p) * Norm(0, sigma).
+ * distributed as B ~ p * A + Norm(0, sigma * sqrt(1-p)).
  *
  * For symmetry, we maximise the likelyhood of getting both A from B and B from A.
  */
 template <class T>
-T exp_dist(const std::vector<T> &a, const std::vector<T> &b) {
-    // p minimizes 1/(1-p)^2 * ( (1+p)^2 (sum_i a_i^2 + b_i^2) - 4 (sum_i a_i b_i))
-    // C = sum_i a_i^2 + b_i^2
-    // D = sum_i a_i b_i
-    // p = (4D - C)/C
+T most_likely_distance(const std::vector<T> &a, const std::vector<T> &b) {
+    // p minimizes 1/(1-p) * ( sum_i a_i^2  - 2 p sum_i a_i b_i + p^2 sum_i b^2)
+    // p = ||a-b||_2 / sqrt(||a||_2 + ||b||_2)
     assert(a.size() == b.size());
-    T C = 0;
-    T D = 0;
+    T aa = 0;
+    T ab = 0;
+    T bb = 0;
     for (size_t i = 0; i < a.size(); i++) {
-        C += a[i] * a[i] + b[i] * b[i];
-        D += a[i] * b[i];
+        aa += a[i] * a[i];
+        ab += (a[i] - b[i]) * (a[i] - b[i]);
+        bb += b[i] * b[i];
     }
-    double p = (4 * D - C) / C;
-    assert(p <= 1);
-    // p < 0 does happen occasionally.
-    // p = max(p,T(0));
-    return 1 - p;
+    // NOTE: Instead of dividing by the average norm^2 of a and b, it's also possible to divide by
+    // either |a| or |b| to get an asymmetric distance that computes the most likely p to transition
+    // from a to b.
+    return std::sqrt(ab / ((aa + bb) / 2));
 }
 
 template <class T>
@@ -108,7 +107,7 @@ T sketch_dist(const std::vector<T> &a, const std::vector<T> &b) {
     if (FLAGS_dist == "l2")
         return l2_dist(a, b);
     if (FLAGS_dist == "exp")
-        return exp_dist(a, b);
+        return most_likely_distance(a, b);
     assert(false && "Value of dist flag is not a known value. Must be one of l1|l2|exp.");
 }
 
