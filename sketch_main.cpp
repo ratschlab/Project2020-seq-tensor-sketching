@@ -27,7 +27,7 @@ using namespace ts;
 // The main command this program should perform.
 // Triangle: compute a triangular distance matrix.
 // More actions will be added.
-DEFINE_string(action, "", "Which action to do. One of: triangle, none");
+DEFINE_string(action, "triangle", "Which action to do. One of: triangle, none");
 
 DEFINE_string(alphabet,
               "dna4",
@@ -243,8 +243,6 @@ int main(int argc, char *argv[]) {
         std::cerr << "Kmer size is too large to fit in 64 bits " << std::endl;
         std::exit(1);
     }
-
-    std::random_device rd;
 
     if (FLAGS_action == "triangle") {
         run_function_on_algorithm([](auto x) { run_triangle(x); });
