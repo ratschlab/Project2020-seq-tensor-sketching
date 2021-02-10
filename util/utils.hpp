@@ -107,7 +107,7 @@ T sketch_dist(const std::vector<T> &a, const std::vector<T> &b) {
         return l2_dist(a, b);
     if (FLAGS_dist == "exp")
         return exp_dist(a, b);
-    assert(false && "Value of dist flag is not value. Must be one of l1|l2|exp");
+    assert(false && "Value of dist flag is not a known value. Must be one of l1|l2|exp.");
 }
 
 
