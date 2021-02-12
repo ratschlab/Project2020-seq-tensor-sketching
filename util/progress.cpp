@@ -26,12 +26,12 @@ void progress_bar::iter() {
         auto step = (it * bar_len) / total;
         while (step > bar_step) {
             if (bar_step > 0)
-                std::cout << "\b\b\b\b";
+                std::cerr << "\b\b\b\b";
             ++bar_step;
-            std::cout << "#" << std::setw(3) << (int)(100.0 * it / total) << "%" << std::flush;
+            std::cerr << "#" << std::setw(3) << (int)(100.0 * it / total) << "%" << std::flush;
         }
         if (it == total) {
-            std::cout << "\033[2K\r" << std::flush;
+            std::cerr << "\033[2K\r" << std::flush;
         }
     }
 }
