@@ -185,6 +185,41 @@ void run_triangle(SketchAlgorithm &algorithm) {
     fo.close();
 };
 
+void run_mutation_distribution() {
+    std::cerr << "Reading input .." << std::endl;
+    std::vector<FastaFile<seq_type>> files = read_directory<seq_type>(FLAGS_i);
+    std::cerr << "Read " << files.size() << " files" << std::endl;
+
+    int n = files.size();
+
+    std::map<int, int> distance_counts;
+    std::vector<std::pair<int, int>> pairs;
+    for (int i = 0; i < n; ++i)
+        for (int j = 0; j < i; ++j)
+            pairs.emplace_back(i, j);
+
+    progress_bar::init(n * (n - 1) / 2);
+#pragma omp parallel for default(shared)
+    for (auto it = pairs.begin(); it < pairs.end(); ++it) { // NOLINT
+        auto [i, j] = *it;
+
+        auto distances = mutation_distances(files[i].sequences[0], files[j].sequences[0]);
+
+#pragma omp critical
+        {
+            for (auto dist : distances.first)
+                ++distance_counts[dist];
+            for (auto dist : distances.second)
+                ++distance_counts[dist];
+        }
+
+        progress_bar::iter();
+    }
+    for (auto [dist, count] : distance_counts) {
+        std::cout << dist << " " << count << '\n';
+    }
+}
+
 // Runs function f on the sketch method specified by the command line options.
 template <typename F>
 void run_function_on_algorithm(F f) {
@@ -246,6 +281,11 @@ int main(int argc, char *argv[]) {
 
     if (FLAGS_action == "triangle") {
         run_function_on_algorithm([](auto x) { run_triangle(x); });
+        return 0;
+    }
+
+    if (FLAGS_action == "mutation_distances") {
+        run_mutation_distribution();
         return 0;
     }
 

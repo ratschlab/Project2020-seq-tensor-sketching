@@ -216,6 +216,98 @@ size_t edit_distance(const std::vector<seq_type> &s1, const std::vector<seq_type
     return result;
 }
 
+template <class seq_type>
+std::pair<std::vector<int>, std::vector<int>> full_edit_distance(const std::vector<seq_type> &s1,
+                                                                 const std::vector<seq_type> &s2) {
+    Timer timer("edit_distance");
+    const size_t m(s1.size());
+    const size_t n(s2.size());
+
+    if (m == 0)
+        return {};
+    if (n == 0)
+        return {};
+
+    Vec2D<int> costs = new2D<int>(m + 1, n + 1);
+
+    for (size_t k = 0; k <= n; k++)
+        costs[0][k] = k;
+
+    size_t i = 0;
+    for (auto it1 = s1.begin(); it1 != s1.end(); ++it1, ++i) {
+        costs[i + 1][0] = i + 1;
+
+        size_t j = 0;
+        for (auto it2 = s2.begin(); it2 != s2.end(); ++it2, ++j) {
+            if (*it1 == *it2) {
+                costs[i + 1][j + 1] = costs[i][j];
+            } else {
+                costs[i + 1][j + 1]
+                        = std::min(costs[i][j], std::min(costs[i][j + 1], costs[i + 1][j])) + 1;
+            }
+        }
+    }
+
+    std::vector<int> v1, v2;
+    for (int i = m, j = n; i > 0 && j > 0;) {
+        if (costs[i][j] == costs[i - 1][j - 1]) {
+            v1.push_back(i);
+            v2.push_back(j);
+            --i, --j;
+        } else if (costs[i][j] == costs[i - 1][j - 1] + 1) {
+            --i, --j;
+        } else if (costs[i][j] == costs[i - 1][j] + 1) {
+            --i;
+        } else if (costs[i][j] == costs[i][j - 1] + 1) {
+            --j;
+        } else {
+            assert(false);
+        }
+    }
+
+    std::reverse(v1.begin(), v1.end());
+    std::reverse(v2.begin(), v2.end());
+    return { std::move(v1), std::move(v2) };
+}
+
+
+// Computes the lengths of runs of consecutive matches, i.e. the distances between consecutive
+// mutations.
+// TODO: Add some tests for this.
+template <class seq_type>
+std::vector<int> matches_to_distance(const std::vector<seq_type> &s,
+                                     const std::vector<int> &matches) {
+    std::vector<int> distances;
+    int run_length = 0;
+    int last_match = -1;
+    for (auto x : matches) {
+        if (x == last_match + 1) {
+            run_length += 1;
+        } else {
+            // abort current run, and add additional 0s for consecutive non-matches.
+            distances.push_back(run_length);
+            for (int i = 0; i < x - last_match - 2; ++i)
+                distances.push_back(0);
+            run_length = 1;
+        }
+        last_match = x;
+    }
+    distances.push_back(run_length);
+    for (int i = 0; i < int(s.size()) - last_match - 1; ++i)
+        distances.push_back(0);
+
+    return distances;
+}
+
+
+template <class seq_type>
+std::pair<std::vector<int>, std::vector<int>> mutation_distances(const std::vector<seq_type> &s1,
+                                                                 const std::vector<seq_type> &s2) {
+    auto [v1, v2] = full_edit_distance(s1, s2);
+    return { matches_to_distance(s1, v1), matches_to_distance(s2, v2) };
+}
+
+
 template <class T, class = is_u_integral<T>>
 T int_pow(T x, T pow) {
     T result = 1;
