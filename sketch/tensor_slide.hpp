@@ -4,7 +4,6 @@
 
 #include "util/utils.hpp"
 
-#include <bit>
 #include <cstddef>
 #include <vector>
 
