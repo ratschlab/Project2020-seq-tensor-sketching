@@ -13,11 +13,11 @@ jobs:
     strategy:
       matrix:
         build_type: [Debug, Release]
-        compiler: [g++-9]
+        compiler: [g++-8]
         include:
-          - compiler: g++-9
-            cxx: g++-9
-            cc: gcc-9
+          - compiler: g++-8
+            cxx: g++-8
+            cc: gcc-8
 
     steps:
     - uses: actions/checkout@v2
