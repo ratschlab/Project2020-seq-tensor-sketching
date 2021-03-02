@@ -15,6 +15,7 @@
 
 #include <gflags/gflags.h>
 
+#include <array>
 #include <filesystem>
 #include <memory>
 #include <numeric>
