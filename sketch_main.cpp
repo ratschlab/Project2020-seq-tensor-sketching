@@ -34,12 +34,12 @@ DEFINE_string(alphabet,
               "The alphabet over which sequences are defined (dna4, dna5, protein)");
 
 DEFINE_string(sketch_method,
-              "TensorSlide",
+              "TSS",
               "The sketching method to use: MH, WMH, OMH, TS, TSB or TSS");
 DEFINE_string(m, "TSS", "Short hand for --sketch_method");
 
 DEFINE_uint32(kmer_length, 1, "The kmer length for: MH, WMH, OMH");
-DEFINE_uint32(k, 3, "Short hand for --kmer_size");
+DEFINE_uint32(k, 3, "Short hand for --kmer_length");
 
 DEFINE_string(o, "", "Output file, containing the sketches for each sequence");
 
