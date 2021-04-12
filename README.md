@@ -8,6 +8,7 @@ The method is described in the paper by Amir Joudaki et al. [`Fast Alignment-Fre
 ```
 git clone https://github.com/ratschlab/Project2020-seq-tensor-sketching
 cd Project2020-seq-tensor-sketching
+git submodule update --init --
 mkdir build; cd build
 cmake ..
 make -j
