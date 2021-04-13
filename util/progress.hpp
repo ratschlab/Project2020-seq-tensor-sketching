@@ -19,4 +19,3 @@ struct progress_bar {
 
 
 };
-

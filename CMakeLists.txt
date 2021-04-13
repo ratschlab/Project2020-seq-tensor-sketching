@@ -66,4 +66,3 @@ target_link_libraries(tests gtest_main gtest gmock util sketch_lib phylogeny_lib
 target_include_directories(tests PRIVATE "include")
 
 gtest_discover_tests(tests)
-

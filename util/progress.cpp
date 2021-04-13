@@ -37,4 +37,3 @@ void progress_bar::iter() {
 }
 
 }; // namespace ts
-
