@@ -13,3 +13,10 @@ mkdir build; cd build
 cmake ..
 make -j
 ```
+## Contributing
+
+- The python code in the repository is formatted using [black](https://github.com/psf/black).
+  To enable the pre-commit hook, install [pre-commit](https://pre-commit.com/)
+  with `pip` or your package manager (Arch: `python-pre-commit`) and run
+  `pre-commit install` from the repository root. All python code will now automatically be formatted
+  on each commit.
