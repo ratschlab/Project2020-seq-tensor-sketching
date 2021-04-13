@@ -99,8 +99,10 @@ def gen_table1_std(data_dir, save_dir, thresh):
                 v = '${:.3f} \\pm {:.3f}$'.format(v, v_std)
             stats[name][i] = v
 
-    table_body = 'Method & Spearman & {} & Abs. ($10^{{-3}}$ sec) & Rel.(1/ED) \\\\\n\hline\n'.format(
-        ' & '.join(str(th) for th in thresh)
+    table_body = (
+        'Method & Spearman & {} & Abs. ($10^{{-3}}$ sec) & Rel.(1/ED) \\\\\n\hline\n'.format(
+            ' & '.join(str(th) for th in thresh)
+        )
     )
     table_body = table_body + '\\\\\n\hline\n'.join(
         [' & '.join(col[row] for method, col in stats.items()) for row in range(6)]
