@@ -55,8 +55,8 @@ class TE(Sketcher):
             nct = nb.float64(1)
             for i in range(self.t):
                 nct = nct * (n - i) / (i + 1)
-            full_sketch[-1] /= nct
-        sketch = np.array([x for x in full_sketch[-1]], dtype=nb.float32)
+            full_sketch[self.t] /= nct
+        sketch = np.array([x for x in full_sketch[self.t]], dtype=nb.float32)
         return SketchedSequence(seq, sketch)
 
     # Returns the sketch for the given t as frequencies.

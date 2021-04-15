@@ -35,18 +35,23 @@ class TS(Sketcher):
 
         return T
 
-    def sketch_one(self, seq: Sequence) -> SketchedSequence:
-        full_sketch = self._full_sketch(seq)
+    def _normalize(self, seq, T):
         if self.normalize:
             # Normalization factor.
             n = seq.len()
             nct = nb.float64(1)
             for i in range(self.t):
                 nct = nct * (n - i) / (i + 1)
-            full_sketch[-1] /= nct
-        sketch = np.array([x for x in full_sketch[-1]], dtype=nb.float32)
+            T /= nct
+        return T
+
+    def sketch_one(self, seq: Sequence) -> SketchedSequence:
+        full_sketch = self._full_sketch(seq)
+
+        self._normalize(seq, full_sketch[self.t])
+
+        sketch = np.array([x for x in full_sketch[self.t]], dtype=nb.float32)
         return SketchedSequence(seq, sketch)
 
-    # Returns the sketch for the given t as frequencies.
     def sketch(self, seqs: list[Sequence]) -> list[SketchedSequence]:
         return [self.sketch_one(seq) for seq in seqs]
