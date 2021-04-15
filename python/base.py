@@ -37,16 +37,34 @@ def pairwise_dists(seqs: list[Sequence]) -> list[tuple[np.float32, Sequence, Seq
     return d
 
 
-sketchparams_spec = [('A', nb.int32), ('t', nb.int32), ('D', nb.int32), ('normalize', nb.bool_)]
+sketchparams_spec = [
+    ('A', nb.int32),
+    ('t', nb.int32),
+    ('D', nb.int32),
+    ('normalize', nb.bool_),
+    ('L', nb.int32),
+    ('DL', nb.int32),
+]
 
 
 @jitclass(sketchparams_spec)
 class SketchParams:
-    def __init__(self, A, t, D, normalize=True):
+    def __init__(self, A, t, D, normalize=True, L=1):
+        # Alphabet size
         self.A = A
+        # Tensor Sketch tuple size
         self.t = t
+        # Tensor Sketch embed dimension
         self.D = D
+        # Return frequencies instead of counts
         self.normalize = normalize
+
+        # GPU Sketch
+        # Amount of work per thread, must divide D.
+        # Spawn t*(D/L) instead of t*D threads when this is > 1.
+        self.L = L
+        assert D % L == 0
+        self.DL = D // L
 
 
 SketchParams_type = SketchParams.class_type.instance_type
@@ -59,6 +77,8 @@ class Sketcher:
         self.t = params.t
         self.D = params.D
         self.normalize = params.normalize
+        self.L = params.L
+        self.DL = params.DL
 
     # [Optional] sketch a single sequence for all t' <= t.
     def _full_sketch(self, seq: Sequence):
