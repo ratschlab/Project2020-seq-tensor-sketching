@@ -6,21 +6,21 @@ from numba import njit, types, typed
 from numba.experimental import jitclass
 
 # Map from sequence characters to internal integer representation.
-char_map: dict[str, int] = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
+_char_map: dict[str, int] = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
 
 
 # Given the char_map above, returns an array of length 256 mapping bytes to
 # internal integers. -1 signals unknown bytes.
-def compute_char_list() -> np.ndarray:
+def _compute_char_list() -> np.ndarray:
     char_list = np.full(256, -1, np.int8)
-    for k in char_map:
-        char_list[ord(k)] = char_map[k]
+    for k in _char_map:
+        char_list[ord(k)] = _char_map[k]
     return char_list
 
 
 # Map 256 bytes to integers; built from the map above.
 # -1 signals unknown bytes.
-char_list: np.ndarray = compute_char_list()
+_char_list: np.ndarray = _compute_char_list()
 
 
 # Class that contains a single sequence. The full_seq member contains the
@@ -42,14 +42,14 @@ class Sequence:
     def id_to_map(id):
         data = typed.Dict()
         for kv in id.split('|'):
-            for k, v in kv.split(':'):
-                data[k] = v
+            k, v = kv.split(':')
+            data[k] = v
         return data
 
     # Remap characters by char_map. Removes other (lower case) characters.
     @staticmethod
     def remap(s):
-        return np.array([char_list[c] for c in s if char_list[c] != -1], dtype=np.int8)
+        return np.array([_char_list[c] for c in s if _char_list[c] != -1], dtype=np.int8)
 
     @staticmethod
     def reverse_complement(seq: np.ndarray):
@@ -70,6 +70,9 @@ class Sequence:
 
     def len(self):
         return len(self.seq)
+
+
+Sequence_type = Sequence.class_type.instance_type
 
 
 class FastaFile:
