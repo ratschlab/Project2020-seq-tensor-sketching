@@ -1,6 +1,6 @@
 # TENSOR SKETCH
 
-from base import *
+from lib.base import *
 
 
 @jitclass(sketchparams_spec + [('hashes', nb.int32[:, :]), ('signs', nb.float32[:, :])])
