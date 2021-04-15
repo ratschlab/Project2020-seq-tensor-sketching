@@ -1,6 +1,6 @@
 # TENSOR EMBEDDING
 
-from base import *
+from lib.base import *
 
 # a_1...a_t is mapped to index  A^{t-1} a_1 + ... + A * a_{t-1} + 1 * a_t
 @jitclass(sketchparams_spec + [('pow', nb.int32[:])])

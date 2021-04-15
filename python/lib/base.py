@@ -8,7 +8,7 @@ from numba import njit
 from numba.experimental import jitclass
 from numba.typed import List
 
-from sequence import *
+from lib.sequence import *
 
 # A SketchedSequence contains a sequence and its sketch.
 # The sketch must be a 1D array of float32s.

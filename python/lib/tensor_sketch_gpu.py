@@ -1,10 +1,9 @@
 # GPU TENSOR SKETCH
 
-from base import *
-from tensor_sketch import TS
-
 from numba import cuda
 
+from lib.base import *
+from lib.tensor_sketch import TS
 
 # CUDA kernel to sketch a list of sequences.
 # A, t, D, L (int32): parameters as usual.
@@ -22,7 +21,7 @@ def _gpu_sketch(A, t, D, L, hashes, signs, seq, starts, T):
     l = cuda.threadIdx.x
     k = cuda.threadIdx.y
     assert k < t
-    assert l < DL
+    assert l < D // L
 
     # We use a 2*(t+1)*D tensor consisting of two 'planes'.
     # At each step, one plane is the input, and one is the output. Which is indicated by `j` further down.
