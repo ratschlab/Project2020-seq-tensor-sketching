@@ -8,7 +8,8 @@ from lib.tensor_sketch import TS
 # CUDA kernel to sketch a list of sequences.
 # A, t, D, L (int32): parameters as usual.
 # global_hashes (int32[:, :]): A*t device array of hashes.
-# global_signs (float32[:, :]): A*t device array of hashes.
+# global_signs (float32[:, :]): A*t device array of signs. Note that these are
+# floats to avoid additional (slow) int32->float32 conversions.
 # seq (int8[:]): concatenation of the sequences to sketch.
 # starts (int32[:]): the start positions of the subsequences in seq.
 # T: (float32[:, :]): n*D device array for the output, given n input sequences.
@@ -138,6 +139,12 @@ class GTS(Sketcher):
         assert len(seqs) > 0
         assert isinstance(seqs[0], Sequence)
 
+        # TODO: Add normalization to the GPU sketch method.
+        for seq in seqs:
+            assert (
+                seq.len() ** self.t < 10 ** 38
+            ), "Counts may overflow! Lower t or shorten the sequence."
+
         # Sort by decreasing length
         seqs = sorted(seqs, key=lambda s: len(s.seq), reverse=True)
 
@@ -187,7 +194,7 @@ class GTS(Sketcher):
         T = d_T.copy_to_host(stream=stream)
 
         # Only return the length t sketch
-        sketched_seqs = []
+        sketched_seqs = List()
         for seq, sketch in zip(seqs, T):
             self.ts._normalize(seq, sketch[self.t])
             sketched_seqs.append(SketchedSequence(seq, sketch[self.t]))
