@@ -1,5 +1,7 @@
 # Classes for Sequence and FastaFile.
 
+from pathlib import Path
+
 import numpy as np
 import numba as nb
 from numba import njit, types, typed
@@ -95,7 +97,8 @@ class FastaFile:
             if header is None:
                 return
             assert seq
-            self.seqs.append(Sequence(header, b''.join(seq)))
+            sequence = Sequence(header, b''.join(seq))
+            self.seqs.append(sequence)
             header = None
             seq = []
 
@@ -108,3 +111,16 @@ class FastaFile:
                 else:
                     seq.append(line)
             flush()
+
+
+# Contains a map from ids to sequences, constructed from a list of FastaFiles.
+class SequenceDict:
+    def __init__(self, fastafiles):
+        self.by_id = dict()
+        for file in fastafiles:
+            for seq in file.seqs:
+                self.by_id[seq.id] = seq
+
+    # Returns None if key not found.
+    def __getitem__(self, key):
+        return self.by_id.get(key)

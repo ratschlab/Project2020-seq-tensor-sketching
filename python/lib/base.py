@@ -29,10 +29,13 @@ def dist(ss1: np.ndarray, ss2: np.ndarray) -> np.float32:
 
 # Return a sorted list of (dist, seq1, seq2).
 @njit
-def pairwise_dists(seqs: list[Sequence]) -> list[tuple[np.float32, Sequence, Sequence]]:
+def pairwise_dists(
+    seqs: list[SketchedSequence],
+) -> list[tuple[np.float32, SketchedSequence, SketchedSequence]]:
     d = []
-    for s1, s2 in itertools.combinations(seqs, 2):
-        d.append((dist(s1.sketch, s2.sketch), s1, s2))
+    for j in range(len(seqs)):
+        for i in range(j):
+            d.append((dist(seqs[i], seqs[j]), seqs[i], seqs[j]))
     d.sort(key=lambda tup: tup[0])
     return d
 
