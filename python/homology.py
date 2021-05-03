@@ -13,24 +13,6 @@ from lib.align import *
 
 import lib.data as data
 
-# Exon stats
-def print_exon_stats():
-    exon_stats(file_paths, seqs)
-
-
-# print_exon_stats()
-
-# Are (sub)sequences s1 and s2 from the same sequence?
-def same_seq(s1, s2):
-    return s1.id == s2.id
-
-
-# Are sequences s1 and s2 orthologs?
-def is_match(s1, s2):
-    if s1.id not in data.orthologs:
-        return False
-    return s2.id in data.orthologs[s1.id]
-
 
 # Dists is a list of (distance, sequence, sequence)
 def ROC_curve(dists, print_distance=False):
@@ -44,7 +26,7 @@ def ROC_curve(dists, print_distance=False):
     for d, s1, s2 in dists:
         total += 1
         newmatch = False
-        if is_match(s1.seq, s2.seq):
+        if data.is_match(s1.seq, s2.seq):
             match += 1
             done = False
             if s1.seq.id not in matched_seqs:
@@ -96,7 +78,7 @@ def count_matches(distances, num_subsequences):
     id_to_sketch = dict()
 
     for _, s1, s2 in distances:
-        if same_seq(s1.seq, s2.seq):
+        if s1.seq.id == s2.seq.id:
             continue
         cnt_1[s1.seq.id] += 1
         cnt_2[s2.seq.id] += 1
@@ -137,7 +119,7 @@ def count_matches(distances, num_subsequences):
     return dists
 
 
-def minimizer_sketching(minimizer_k, l, window, params, r):
+def minimizer_sketching(minimizer_k, l, window, params, r, sketch_exons_only=False):
 
     print(f'MINIMIZER PARAMS: k={minimizer_k}, window={window}')
     print(f'SUBSEQUENCE LEN:  l={l}')
@@ -152,10 +134,17 @@ def minimizer_sketching(minimizer_k, l, window, params, r):
     # Sort sequences by genome
     sequences = [[], []]
     for s in seqs:
-        if s.metadata['genome'] == 'hetGla2':
-            sequences[0].append(s)
-        if s.metadata['genome'] == 'hg38':
-            sequences[1].append(s)
+        if sketch_exons_only:
+            exon_seqs = [e[1] for e in data.exons[s.id]]
+            if s.metadata['genome'] == 'hetGla2':
+                sequences[0] += exon_seqs
+            if s.metadata['genome'] == 'hg38':
+                sequences[1] += exon_seqs
+        else:
+            if s.metadata['genome'] == 'hetGla2':
+                sequences[0].append(s)
+            if s.metadata['genome'] == 'hg38':
+                sequences[1].append(s)
 
     num_subsequences = dict()
 
@@ -174,15 +163,12 @@ def minimizer_sketching(minimizer_k, l, window, params, r):
     print('file1: ', len(subsequences[1]))
 
     # 2. Sketch all subsequences.
-    gts = GTS(params)
+    gts = TS(params)
     sketches = timeit(lambda: [gts.sketch(ss) for ss in subsequences], "GTS")
 
-    # Print some sketches
-    print('First sketches subset per file')
-    # print(sketches[0][0].sketch)
-    # print(sketches[1][0].sketch)
-
     raw_sketches = [[s.sketch for s in ss] for ss in sketches]
+
+    print_sketch_statistics([s for ss in raw_sketches for s in ss])
 
     # 3. Find close subsequences using kd-trees.
     kdtrees = timeit(
@@ -232,14 +218,16 @@ l = 20
 window = 20
 # Sketch params
 params = SketchParams(A=4, t=3, D=10, normalize=True, L=2)
+sketch_exons_only = True
 # Max query distance, map from (t, D) to distance
 r_map = {
-    (2, 10): 0.015,
-    (3, 10): 0.009,
-    (3, 20): 0.009,
-    (6, 10): 0.0018,
+    (2, 10, False): 0.015,
+    (3, 10, False): 0.009,
+    (3, 10, True): 0.9,
+    (3, 20, False): 0.009,
+    (6, 10, False): 0.0018,
 }
-r = r_map[(params.t, params.D)]
+r = r_map[(params.t, params.D, sketch_exons_only)]
 
 
 data.read(file_names_=data.file_names[:NUM_FILES])
@@ -266,4 +254,4 @@ for s in seqs:
 print()
 
 print_all_exons((minimizer_k, window))
-minimizer_sketching(minimizer_k, l, window, params, r)
+minimizer_sketching(minimizer_k, l, window, params, r, sketch_exons_only)

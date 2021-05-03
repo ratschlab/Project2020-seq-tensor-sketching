@@ -74,6 +74,9 @@ def to_chars(seq):
         # Note that taking subsequences into full_seq and seq (before/after
         # removing repeats) is sometimes mixed, so this number may not be
         # accurate.
+        # Exons are taken as indices into full_seq, and repeats are pruned.
+        # From this (or from the original seq), minimizer positions/subsequences are taken directly from seq.
+        # This offset is mostly useful as an ID to identify subsequences.
         ('offset', nb.int32),
         # C-layout 1-dimensional arrays.
         ('full_seq', nb.byte[::1]),

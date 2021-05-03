@@ -26,8 +26,9 @@ by_id = None
 by_tid = None
 # Map from sequence id to list of ortholog sequence ids.
 orthologs = None
-# Map from sequence id to list of (exon_meta, Sequence), where the sequence is a subsequence of the full sequence.
+# Map from sequence id to list of Sequence where the sequence is a subsequence of the full sequence.
 exons = None
+
 
 # Read all data
 def read(data_dir_=Path('/home/philae/git/eth/data/homology/'), file_names_=file_names):
@@ -70,7 +71,7 @@ def read(data_dir_=Path('/home/philae/git/eth/data/homology/'), file_names_=file
                 filtered.append(exon)
 
             exons[seq.id] = [
-                (exon_meta, seq.subsequence_of_full(exon_meta['rstart'], exon_meta['rend'] + 1))
+                seq.subsequence_of_full(exon_meta['rstart'], exon_meta['rend'] + 1)
                 for exon_meta in filtered
             ]
 
@@ -93,16 +94,23 @@ def get_orthologs(id):
     return sorted([by_id[o] for o in os if o in by_id], key=lambda s: s.id)
 
 
+# Are (sub)sequences s1 and s2 orthologs?
+def is_match(s1, s2):
+    if s1.id not in orthologs:
+        return False
+    return s2.id in orthologs[s1.id]
+
+
 # ============ EXON PROCESSING ===============
 
 
-def print_exon(exon_meta, exon, minimizer_params=None, *, aligned=None):
+def print_exon(exon, minimizer_params=None, *, aligned=None):
     # Remove colours from aligned before taking indices.
     RED = '\033[91m'
     END = '\033[0m'
 
     chars = aligned or to_string(exon)
-    print(f' {exon_meta["number"]:3} {chars}')
+    print(f' {chars}')
 
     if minimizer_params is None:
         return
@@ -138,7 +146,7 @@ def print_exon(exon_meta, exon, minimizer_params=None, *, aligned=None):
             x[s] = '['
 
     x = ''.join(x)
-    print(f'{"":4} {"":3} {x}')
+    print(f'{"":4} {x}')
 
 
 # Given a sequence id, print its exons.
@@ -148,8 +156,8 @@ def print_exons(id):
     # where start and end are relative to the gene start.
     seq = by_id[id]
     print(f'Exons for sequence {id}')
-    for exon_meta in exons[id]:
-        print_exon(exon, exon_meta)
+    for exon in exons[id]:
+        print_exon(exon)
     print()
 
 
@@ -167,13 +175,12 @@ def compare_exons(id, minimizer_params=None):
             for i in range(len(os)):
                 if number < len(seq_exons[i]):
                     print(i, end='')
-                    exon_meta = seq_exons[i][number]
                     exon = get_exon(exon_meta, seqs[i])
-                    print_exon(exon_meta, exon, minimizer_params)
+                    print_exon(exon, minimizer_params)
             print()
     else:
         # Align the exons.
-        exon_pairs = align_exons(seqs[0], exons[seqs[0].id], seqs[1], exons[seqs[1].id])
+        exon_pairs = align_exons(seqs[0], exons[seqs[0].id][1], seqs[1], exons[seqs[1].id][1])
         for exon_pair in exon_pairs:
             e1, e2 = exon_pair
             if e1 is not None and e2 is not None:
@@ -188,3 +195,7 @@ def compare_exons(id, minimizer_params=None):
                 print_exon(*exon_pair[i], minimizer_params, aligned=aligned[i])
             print()
     print()
+
+
+# Given 2 exons (
+# def matching_minimizers

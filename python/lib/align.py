@@ -37,6 +37,8 @@ def edit_distance(s1: Sequence, s2: Sequence, color=True):
 
 
 # Given two sequences, find the pairwise matching exons.
+# Returns (edit_distance, (string, string)) where the 2 strings contain the
+# original characters interleaved with spaces.
 def align(s1: Sequence, s2: Sequence, color=True):
     # This should only be used for relatively small sequences.
     l1 = s1.len()
@@ -100,9 +102,8 @@ def align(s1: Sequence, s2: Sequence, color=True):
 
 
 # Return a list of aligned (Exon/None, Exon/None) pairs.
-# The cost of an unaligned exon is its length divided by 4.
-# This is copied from the c++ implementation in utils.hpp.
-# exons1 and exons2 are pairs of (exon metadata, Sequence) as in data.exons[s1.id].
+# The cost of an unaligned exon is its length multiplied by C=0.75.
+# exons1 and exons2 are lists of Sequence objects.
 def align_exons(s1, exons1, s2, exons2, color=True, C=0.75):
     l1 = len(exons1)
     l2 = len(exons2)
@@ -110,20 +111,20 @@ def align_exons(s1, exons1, s2, exons2, color=True, C=0.75):
     dists = np.zeros((l1, l2), dtype=np.float32)
     for i, e1 in enumerate(exons1):
         for j, e2 in enumerate(exons2):
-            dists[i][j] = edit_distance(e1[1], e2[1])
+            dists[i][j] = edit_distance(e1, e2)
 
     costs = np.zeros((l1 + 1, l2 + 1), dtype=np.float32)
     for j, e2 in enumerate(exons2):
-        costs[0][j + 1] = costs[0][j] + C * e2[1].len()
+        costs[0][j + 1] = costs[0][j] + C * e2.len()
 
     for i, e1 in enumerate(exons1):
-        costs[i + 1][0] = costs[i][0] + C * e1[1].len()
+        costs[i + 1][0] = costs[i][0] + C * e1.len()
 
         for j, e2 in enumerate(exons2):
             costs[i + 1][j + 1] = min(
                 costs[i][j] + dists[i][j],
-                costs[i][j + 1] + C * e1[1].len(),
-                costs[i + 1][j] + C * e2[1].len(),
+                costs[i][j + 1] + C * e1.len(),
+                costs[i + 1][j] + C * e2.len(),
             )
 
     # Color substituted characters differently.
@@ -139,10 +140,10 @@ def align_exons(s1, exons1, s2, exons2, color=True, C=0.75):
         if i > 0 and j > 0 and costs[i][j] == costs[i - 1][j - 1] + dists[i - 1][j - 1]:
             state = (i - 1, j - 1)
             exon_pairs.append((exons1[i - 1], exons2[j - 1]))
-        elif i > 0 and costs[i][j] == costs[i - 1][j] + C * exons1[i - 1][1].len():
+        elif i > 0 and costs[i][j] == costs[i - 1][j] + C * exons1[i - 1].len():
             state = (i - 1, j)
             exon_pairs.append((exons1[i - 1], None))
-        elif j > 0 and costs[i][j] == costs[i][j - 1] + C * exons2[j - 1][1].len():
+        elif j > 0 and costs[i][j] == costs[i][j - 1] + C * exons2[j - 1].len():
             state = (i, j - 1)
             exon_pairs.append((None, exons2[j - 1]))
         else:
