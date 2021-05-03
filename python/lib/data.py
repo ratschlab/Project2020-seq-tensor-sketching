@@ -5,6 +5,7 @@
 import json
 
 from pathlib import Path
+from collections import defaultdict
 
 from lib.util import *
 from lib.sequence import *
@@ -103,6 +104,27 @@ def is_match(s1, s2):
 
 # ============ EXON PROCESSING ===============
 
+# Given an exon, its minimizers, and its aligned string (to another exon), find the aligned minimizer positions.
+# Returns a list of [aligned_minimizer_pos]
+def align_minimizer_pos(exon, minimizer_pos, aligned):
+    # Put a [ at the start of each minimizer segment.
+    # i: position in original sequence
+    # j: position in aligned sequence
+    i = 0
+    j = 0
+    minimizer_pos.sort()
+    aligned_minimizer_pos = []
+    while aligned[j] == ' ':
+        j += 1
+    for s in minimizer_pos:
+        while i < s:
+            i += 1
+            j += 1
+            while aligned[j] == ' ':
+                j += 1
+        aligned_minimizer_pos.append(j)
+    return aligned_minimizer_pos
+
 
 def print_exon(exon, minimizer_params=None, *, aligned=None):
     # Remove colours from aligned before taking indices.
@@ -115,9 +137,9 @@ def print_exon(exon, minimizer_params=None, *, aligned=None):
     if minimizer_params is None:
         return
     # Print the minimizers
-    starts = minimizers(exon, *minimizer_params)
+    minimizer_pos = minimizers(exon, *minimizer_params)
     # Just to be sure.
-    starts.sort()
+    minimizer_pos.sort()
 
     # Remove colours from align before taking indices.
     if aligned:
@@ -128,22 +150,11 @@ def print_exon(exon, minimizer_params=None, *, aligned=None):
     # Put a [ at the start of each minimizer segment.
     x = [' '] * len(chars)
     if aligned:
-        # i: position in original sequence
-        # j: position in aligned sequence
-        i = 0
-        j = 0
-        while stripped_aligned[j] == ' ':
-            j += 1
-        for s in starts:
-            while i < s:
-                i += 1
-                j += 1
-                while stripped_aligned[j] == ' ':
-                    j += 1
+        for j in align_minimizer_pos(exon, minimizer_pos, stripped_aligned):
             x[j] = '['
     else:
-        for s in starts:
-            x[s] = '['
+        for j in minimizer_pos:
+            x[j] = '['
 
     x = ''.join(x)
     print(f'{"":4} {x}')
@@ -197,5 +208,36 @@ def compare_exons(id, minimizer_params=None):
     print()
 
 
-# Given 2 exons (
-# def matching_minimizers
+# Given 2 matching exons and their (minimizer pos, subsequence) pairs, find all
+# matching (seq, offset) pairs.  Exons are given as Sequence minimizers are a
+# list of integers, positions into the sequence.
+# Returns a dictionary: (seq id, offset) -> [(seq id, offset)]
+def matching_minimizers(exon1, minimizers1, exon2, minimizers2):
+    # 1. align the exons
+    (d, (a1, a2)) = align.align(exon1, exon2, color=False)
+
+    # 2. find aligned minimizer positions
+    # [((mp, seq), amp)]
+    amps1 = zip(minimizers1, align_minimizer_pos(exon1, [mp for mp, seq in minimizers1], a1))
+    amps2 = zip(minimizers2, align_minimizer_pos(exon2, [mp for mp, seq in minimizers2], a2))
+
+    matching_minimizers = defaultdict(list)
+
+    # 3. Return a dictionary: (seq, offset) -> [(seq, offset)]
+    # i: index into mp1
+    # j: index into mp2
+    while True:
+        if i == len(amps1):
+            break
+        if j == len(amps2):
+            break
+
+        (mp1, seq1), amp1 = amps1[i]
+        (mp2, seq2), amp2 = amps2[i]
+
+        # Store if equal aligned position.
+        if amp1 == amp2:
+            matching_minimizers[(seq1.id, mp1)].append((seq2.id, mp2))
+            matching_minimizers[(seq2.id, mp2)].append((seq1.id, mp1))
+
+    return matching_minimizers
