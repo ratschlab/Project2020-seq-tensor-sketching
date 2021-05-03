@@ -29,6 +29,9 @@ by_tid = None
 orthologs = None
 # Map from sequence id to list of Sequence where the sequence is a subsequence of the full sequence.
 exons = None
+# Map from exon key (id, exon_offset) to orthologs exon keys.
+# This must be filled manually after calling align_exons.
+exon_orthologs = defaultdict(list)
 
 
 # Read all data
@@ -72,7 +75,7 @@ def read(data_dir_=Path('/home/philae/git/eth/data/homology/'), file_names_=file
                 filtered.append(exon)
 
             exons[seq.id] = [
-                seq.subsequence_of_full(exon_meta['rstart'], exon_meta['rend'] + 1)
+                seq.exon_subsequence(exon_meta['rstart'], exon_meta['rend'] + 1)
                 for exon_meta in filtered
             ]
 
@@ -172,6 +175,21 @@ def print_exons(id):
     print()
 
 
+def align_exon_pair(e1, e2, minimizer_params=None):
+    exon_pair = (e1, e2)
+    if e1 is not None and e2 is not None:
+        dist, aligned = align(e1, e2)
+    else:
+        aligned = (None, None)
+
+    for e, a in zip(exon_pair, aligned):
+        if e is None:
+            continue
+        print(f'{seqid(e):4}', end='')
+        print_exon(e, minimizer_params, aligned=a)
+    print()
+
+
 # Given a sequence id, print the exons for this sequence and all orthologs.
 def compare_exons(id, minimizer_params=None):
     seqs = get_orthologs(id)
@@ -191,53 +209,52 @@ def compare_exons(id, minimizer_params=None):
             print()
     else:
         # Align the exons.
-        exon_pairs = align_exons(seqs[0], exons[seqs[0].id][1], seqs[1], exons[seqs[1].id][1])
+        exon_pairs = align_exons(seqs[0], exons[seqs[0].id], seqs[1], exons[seqs[1].id])
         for exon_pair in exon_pairs:
-            e1, e2 = exon_pair
-            if e1 is not None and e2 is not None:
-                dist, aligned = align(exon_pair[0][1], exon_pair[1][1])
-            else:
-                aligned = (None, None)
-
-            for i in range(2):
-                if exon_pair[i] is None:
-                    continue
-                print(f'{seqid(seqs[i]):4}', end='')
-                print_exon(*exon_pair[i], minimizer_params, aligned=aligned[i])
-            print()
+            align_exon_pair(*exon_pair, minimizer_params=minimizer_params)
     print()
 
 
-# Given 2 matching exons and their (minimizer pos, subsequence) pairs, find all
-# matching (seq, offset) pairs.  Exons are given as Sequence minimizers are a
-# list of integers, positions into the sequence.
-# Returns a dictionary: (seq id, offset) -> [(seq id, offset)]
-def matching_minimizers(exon1, minimizers1, exon2, minimizers2):
+# Given 2 matching exons and their corresponding subsequences with minimizer
+# positions, find all matching (seq, offset) pairs.
+# Exons are given as Sequence.
+# Subsequences are a list of pairs: [(minimizer position, sequence)]
+#
+# Returns a list of tuples of matching sequences.
+def find_matching_minimizers(exon1, subsequences1, exon2, subsequences2):
     # 1. align the exons
-    (d, (a1, a2)) = align.align(exon1, exon2, color=False)
+    (d, (a1, a2)) = align(exon1, exon2, color=False)
 
     # 2. find aligned minimizer positions
     # [((mp, seq), amp)]
-    amps1 = zip(minimizers1, align_minimizer_pos(exon1, [mp for mp, seq in minimizers1], a1))
-    amps2 = zip(minimizers2, align_minimizer_pos(exon2, [mp for mp, seq in minimizers2], a2))
+    amps1 = align_minimizer_pos(exon1, [mp for mp, seq in subsequences1], a1)
+    amps2 = align_minimizer_pos(exon2, [mp for mp, seq in subsequences2], a2)
 
-    matching_minimizers = defaultdict(list)
+    assert len(amps1) == len(subsequences1)
+    assert len(amps2) == len(subsequences2)
 
-    # 3. Return a dictionary: (seq, offset) -> [(seq, offset)]
+    matching_seqs = []
+
+    # 3. Return a dictionary: (seq id, offset) -> [(seq id, offset)]
     # i: index into mp1
     # j: index into mp2
+    i = 0
+    j = 0
     while True:
         if i == len(amps1):
             break
         if j == len(amps2):
             break
 
-        (mp1, seq1), amp1 = amps1[i]
-        (mp2, seq2), amp2 = amps2[i]
-
         # Store if equal aligned position.
-        if amp1 == amp2:
-            matching_minimizers[(seq1.id, mp1)].append((seq2.id, mp2))
-            matching_minimizers[(seq2.id, mp2)].append((seq1.id, mp1))
+        if amps1[i] == amps2[j]:
+            matching_seqs.append((subsequences1[i][1], subsequences2[j][1]))
+            i += 1
+            j += 1
+        else:
+            if amps1[i] < amps2[j]:
+                i += 1
+            else:
+                j += 1
 
-    return matching_minimizers
+    return matching_seqs

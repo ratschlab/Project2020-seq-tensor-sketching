@@ -2,8 +2,10 @@
 import os
 import json
 from pathlib import Path
+from collections import defaultdict
 
 import scipy.spatial
+from colorama import Fore, Style
 
 from lib.tensor_sketch_gpu import *
 from lib.base import *
@@ -15,7 +17,7 @@ import lib.data as data
 
 
 # Dists is a list of (distance, sequence, sequence)
-def ROC_curve(dists, print_distance=False):
+def ROC_curve(dists, print_distance=False, sketch_exons=False, matching_subsequences=None):
     dists.sort(key=lambda tup: tup[0])
     total = 0
     match = 0
@@ -26,12 +28,39 @@ def ROC_curve(dists, print_distance=False):
     for d, s1, s2 in dists:
         total += 1
         newmatch = False
-        if data.is_match(s1.seq, s2.seq):
+
+        # True when the sketched [sub]sequences come from homologues sequences/exons.
+        sequence_match = False
+        # True when the sketched subsequences have matching minimizer positions.
+        # Only meaningful for exon sketching.
+        minimizer_match = False
+        if sketch_exons:
+            key1 = s1.seq.exon_key()
+            key2 = s2.seq.exon_key()
+
+            # Check whether the exons are the same.
+            sequence_match = key1 in data.exon_orthologs[key2]
+            # Check whether these correspond to matching minimizers as well.
+            minimizer_match = s1.seq.key() in matching_subsequences[s2.seq.key()]
+            if minimizer_match:
+                assert sequence_match
+        else:
+            key1 = s1.seq.id
+            key2 = s2.seq.id
+            sequence_match = data.is_match(s1.seq, s2.seq)
+
+        if sequence_match:
             match += 1
             done = False
-            if s1.seq.id not in matched_seqs:
+            if key1 not in matched_seqs:
                 newmatch = True
-            matched_seqs.add(s1.seq.id)
+            matched_seqs.add(key1)
+            # matched_seqs.add(key2)
+
+            if sketch_exons and newmatch:
+                print(f'{Fore.GREEN}New exon match:{Style.RESET_ALL}')
+                data.align_exon_pair(s1.seq.parent, s2.seq.parent, minimizer_params)
+                print()
 
         # Print the first 200 pairs with distance > 0.
         if print_distance and d > 0 and num_printed < 200:
@@ -39,7 +68,16 @@ def ROC_curve(dists, print_distance=False):
             edit_dist, (x, y) = align(s1.seq, s2.seq)
             print(f'Seq {data.seqid(s1.seq): 2}: {x}')
             print(f'Seq {data.seqid(s2.seq): 2}: {y}')
-            print(f'sketch dist {d:0.6f}    | edit dist {edit_dist: 2}')
+            sequence_match_text = (
+                Fore.GREEN + "exon match" + Style.RESET_ALL if sequence_match else ''
+            )
+            minimizer_match_text = (
+                Fore.GREEN + "minimizer match" + Style.RESET_ALL if minimizer_match else ''
+            )
+
+            print(
+                f'sketch dist {d:0.6f}    | edit dist {edit_dist: 2}    | {sequence_match_text} {minimizer_match_text}'
+            )
             print()
 
         # Print stats for powers of 2 and when new pairs of sequences are matched
@@ -119,7 +157,7 @@ def count_matches(distances, num_subsequences):
     return dists
 
 
-def minimizer_sketching(minimizer_k, l, window, params, r, sketch_exons_only=False):
+def minimizer_sketching(seqs, minimizer_k, l, window, params, r, sketch_exons_only=False):
 
     print(f'MINIMIZER PARAMS: k={minimizer_k}, window={window}')
     print(f'SUBSEQUENCE LEN:  l={l}')
@@ -128,37 +166,99 @@ def minimizer_sketching(minimizer_k, l, window, params, r, sketch_exons_only=Fal
     print()
 
     # 1. Find minimizers for each sequence and the corresponding subsequences.
+
+    # [ [subsequences] ]
     # Note: the subsequences of each input fastafile are stored separately, so we can focus on cross-file matches.
-    subsequences = []
+    subsequences = [List(), List()]
 
-    # Sort sequences by genome
-    sequences = [[], []]
-    for s in seqs:
-        if sketch_exons_only:
-            exon_seqs = [e[1] for e in data.exons[s.id]]
+    # Map from sequence id to number of subsequences taken for this sequence.
+    num_exons = 0
+    num_matching_exons = 0
+    num_subsequences = defaultdict(int)
+    num_matching_subsequences = 0
+
+    matching_subsequences = None
+
+    if sketch_exons_only:
+        # A dictionary: seq_key -> [seq_key], matching a
+        # subsequence to homologues subsequences.
+        matching_subsequences = defaultdict(list)
+
+        # Add homologues for hetGla2 sequences.
+        for s in seqs:
+            if s.metadata['genome'] != 'hetGla2':
+                continue
+
+            seqs = data.get_orthologs(s.id)
+
+            exons1 = data.exons[seqs[0].id]
+            exons2 = data.exons[seqs[1].id]
+
+            exon_pairs = align_exons(seqs[0], exons1, seqs[1], exons2)
+            for exon_pair in exon_pairs:
+                e1, e2 = exon_pair
+
+                subseqs = [None, None]
+
+                # Compute subsequences for these exons.
+                for i, e in enumerate(exon_pair):
+                    if e is None:
+                        continue
+                    num_exons += 1
+                    positions = minimizers(e, minimizer_k, window)
+                    # print(positions)
+                    subseqs[i] = make_subsequences(e, minimizer_k, positions, l)
+                    num_subsequences[e.id] += len(subseqs)
+                    for pos, subseq in subseqs[i]:
+                        subsequences[i].append(subseq)
+
+                if e1 is None or e2 is None:
+                    continue
+
+                num_matching_exons += 1
+                data.exon_orthologs[e1.exon_key()].append(e2.exon_key())
+                data.exon_orthologs[e2.exon_key()].append(e1.exon_key())
+
+                # If both exons are present, find matching minimizer positions/subsequences .
+                # Ignore the distance.
+                # _, aligned = align(exon_pair[0], exon_pair[1])
+
+                # TODO DELETE
+                # data.align_exon_pair(e1, e2, minimizer_params)
+
+                matches = data.find_matching_minimizers(e1, subseqs[0], e2, subseqs[1])
+                for s1, s2 in matches:
+                    # print(s1.exon_offset, s1.subseq_offset, to_string(s1))
+                    # print(s2.exon_offset, s2.subseq_offset, to_string(s2))
+                    # print()
+                    key1 = s1.key()
+                    key2 = s2.key()
+                    matching_subsequences[key1].append(key2)
+                    matching_subsequences[key2].append(key1)
+                    num_matching_subsequences += 1
+        # return
+
+    else:
+        # Add all sequences for the first 2 files.
+        for s in seqs:
+            idx = None
             if s.metadata['genome'] == 'hetGla2':
-                sequences[0] += exon_seqs
-            if s.metadata['genome'] == 'hg38':
-                sequences[1] += exon_seqs
-        else:
-            if s.metadata['genome'] == 'hetGla2':
-                sequences[0].append(s)
-            if s.metadata['genome'] == 'hg38':
-                sequences[1].append(s)
+                idx = 0
+            elif s.metadata['genome'] == 'hg38':
+                idx = 1
+            else:
+                continue
 
-    num_subsequences = dict()
-
-    for file in sequences:
-        ss = List()
-        for s in file:
             minimizer_pos = minimizers(s, minimizer_k, window)
             subseqs = make_subsequences(s, minimizer_k, minimizer_pos, l)
             num_subsequences[s.id] = len(subseqs)
-            for subseq in subseqs:
-                ss.append(subseq)
-        subsequences.append(ss)
+            for pos, subseq in subseqs:
+                subsequences[idx].append(subseq)
 
+    print('num exons:        ', num_exons)
+    print('num matching exs: ', num_matching_exons)
     print('num subsequences: ', sum(len(ss) for ss in subsequences))
+    print('num matching sss: ', num_matching_subsequences)
     print('file0: ', len(subsequences[0]))
     print('file1: ', len(subsequences[1]))
 
@@ -194,8 +294,11 @@ def minimizer_sketching(minimizer_k, l, window, params, r, sketch_exons_only=Fal
         for j in matches[i]:
             dists.append((point_dist(i, j), sketches[0][i], sketches[1][j]))
 
-    ROC_curve(dists, True)
-    ROC_curve(count_matches(dists, num_subsequences))
+    ROC_curve(
+        dists, True, sketch_exons=sketch_exons_only, matching_subsequences=matching_subsequences
+    )
+    if not sketch_exons_only:
+        ROC_curve(count_matches(dists, num_subsequences))
 
 
 def print_all_exons(minimizer_params=None):
@@ -253,5 +356,6 @@ for s in seqs:
     print(f'{data.seqid(s.id):3} {s.len():7} {s.id}')
 print()
 
-print_all_exons((minimizer_k, window))
-minimizer_sketching(minimizer_k, l, window, params, r, sketch_exons_only)
+minimizer_params = (minimizer_k, window)
+print_all_exons(minimizer_params)
+minimizer_sketching(seqs, minimizer_k, l, window, params, r, sketch_exons_only)

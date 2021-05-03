@@ -63,7 +63,7 @@ def minimizers(s, k, window, A=4):
     for i in range(k - 1):
         val = (A * val + s.seq[i]) % Ak
 
-    hash_list = lib.hashing.get_hash(k, A)
+    hash_array = lib.hashing.get_hash(k, A)
 
     # For each kmer start position i:
     for i in range(0, s.len() - k + 1):
@@ -75,11 +75,11 @@ def minimizers(s, k, window, A=4):
             q.popleft()
         # - Update the kmer value and compute the hash.
         val = (A * val + s.seq[i + k - 1]) % Ak
-        h = lib.hashing.hash_int(val, k, cache=hash_list)
+        h = lib.hashing.hash_int(val, k, cache=hash_array)
 
         # - remove earlier positions with a larger hash
         while len(q) > 0 and q[-1][1] >= h:
-            if len(q) == 1 and q[0][0] >= window - 1:
+            if len(q) == 1 and i >= window:
                 # print('+ last pop', q[-1])
                 pos.append(q[0][0])
             else:
@@ -99,17 +99,20 @@ def minimizers(s, k, window, A=4):
     return pos
 
 
+# Takes a sequence s, the minimizer k, the minimizer positions, and the subsequence length.
+# Returns lists of [(position, subsequence)].
 def make_subsequences(s, k, positions, l, method=2):
-    L = s.len()
+    length = s.len()
     if method == 1:
         # Option 1: **start** windows at minimizers.
-        return [s.subsequence(p, l) for p in positions if p + l <= L]
+        return [(p, s.subsequence(p, l)) for p in positions if p + l <= length]
     if method == 2:
         # Option 2: **center** windows around minimizers.
-        offset = (L - k) // 2
+        offset = (l - k) // 2
+        # print('OFFSET', offset)
         return [
-            s.subsequence(p - offset, l)
+            (p, s.subsequence(p - offset, l))
             for p in positions
-            if 0 <= p - offset and p - offset + l <= L
+            if 0 <= p - offset and p - offset + l <= length
         ]
     assert False

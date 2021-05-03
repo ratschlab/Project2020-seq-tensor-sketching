@@ -63,24 +63,27 @@ def to_chars(seq):
 # Class that contains a single sequence. The full_seq member contains the
 # original byte-representation of the sequence as read from the Fasta file. The
 # seq member contains the processed internal int8 representation.
+Sequence_type = nb.deferred_type()
+
+
 @jitclass(
     [
         # The full string header of the sequence in the fasta file.
         ('id', types.unicode_type),
         # The decoded metadata in the id.
         ('metadata', types.DictType(types.unicode_type, types.unicode_type)),
-        # The position in full_seq where this substring starts.
+        # Exon_offset indicates the position in full_seq where this subsequence starts.
         # 0 for the original sequence.
-        # Note that taking subsequences into full_seq and seq (before/after
-        # removing repeats) is sometimes mixed, so this number may not be
-        # accurate.
         # Exons are taken as indices into full_seq, and repeats are pruned.
-        # From this (or from the original seq), minimizer positions/subsequences are taken directly from seq.
-        # This offset is mostly useful as an ID to identify subsequences.
-        ('offset', nb.int32),
-        # C-layout 1-dimensional arrays.
+        ('exon_offset', nb.int32),
+        # Minimizer or subsequence offsets to the start of the sequence/exon, are relative to the pruned `seq`.
+        ('subseq_offset', nb.int32),
+        # C-layout 1-dimensional byte array of original characterss.
         ('full_seq', nb.byte[::1]),
+        # C-layout 1-dimensional array of integer {0,1,2,3} character representations.
         ('seq', nb.int8[::1]),
+        # A pointer to the parent class of which this is a subsequence, or self otherwise.
+        ('parent', Sequence_type),
     ]
     # NOTE: cache=True is sadly not supported for @jitclass.
 )
@@ -118,11 +121,14 @@ class Sequence:
         # Metadata encoded in the header.
         self.metadata = self.id_to_map(id)
         # This sequence doesn't have an offset.
-        self.offset = 0
+        self.exon_offset = 0
+        self.subseq_offset = 0
         # The original sequence, corrected for reverse complement in case this is the negative strand.
         self.full_seq = np.array([c for c in s], dtype=nb.byte)
         # The sequence with masked repeats (lower case characters) removed, and mapped to integers.
         self.seq = self.remap(s)
+        # By default sequences have themselves as parent.
+        self.parent = self
 
         if 'strand' in self.metadata and self.metadata['strand'] == '-':
             # NOTE: Although the README.md in the homology dataset states that
@@ -139,11 +145,12 @@ class Sequence:
 
     # Creates a new Sequence object that is a subsequence of the raw sequence with the given start and length.
     # The full_seq is reconstructed from the raw subsequence.
-    # TODO: Convert to (start, end) args.
     def subsequence(self, start: int, length: int):
         subseq = Sequence(self.id, b'')
         subseq.seq = self.seq[start : start + length]
-        subseq.offset = self.offset + start
+        subseq.exon_offset = self.exon_offset
+        subseq.subseq_offset = self.subseq_offset + start
+        subseq.parent = self
         # Convert the raw subsequence back to chars.
         # ord(A, C, G, T)
         d = np.array([65, 67, 71, 84], dtype=nb.byte)
@@ -152,24 +159,36 @@ class Sequence:
 
     # Creates a new Sequence object that is a subsequence of the original full sequence with the given start and length.
     # Repeats are dropped for the raw int8 sequence, and the string sequence is reconstructed from this.
-    def subsequence_of_full(self, start: int, end: int):
+    def exon_subsequence(self, start: int, end: int):
+        # Exon subsequences can only be taken from the original full subsequence.
+        assert self.exon_offset == 0
+        assert self.subseq_offset == 0
         subseq = Sequence(self.id, b'')
         subseq.seq = subseq.remap(self.full_seq[start:end])
-        subseq.offset = self.offset + start
+        subseq.exon_offset = start
+        subseq.subseq_offset = 0
+        subseq.parent = self
         # Convert the raw subsequence back to chars.
         # ord(A, C, G, T)
         d = np.array([65, 67, 71, 84], dtype=nb.byte)
         subseq.full_seq = np.array([d[c] for c in subseq.seq], dtype=nb.byte)
         return subseq
 
+    # Unique identifying key for this exon. This leaves out the subsequence offset.
+    def exon_key(self):
+        return (self.id, self.exon_offset)
+
+    # Unique identifying key for this subsequence in the current exon.
+    def key(self):
+        return (self.id, self.exon_offset, self.subseq_offset)
+
+
+Sequence_type.define(Sequence.class_type.instance_type)
 
 # Convert seq.full_seq from list of int8 to bytes to string.
 # NOTE: bytes() is not supported by Numba.
 def to_string(seq):
     return str(bytes(seq.full_seq), 'ascii')
-
-
-Sequence_type = Sequence.class_type.instance_type
 
 
 class FastaFile:
