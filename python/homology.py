@@ -25,6 +25,11 @@ def ROC_curve(dists, print_distance=False, sketch_exons=False, matching_subseque
     done = False
     matched_seqs = set()
     num_printed = 0
+
+    # Histogram of matches: dist -> {no match, exon match, minimizer match}
+    edit_dists = []
+    sketch_dists = []
+    types = []
     for d, s1, s2 in dists:
         total += 1
         newmatch = False
@@ -57,17 +62,27 @@ def ROC_curve(dists, print_distance=False, sketch_exons=False, matching_subseque
             matched_seqs.add(key1)
             # matched_seqs.add(key2)
 
-            if sketch_exons and newmatch:
+            if print_distance and d > 0 and sketch_exons and newmatch:
                 print(f'{Fore.GREEN}New exon match:{Style.RESET_ALL}')
                 data.align_exon_pair(s1.seq.parent, s2.seq.parent, minimizer_params)
                 print()
 
+        # Add to histogram
+        ed = edit_distance(s1.seq, s2.seq)
+        edit_dists.append(ed)
+        types.append('match' if sequence_match else 'no_match')
+        sketch_dists.append(d)
+        # if minimizer_match:
+        # edit_dists.append(ed)
+        # types.append('minimizer_match')
+        # sketch_dists.append(d)
+
         # Print the first 200 pairs with distance > 0.
-        if print_distance and d > 0 and num_printed < 200:
+        if print_distance and d > 0 and (num_printed < 200 or (sketch_exons and newmatch)):
             num_printed += 1
             edit_dist, (x, y) = align(s1.seq, s2.seq)
-            print(f'Seq {data.seqid(s1.seq): 2}: {x}')
-            print(f'Seq {data.seqid(s2.seq): 2}: {y}')
+            print(f'Seq {data.seqid(s1.seq):3}: {x}')
+            print(f'Seq {data.seqid(s2.seq):3}: {y}')
             sequence_match_text = (
                 Fore.GREEN + "exon match" + Style.RESET_ALL if sequence_match else ''
             )
@@ -81,7 +96,7 @@ def ROC_curve(dists, print_distance=False, sketch_exons=False, matching_subseque
             print()
 
         # Print stats for powers of 2 and when new pairs of sequences are matched
-        if newmatch or (match > 0 and (match & (match - 1)) == 0 and not done):
+        if match > 0 and (match & (match - 1)) == 0 and not done:
             print(
                 f'{match:7} {total:7} {match / total:.3f} for dist threshold {d:.4f} with {len(matched_seqs):5} matched seqs'
             )
@@ -91,6 +106,8 @@ def ROC_curve(dists, print_distance=False, sketch_exons=False, matching_subseque
     )
 
     print('Number of matched sequences: ', len(matched_seqs))
+
+    return (edit_dists, types, sketch_dists)
 
 
 def full_sketching():
@@ -157,7 +174,16 @@ def count_matches(distances, num_subsequences):
     return dists
 
 
-def minimizer_sketching(seqs, minimizer_k, l, window, params, r, sketch_exons_only=False):
+def minimizer_sketching(
+    seqs,
+    minimizer_k,
+    l,
+    window,
+    params,
+    r,
+    sketch_exons_only=False,
+    matching_subsequences=defaultdict(list),
+):
 
     print(f'MINIMIZER PARAMS: k={minimizer_k}, window={window}')
     print(f'SUBSEQUENCE LEN:  l={l}')
@@ -177,13 +203,13 @@ def minimizer_sketching(seqs, minimizer_k, l, window, params, r, sketch_exons_on
     num_subsequences = defaultdict(int)
     num_matching_subsequences = 0
 
-    matching_subsequences = None
+    exon_lengths = []
+    seq_density = []
+    exon_edit_distance = []
 
     if sketch_exons_only:
         # A dictionary: seq_key -> [seq_key], matching a
         # subsequence to homologues subsequences.
-        matching_subsequences = defaultdict(list)
-
         # Add homologues for hetGla2 sequences.
         for s in seqs:
             if s.metadata['genome'] != 'hetGla2':
@@ -211,21 +237,24 @@ def minimizer_sketching(seqs, minimizer_k, l, window, params, r, sketch_exons_on
                     num_subsequences[e.id] += len(subseqs)
                     for pos, subseq in subseqs[i]:
                         subsequences[i].append(subseq)
+                    exon_lengths.append(e.len())
+                    seq_density.append(len(subseqs) / e.len())
 
                 if e1 is None or e2 is None:
                     continue
+
+                exon_dist = edit_distance(e1, e2) / max(e1.len(), e2.len())
+                exon_edit_distance.append(exon_dist)
+
+                # Print far away exons.
+                if exon_dist > 0.5:
+                    data.align_exon_pair(e1, e2, minimizer_params)
 
                 num_matching_exons += 1
                 data.exon_orthologs[e1.exon_key()].append(e2.exon_key())
                 data.exon_orthologs[e2.exon_key()].append(e1.exon_key())
 
-                # If both exons are present, find matching minimizer positions/subsequences .
-                # Ignore the distance.
-                # _, aligned = align(exon_pair[0], exon_pair[1])
-
-                # TODO DELETE
-                # data.align_exon_pair(e1, e2, minimizer_params)
-
+                # Find matching minimizer positions/subsequences .
                 matches = data.find_matching_minimizers(e1, subseqs[0], e2, subseqs[1])
                 for s1, s2 in matches:
                     # print(s1.exon_offset, s1.subseq_offset, to_string(s1))
@@ -262,6 +291,13 @@ def minimizer_sketching(seqs, minimizer_k, l, window, params, r, sketch_exons_on
     print('file0: ', len(subsequences[0]))
     print('file1: ', len(subsequences[1]))
 
+    print('Exon lengths')
+    sns.displot(x=exon_lengths)
+    print('Exon minimizer density')
+    sns.displot(x=seq_density)
+    print('Matching exon edit distance')
+    sns.displot(x=exon_edit_distance)
+
     # 2. Sketch all subsequences.
     gts = TS(params)
     sketches = timeit(lambda: [gts.sketch(ss) for ss in subsequences], "GTS")
@@ -293,12 +329,7 @@ def minimizer_sketching(seqs, minimizer_k, l, window, params, r, sketch_exons_on
     for i in range(len(sketches[0])):
         for j in matches[i]:
             dists.append((point_dist(i, j), sketches[0][i], sketches[1][j]))
-
-    ROC_curve(
-        dists, True, sketch_exons=sketch_exons_only, matching_subsequences=matching_subsequences
-    )
-    if not sketch_exons_only:
-        ROC_curve(count_matches(dists, num_subsequences))
+    return dists
 
 
 def print_all_exons(minimizer_params=None):
@@ -310,8 +341,9 @@ def print_all_exons(minimizer_params=None):
 
 # =============================================================
 
+# This must be 2 for exon ortholog related code to work.
 NUM_FILES = 2
-NUM_ORTHOLOGS = 5
+NUM_ORTHOLOGS = 50
 
 # k for minimizers
 minimizer_k = 4
@@ -326,36 +358,62 @@ sketch_exons_only = True
 r_map = {
     (2, 10, False): 0.015,
     (3, 10, False): 0.009,
-    (3, 10, True): 0.9,
+    (3, 10, True): 0.1,
     (3, 20, False): 0.009,
     (6, 10, False): 0.0018,
 }
 r = r_map[(params.t, params.D, sketch_exons_only)]
 
 
-data.read(file_names_=data.file_names[:NUM_FILES])
-
-
-# Sequences corresponding to the first 10 orthologs.
 seqs = List()
-for i, key in enumerate(data.orthologs):
-    for o in data.get_orthologs(key):
-        seqs.append(o)
-    if len(seqs) >= NUM_FILES * NUM_ORTHOLOGS:
-        break
-
-total_len = 0
-for s in seqs:
-    total_len += s.len()
-
-print('Total length of sequences: ', total_len)
-
-
-# print_stats('Sequence Length', [s.len() for s in seqs], False)
-for s in seqs:
-    print(f'{data.seqid(s.id):3} {s.len():7} {s.id}')
-print()
-
 minimizer_params = (minimizer_k, window)
-print_all_exons(minimizer_params)
-minimizer_sketching(seqs, minimizer_k, l, window, params, r, sketch_exons_only)
+matching_subsequences = defaultdict(list)
+dists = None
+
+
+def run():
+    global seqs, minimizer_params, matching_subsequences, dists
+
+    data.read(file_names_=data.file_names[:NUM_FILES])
+
+    # Sequences corresponding to the first 10 orthologs.
+    for i, key in enumerate(data.orthologs):
+        for o in data.get_orthologs(key):
+            seqs.append(o)
+        if len(seqs) >= NUM_FILES * NUM_ORTHOLOGS:
+            break
+
+    total_len = 0
+    for s in seqs:
+        total_len += s.len()
+
+    print('Total length of sequences: ', total_len)
+
+    # print_stats('Sequence Length', [s.len() for s in seqs], False)
+    # for s in seqs:
+    # print(f'{data.seqid(s.id):3} {s.len():7} {s.id}')
+
+    print()
+
+    # print_all_exons(minimizer_params)
+
+    dists = minimizer_sketching(
+        seqs,
+        minimizer_k,
+        l,
+        window,
+        params,
+        r,
+        sketch_exons_only,
+        matching_subsequences=matching_subsequences,
+    )
+
+
+if __name__ == '__main__':
+    run()
+
+    ROC_curve(
+        dists, True, sketch_exons=sketch_exons_only, matching_subsequences=matching_subsequences
+    )
+    if not sketch_exons_only:
+        ROC_curve(count_matches(dists, num_subsequences))

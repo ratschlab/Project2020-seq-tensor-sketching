@@ -5,6 +5,8 @@ from numba import njit
 
 from lib.sequence import *
 
+MAX_ALIGN = 4000000
+
 # Return the edit distance between two sequences.
 # See `align` below which also returns the aligned strings.
 # This is copied from the c++ implementation in utils.hpp.
@@ -13,7 +15,9 @@ def edit_distance(s1: Sequence, s2: Sequence, color=True):
     # This should only be used for relatively small sequences.
     l1 = s1.len()
     l2 = s2.len()
-    assert l1 * l2 <= 1000000
+    if l1 * l2 > MAX_ALIGN:
+        print('Aligning sequences of length:', l1, 'and', l2)
+        assert l1 * l2 <= MAX_ALIGN
 
     if l1 == 0:
         return l2
@@ -43,7 +47,7 @@ def align(s1: Sequence, s2: Sequence, color=True):
     # This should only be used for relatively small sequences.
     l1 = s1.len()
     l2 = s2.len()
-    assert l1 * l2 <= 1000000
+    assert l1 * l2 <= MAX_ALIGN
 
     costs = np.zeros((l1 + 1, l2 + 1), dtype=np.int32)
     for i in range(l2 + 1):

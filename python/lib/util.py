@@ -94,5 +94,7 @@ def print_sketch_statistics(sketches):
     point_distance = pow(scaled_per_point_vol, 1.0 / D)
     print(f'Uniform distance: {point_distance: .4f}')
 
+    print('Distribution of value per sketch dimension.')
     sns.displot(x=values, hue=indexes, kind='kde')
+    print('Distribution of norm of sketches.')
     sns.displot(x=norms, kind='kde')
