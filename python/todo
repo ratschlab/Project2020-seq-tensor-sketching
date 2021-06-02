@@ -1,0 +1,8 @@
+# TODO LIST
+
+- Measure shift distance between low-edit-distance minimizer-matches
+- Is Hamming distance embedding good enough maybe?
+	- What if we add minimizers + their right neighbour, to account for small distances?
+- Analyse different minimizer strategies and what distribution of minimizer offsets/distances they give [depending on mutation rate/window size/kmer size]
+- Implement edit distance embedding?
+- Implement hamming distance embedding?
