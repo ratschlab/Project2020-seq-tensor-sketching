@@ -132,7 +132,7 @@ def align(s1: Sequence, s2: Sequence, edge_cost=0.5, color=True):
 # Return a list of aligned (Exon/None, Exon/None) pairs.
 # The cost of an unaligned exon is its length multiplied by C=0.75.
 # exons1 and exons2 are lists of Sequence objects.
-def align_exons(s1, exons1, s2, exons2, color=True, C=0.75, edge_cost=edge_cost):
+def align_exons(s1, exons1, s2, exons2, color=True, C=0.75, edge_cost=0.5):
     l1 = len(exons1)
     l2 = len(exons2)
 

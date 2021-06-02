@@ -395,7 +395,7 @@ def run():
 
     print()
 
-    # print_all_exons(minimizer_params)
+    print_all_exons(minimizer_params)
 
     dists = minimizer_sketching(
         seqs,
