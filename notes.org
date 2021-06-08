@@ -33,12 +33,12 @@ On the following datasets:
 
 
 ** Finding close pairs
+*** Bucketing via bitsampling
 *Input*: a set of windows $W$, all of length $l$
 
 *Output*: a set of pairs of windows $S\subset W^2$, the candidates with likely short edit
 distance. Possibly sorted by decreasing likelyhood.
 
-*** Bucketing via Bitmasking
 - Repeat $r$ times:
   + Choose $P \in [w]^m$ uniform random: a subset of $k$ of the $l$ positions.
   + Map each window $w$ to $f(w) := w_P$
@@ -57,6 +57,10 @@ To make it work for shift distance up to 1:
 - This uses 2x more memory.
 
 *** Embedding
+*Input*: a set of windows $W$, all of length $l$.
+
+*Output*: An embedding of these windows into $\mathbb R^D$.
+
 **** Trivial Hamming distance
 Flattened one-hot encoding of the $w$ characters into dimension $4w$.
 
@@ -79,6 +83,11 @@ It would be cool to understand how exactly these trained network effect the weig
 
 
 *** From Embedding to Pairs
+*Input*: An embedding of these windows into $\mathbb R^D$.
+
+*Output*: a set of pairs of windows $S\subset W^2$, the candidates with likely short edit
+distance. Possibly sorted by decreasing likelyhood.
+
 **** KD-tree
 Put all points in a KD-tree, and do a query for all pairs within a given distance from each other.
 
@@ -94,9 +103,21 @@ As a generalization of the bimask bucketing from above, we can bucket embedding 
   + Each embedded point $f(w)$ maps to its part: $b(f(w)) = (sign(v_1 \dot f(w)), \dots, sign(v_k \dot f(w))$.
   + Add windows with the same part $b(f(w))$ as pairs to $S$.
 
-
-
-
+* Execution plan
+1. Set up framework
+   a. Define (in-memory/on-disk) data format for all in/outputs.
+   b. Implement metrics for window anchoring.
+   c. Implement metrics for candidate pairs.
+2. Generate input data
+   a. Convert existing homology search dataset into the input format.
+   b. Generate a synthetic dataset with homologues sequences, with homologues pairs of various mutation rates and mutation types (with/out indels)
+3. Experiment with window anchoring
+   a. Implement various algorithms
+   b. Compare using already defined metrics
+4. Experiment with bucketing
+   a. Implement bit-sampling
+   b. Implement Embeddings (open ended; find better embeddings based on NN analysis)
+   c. Analyse & compare using already implemented metrics.
 
 * Meeting notes
 ** June 04
@@ -109,4 +130,4 @@ As a generalization of the bimask bucketing from above, we can bucket embedding 
   - a random convolution
   - one output of a convolution + reLU nonlineairity
 
-  What makes such a function good? Define a metric.
+  What mak     es such a function good? Define a metric.
