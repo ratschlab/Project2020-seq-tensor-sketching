@@ -113,7 +113,7 @@ class Tensor : public SketchBase<std::vector<double>, false> {
 
     static double dist(const std::vector<double> &a, const std::vector<double> &b) {
         Timer timer("tensor_sketch_dist");
-        return l2_dist(a, b);
+        return sketch_dist(a, b);
     }
 
   protected:

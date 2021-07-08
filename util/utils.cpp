@@ -6,6 +6,12 @@
 #include <gflags/gflags.h>
 #include <numeric>
 
+DEFINE_string(dist,
+              "l2",
+              "Algorithm to use for distance computation of sketch methods. "
+              "l1|l2|exp");
+
+
 namespace ts {
 
 std::string flag_values(char delimiter, bool skip_empty, bool include_flagfile) {

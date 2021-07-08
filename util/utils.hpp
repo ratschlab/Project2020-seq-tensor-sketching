@@ -3,11 +3,15 @@
 #include "util/multivec.hpp"
 #include "util/timer.hpp"
 
+#include <gflags/gflags.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <numeric>
 #include <vector>
+
+DECLARE_string(dist);
 
 namespace ts { // ts = Tensor Sketch
 
@@ -67,6 +71,44 @@ T l2_dist(const std::vector<T> &a, const std::vector<T> &b) {
         res += el * el;
     }
     return res;
+}
+
+/**
+ * Return the probability p that maximizes the probability of the given observations under the
+ * assumption that the input is i.i.d. distributed as A~Norm(0, sigma), and the output is
+ * distributed as B ~ p * A + Norm(0, sigma * sqrt(1-p)).
+ *
+ * For symmetry, we maximise the likelyhood of getting both A from B and B from A.
+ */
+template <class T>
+T most_likely_distance(const std::vector<T> &a, const std::vector<T> &b) {
+    // p minimizes 1/(1-p) * ( sum_i a_i^2  - 2 p sum_i a_i b_i + p^2 sum_i b^2)
+    // p = ||a-b||_2 / sqrt(||a||_2 + ||b||_2)
+    assert(a.size() == b.size());
+    T aa = 0;
+    T ab = 0;
+    T bb = 0;
+    for (size_t i = 0; i < a.size(); i++) {
+        aa += a[i] * a[i];
+        ab += (a[i] - b[i]) * (a[i] - b[i]);
+        bb += b[i] * b[i];
+    }
+    // NOTE: Instead of dividing by the average norm^2 of a and b, it's also possible to divide by
+    // either |a| or |b| to get an asymmetric distance that computes the most likely p to transition
+    // from a to b.
+    return std::sqrt(ab / ((aa + bb) / 2));
+}
+
+template <class T>
+T sketch_dist(const std::vector<T> &a, const std::vector<T> &b) {
+    assert(a.size() == b.size());
+    if (FLAGS_dist == "l1")
+        return l1_dist(a, b);
+    if (FLAGS_dist == "l2")
+        return l2_dist(a, b);
+    if (FLAGS_dist == "exp")
+        return most_likely_distance(a, b);
+    assert(false && "Value of dist flag is not a known value. Must be one of l1|l2|exp.");
 }
 
 

@@ -28,7 +28,7 @@ target_link_libraries(sequence gflags OpenMP::OpenMP_CXX)
 
 file(GLOB sketch_files "sketch/*.cpp")
 add_library(sketch_lib ${sketch_files})
-target_link_libraries(sketch_lib murmur_lib OpenMP::OpenMP_CXX)
+target_link_libraries(sketch_lib murmur_lib OpenMP::OpenMP_CXX gflags)
 
 file(GLOB phylogeny_files "phylogeny/*.cpp")
 add_library(phylogeny_lib ${phylogeny_files})
