@@ -82,7 +82,10 @@ FastaFile<seq_type> read_fasta(const std::string &file_name, const std::string &
         f.sequences.push_back(std::move(seq));
         seq.clear();
     }
-    assert(f.sequences.size() == f.comments.size());
+    if(f.sequences.size() != f.comments.size()) {
+        std::cerr << "Invalid fasta file: " << file_name << std::endl;
+        std::exit(1);
+    }
     return f;
 }
 
@@ -104,7 +107,7 @@ std::vector<FastaFile<seq_type>> read_directory(const std::string &directory_nam
     } else {
         for (const auto &f : std::filesystem::directory_iterator(directory_name)) {
             const std::filesystem::path ext = f.path().extension();
-            if (ext == ".fna" || ext == ".fasta") {
+            if (ext == ".fa" || ext == ".fna" || ext == ".fasta") {
                 files.emplace_back(read_fasta<seq_type>(f.path(), "fasta"));
             }
         }

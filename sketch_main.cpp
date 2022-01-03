@@ -24,18 +24,11 @@
 
 using namespace ts;
 
-// The main command this program should perform.
-// Triangle: compute a triangular distance matrix.
-// More actions will be added.
-DEFINE_string(action, "triangle", "Which action to do. One of: triangle, none");
-
 DEFINE_string(alphabet,
               "dna4",
               "The alphabet over which sequences are defined (dna4, dna5, protein)");
 
-DEFINE_string(sketch_method,
-              "TSS",
-              "The sketching method to use: MH, WMH, OMH, TS, TSB or TSS");
+DEFINE_string(sketch_method, "TSS", "The sketching method to use: MH, WMH, OMH, TS, TSB or TSS");
 DEFINE_string(m, "TSS", "Short hand for --sketch_method");
 
 DEFINE_uint32(kmer_length, 1, "The kmer length for: MH, WMH, OMH");
@@ -46,9 +39,6 @@ DEFINE_string(o, "", "Output file, containing the sketches for each sequence");
 DEFINE_string(i,
               "",
               "Input file or directory, containing the sequences to be sketched in .fa format");
-
-DEFINE_string(input_format, "fasta", "Input format: 'fasta', 'csv'");
-DEFINE_string(f, "fasta", "Short hand for --input_format");
 
 DEFINE_int32(embed_dim, 4, "Embedding dimension, used for all sketching methods");
 
@@ -100,9 +90,6 @@ void adjust_short_names() {
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("k").is_default) {
         FLAGS_kmer_length = FLAGS_k;
-    }
-    if (!gflags::GetCommandLineFlagInfoOrDie("f").is_default) {
-        FLAGS_input_format = FLAGS_f;
     }
     if (!gflags::GetCommandLineFlagInfoOrDie("w").is_default) {
         FLAGS_window_size = FLAGS_w;
@@ -244,10 +231,5 @@ int main(int argc, char *argv[]) {
         std::exit(1);
     }
 
-    if (FLAGS_action == "triangle") {
-        run_function_on_algorithm([](auto x) { run_triangle(x); });
-        return 0;
-    }
-
-    std::cerr << "Unknown action: " << FLAGS_action << "\n";
+    run_function_on_algorithm([](auto x) { run_triangle(x); });
 }
